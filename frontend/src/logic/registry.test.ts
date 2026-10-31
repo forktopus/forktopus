@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { repo, unavailable } from '../test/fixtures'
-import { filterRepos, hostsOf, integrationIssueCount, kpis, sortRepos } from './registry'
+import { filterRepos, hostSources, hostsOf, integrationIssueCount, kpis, registryRows, sortRepos } from './registry'
 import { repoName, repoNamespace } from './repo'
 
 const alpha = repo({ id: 'alpha', remotePath: 'team/alpha', branch: { name: 'feature/login', behind: 2 } })
@@ -66,6 +66,7 @@ describe('KPI', () => {
       activeCI: 1,
       noStatus: 0,
       partial: true,
+      remoteKnown: 3,
     })
     expect(kpis([alpha, gamma], 2).partial).toBe(false)
     // Отставание alpha без прочитанного статуса не считается, но и не теряется молча.
@@ -75,5 +76,46 @@ describe('KPI', () => {
   it('хосты и проблемы интеграции', () => {
     expect(hostsOf(all)).toEqual(['github.com', 'gitlab.com'])
     expect(integrationIssueCount(all)).toBe(1)
+  })
+})
+
+describe('источники', () => {
+  it('хосты со счётчиками и пометкой о незавершённой настройке', () => {
+    expect(hostSources(all)).toEqual([
+      { host: 'github.com', count: 2, issue: false },
+      { host: 'gitlab.com', count: 1, issue: true },
+    ])
+  })
+})
+
+describe('вложенные репозитории (D-025)', () => {
+  const parent = repo({ id: 'p', remotePath: 'team/p' })
+  const sub = { ...repo({ id: 's', remotePath: 'team/s' }), parentId: 'p' }
+  const deep = { ...repo({ id: 'd', remotePath: 'team/d' }), parentId: 's' }
+  const other = repo({ id: 'o', remotePath: 'team/o' })
+
+  it('идут сразу под родителем с отступом, порядок соседей сохраняется', () => {
+    const rows = registryRows([deep, other, sub, parent])
+    expect(rows.map((r) => [r.repo.id, r.depth, r.children])).toEqual([
+      ['o', 0, 0],
+      ['p', 0, 1],
+      ['s', 1, 1],
+      ['d', 2, 0],
+    ])
+  })
+
+  it('без родителя в выборке — на верхнем уровне; свёрнутый скрывает потомков', () => {
+    expect(registryRows([sub, other]).map((r) => [r.repo.id, r.depth])).toEqual([
+      ['s', 0],
+      ['o', 0],
+    ])
+    expect(registryRows([parent, sub, deep], new Set(['p'])).map((r) => r.repo.id)).toEqual(['p'])
+  })
+})
+
+describe('KPI PR/CI без источников', () => {
+  it('ни у одного нет данных — суммы неизвестны, а не 0', () => {
+    expect(kpis([beta], 4).remoteKnown).toBe(0)
+    expect(kpis(all, 4).remoteKnown).toBe(3)
   })
 })
