@@ -3,8 +3,8 @@
 // фильтры сохраняются в настройках Go через DataSource.saveUI.
 
 import { createStore, type StoreApi } from 'zustand/vanilla'
-import type { Repository, Root, ToolDiagnostic, UI } from '../data/model'
-import { errorOf, type DataSource } from '../data/source'
+import type { Repository, Root, ScanIssue, ToolDiagnostic, UI } from '../data/model'
+import { errorOf, type DataSource, type Snapshot } from '../data/source'
 import { registryFilters, sortKeys, type RegistryFilter, type SortKey } from '../logic/registry'
 import type { ThemeMode } from '../theme/tokens'
 
@@ -25,13 +25,19 @@ export const defaultFilters: Filters = { registry: 'all', host: '', sort: 'name'
 
 export interface AppState {
   sourceKind: DataSource['kind']
+  /** первые данные (корни и кэш репозиториев) загружены */
   ready: boolean
-  refreshing: boolean
+  scanning: boolean
   roots: Root[]
   repos: Record<string, Repository>
+  /** каталоги, которые не удалось просмотреть при последнем сканировании */
+  issues: ScanIssue[]
+  /** список из кэша прошлого запуска, ещё не подтверждён сканированием (D-027) */
+  stale: boolean
+  /** время последнего сканирования (в том числе закэшированного) */
+  lastCheckAt: string | null
   tools: ToolDiagnostic[]
   toolsCheckedAt: string | null
-  lastCheckAt: string | null
   mode: Mode
   theme: ThemeChoice
   filters: Filters
@@ -41,9 +47,13 @@ export interface AppState {
   error: string | null
 
   init(): Promise<void>
+  /** перечитать корни и пересканировать */
   refresh(): Promise<void>
+  scan(): Promise<void>
   checkTools(): Promise<void>
   addRoot(path: string): Promise<boolean>
+  /** системный диалог выбора папки + addRoot; false — диалог закрыт или ошибка */
+  pickAndAddRoot(): Promise<boolean>
   removeRoot(id: string): Promise<void>
   setMode(mode: Mode): void
   setTheme(theme: ThemeMode): void
@@ -83,22 +93,28 @@ export function toUI(s: Pick<AppState, 'mode' | 'theme' | 'filters'>): UI {
   }
 }
 
+const byId = (repos: Repository[]) => Object.fromEntries(repos.map((r) => [r.id, r]))
+
 export function createAppStore(source: DataSource): AppStore {
-  return createStore<AppState>()((set, get) => {
+  const store = createStore<AppState>()((set, get) => {
     const fail = (err: unknown) => set({ error: errorOf(err).message })
     const persist = () => {
       source.saveUI(toUI(get())).catch(fail)
     }
+    const applySnapshot = (snap: Snapshot) =>
+      set({ repos: byId(snap.repositories), issues: snap.issues, stale: snap.stale, lastCheckAt: snap.scannedAt ?? null })
 
     return {
       sourceKind: source.kind,
       ready: false,
-      refreshing: false,
+      scanning: false,
       roots: [],
       repos: {},
+      issues: [],
+      stale: false,
+      lastCheckAt: null,
       tools: [],
       toolsCheckedAt: null,
-      lastCheckAt: null,
       mode: 'registry',
       theme: null,
       filters: defaultFilters,
@@ -106,30 +122,40 @@ export function createAppStore(source: DataSource): AppStore {
       selectedId: null,
       error: null,
 
+      // Сначала — сохранённое (UI, корни, кэш), чтобы экран появился сразу;
+      // затем в фоне сканирование и диагностика CLI.
       async init() {
         try {
           set(fromUI(await source.getUI()))
+          const [roots, snap] = await Promise.all([source.listRoots(), source.listRepositories()])
+          set({ roots })
+          applySnapshot(snap)
         } catch (err) {
           fail(err)
         }
-        await Promise.all([get().refresh(), get().checkTools()])
         set({ ready: true })
+        await Promise.all([get().scan(), get().checkTools()])
       },
 
       async refresh() {
-        if (get().refreshing) return
-        set({ refreshing: true })
         try {
-          const [roots, repos] = await Promise.all([source.listRoots(), source.listRepositories()])
-          set({
-            roots,
-            repos: Object.fromEntries(repos.map((r) => [r.id, r])),
-            lastCheckAt: new Date().toISOString(),
-          })
+          set({ roots: await source.listRoots() })
+        } catch (err) {
+          fail(err)
+        }
+        await get().scan()
+      },
+
+      async scan() {
+        if (get().scanning) return
+        set({ scanning: true })
+        try {
+          const res = await source.scanRoots()
+          set({ repos: byId(res.repositories), issues: res.issues, stale: false, lastCheckAt: res.scannedAt })
         } catch (err) {
           fail(err)
         } finally {
-          set({ refreshing: false })
+          set({ scanning: false })
         }
       },
 
@@ -144,22 +170,35 @@ export function createAppStore(source: DataSource): AppStore {
       async addRoot(path) {
         try {
           await source.addRoot(path)
+          set({ roots: await source.listRoots() })
         } catch (err) {
           fail(err)
           return false
         }
-        await get().refresh()
+        void get().scan()
         return true
+      },
+
+      async pickAndAddRoot() {
+        let path: string
+        try {
+          path = await source.pickFolder()
+        } catch (err) {
+          fail(err)
+          return false
+        }
+        return path ? get().addRoot(path) : false
       },
 
       async removeRoot(id) {
         try {
           await source.removeRoot(id)
+          const [roots, snap] = await Promise.all([source.listRoots(), source.listRepositories()])
+          set({ roots })
+          applySnapshot(snap)
         } catch (err) {
           fail(err)
-          return
         }
-        await get().refresh()
       },
 
       setMode(mode) {
@@ -182,4 +221,15 @@ export function createAppStore(source: DataSource): AppStore {
       clearError: () => set({ error: null }),
     }
   })
+
+  // Найденные по ходу сканирования репозитории сразу видны в списке. В событии
+  // ещё нет parentId — берём из прежней записи; итог сканирования всё заменит.
+  source.onScanRepository((repo) => {
+    const { scanning, repos } = store.getState()
+    if (!scanning) return
+    const prev = repos[repo.id]
+    store.setState({ repos: { ...repos, [repo.id]: { ...repo, parentId: repo.parentId ?? prev?.parentId } } })
+  })
+
+  return store
 }

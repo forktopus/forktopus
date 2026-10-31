@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/forktopus/forktopus/internal/fsutil"
 	"github.com/forktopus/forktopus/internal/model"
 )
 
@@ -25,7 +26,10 @@ type Settings struct {
 	Remotes map[string]string `json:"remotes,omitempty"`
 	// HostProviders — тип провайдера для self-hosted хостов: host[:port] → провайдер.
 	HostProviders map[string]model.Provider `json:"hostProviders,omitempty"`
-	UI            UI                        `json:"ui"`
+	// ScanSkipDirs — имена каталогов, в которые сканер не заходит; пусто —
+	// scan.DefaultSkipDirs.
+	ScanSkipDirs []string `json:"scanSkipDirs,omitempty"`
+	UI           UI       `json:"ui"`
 }
 
 // UI — состояние интерфейса, которое переживает перезапуск.
@@ -109,30 +113,5 @@ func (s *Store) Save(cfg Settings) error {
 	if err != nil {
 		return err
 	}
-	dir := filepath.Dir(s.path)
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return err
-	}
-	tmp, err := os.CreateTemp(dir, ".config-*.json")
-	if err != nil {
-		return err
-	}
-	defer os.Remove(tmp.Name()) // после успешного rename файла уже нет
-
-	if err := tmp.Chmod(0o600); err != nil {
-		tmp.Close()
-		return err
-	}
-	if _, err := tmp.Write(append(data, '\n')); err != nil {
-		tmp.Close()
-		return err
-	}
-	if err := tmp.Sync(); err != nil {
-		tmp.Close()
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-	return os.Rename(tmp.Name(), s.path)
+	return fsutil.WriteFileAtomic(s.path, append(data, '\n'), 0o600)
 }

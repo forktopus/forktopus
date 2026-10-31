@@ -10,18 +10,25 @@ export interface Label {
   text: string
 }
 
+/** Статус рабочей копии прочитан (branch и worktree есть). */
+export function hasStatus(r: Repository): boolean {
+  return r.branch != null && r.worktree != null
+}
+
+/** staged + unstaged + untracked; статус не прочитан — 0, проверять hasStatus. */
 export function changeCount(r: Repository): number {
   const w = r.worktree
-  return w.staged + w.unstaged + w.untracked
+  return w ? w.staged + w.unstaged + w.untracked : 0
 }
 
 export function hasChanges(r: Repository): boolean {
-  return changeCount(r) + r.worktree.conflicts > 0
+  return changeCount(r) + (r.worktree?.conflicts ?? 0) > 0
 }
 
-export type SyncState = 'detached' | 'noUpstream' | 'inSync' | 'ahead' | 'behind' | 'diverged'
+export type SyncState = 'unknown' | 'detached' | 'noUpstream' | 'inSync' | 'ahead' | 'behind' | 'diverged'
 
-export function syncState(b: BranchStatus): SyncState {
+export function syncState(b: BranchStatus | null | undefined): SyncState {
+  if (!b) return 'unknown'
   if (b.detached) return 'detached'
   if (!b.upstream || b.ahead == null || b.behind == null) return 'noUpstream'
   if (b.ahead > 0 && b.behind > 0) return 'diverged'
@@ -32,7 +39,8 @@ export function syncState(b: BranchStatus): SyncState {
 
 /** Отставание по достоверным данным; без upstream — false, а не «0». */
 export function isBehind(r: Repository): boolean {
-  return (r.branch.behind ?? 0) > 0 && syncState(r.branch) !== 'noUpstream'
+  const state = syncState(r.branch)
+  return state === 'behind' || state === 'diverged'
 }
 
 /** Число из серверного источника или null, если данных нет. */
@@ -59,8 +67,11 @@ function unknownLabel(availability: Availability): Label {
   return { tone: 'muted', text: t('remote.unavailable') }
 }
 
+const statusUnknown: Label = { tone: 'muted', text: t('status.unknown') }
+
 export function changesLabel(r: Repository): Label {
   const w = r.worktree
+  if (!w) return statusUnknown
   if (w.conflicts > 0) return { tone: 'bad', text: t('changes.conflicts', { count: w.conflicts }) }
   const count = changeCount(r)
   if (count > 0) return { tone: 'warn', text: t('changes.count', { count }) }
@@ -70,16 +81,18 @@ export function changesLabel(r: Repository): Label {
 export function syncLabel(r: Repository): Label {
   const b = r.branch
   switch (syncState(b)) {
+    case 'unknown':
+      return statusUnknown
     case 'detached':
       return { tone: 'warn', text: t('sync.detached') }
     case 'noUpstream':
       return { tone: 'muted', text: t('sync.noUpstream') }
     case 'diverged':
-      return { tone: 'bad', text: t('sync.diverged', { ahead: b.ahead!, behind: b.behind! }) }
+      return { tone: 'bad', text: t('sync.diverged', { ahead: b!.ahead!, behind: b!.behind! }) }
     case 'behind':
-      return { tone: 'warn', text: t('sync.behind', { behind: b.behind! }) }
+      return { tone: 'warn', text: t('sync.behind', { behind: b!.behind! }) }
     case 'ahead':
-      return { tone: 'info', text: t('sync.ahead', { ahead: b.ahead! }) }
+      return { tone: 'info', text: t('sync.ahead', { ahead: b!.ahead! }) }
     case 'inSync':
       return { tone: 'good', text: t('sync.inSync') }
   }

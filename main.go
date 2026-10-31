@@ -7,6 +7,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"github.com/forktopus/forktopus/internal/app"
+	"github.com/forktopus/forktopus/internal/repocache"
 	"github.com/forktopus/forktopus/internal/runner"
 	"github.com/forktopus/forktopus/internal/settings"
 )
@@ -21,7 +22,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("не удалось определить каталог настроек: %v", err)
 	}
-	service, err := app.NewAppService(settings.NewStore(configPath), runner.Exec{})
+	cachePath, err := repocache.DefaultPath()
+	if err != nil {
+		log.Printf("кэш репозиториев отключён: %v", err)
+	}
+	service, err := app.NewAppService(settings.NewStore(configPath), runner.Exec{}, cachePath)
 	if err != nil {
 		// Приложение продолжает работу со значениями по умолчанию.
 		log.Printf("настройки: %v", err)

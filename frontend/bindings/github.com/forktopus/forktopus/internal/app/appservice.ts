@@ -41,10 +41,10 @@ export function GetUI(): $CancellablePromise<settings$0.UI> {
 }
 
 /**
- * ListRepositories возвращает известные репозитории. Сканирование корней
- * появится на этапе 05; до этого список пуст.
+ * ListRepositories возвращает известные репозитории. До первого сканирования
+ * в этом запуске — кэш прошлого запуска с пометкой Stale (D-027).
  */
-export function ListRepositories(): $CancellablePromise<model$0.Repository[] | null> {
+export function ListRepositories(): $CancellablePromise<model$0.RepositorySnapshot> {
     return $Call.ByID(2103912973);
 }
 
@@ -53,6 +53,14 @@ export function ListRepositories(): $CancellablePromise<model$0.Repository[] | n
  */
 export function ListRoots(): $CancellablePromise<model$0.Root[] | null> {
     return $Call.ByID(1982120062);
+}
+
+/**
+ * PickFolder открывает системный диалог выбора папки. Пустая строка —
+ * пользователь закрыл диалог.
+ */
+export function PickFolder(): $CancellablePromise<string> {
+    return $Call.ByID(239958924);
 }
 
 /**
@@ -67,4 +75,21 @@ export function RemoveRoot(id: string): $CancellablePromise<void> {
  */
 export function SaveUI(ui: settings$0.UI): $CancellablePromise<void> {
     return $Call.ByID(3434843930, ui);
+}
+
+/**
+ * ScanRoots сканирует все корни. Найденные репозитории приходят событиями
+ * EventScanRepository по мере обнаружения, итог — в результате. Отмена вызова
+ * из JS прерывает сканирование; прежний список при этом сохраняется.
+ */
+export function ScanRoots(): $CancellablePromise<model$0.ScanResult> {
+    return $Call.ByID(1248533849);
+}
+
+/**
+ * SelectRemote запоминает remote, по которому определяется сервер
+ * репозитория. Пустое имя сбрасывает выбор. В .git/config ничего не пишется.
+ */
+export function SelectRemote(repoID: string, remote: string): $CancellablePromise<void> {
+    return $Call.ByID(2837537355, repoID, remote);
 }

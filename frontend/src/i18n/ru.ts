@@ -55,12 +55,20 @@ export const ru = {
   'roots.empty': 'Корневых папок пока нет.',
   'roots.pathLabel': 'Абсолютный путь к папке',
   'roots.pathPlaceholder': '/srv/repos/github.com',
+  'roots.pick': 'Выбрать папку…',
+  'roots.orManual': 'или введите путь вручную',
+  'roots.issues': { one: '{count} каталог не удалось просмотреть', few: '{count} каталога не удалось просмотреть', many: '{count} каталогов не удалось просмотреть' },
   'roots.repoCount': { one: '{count} репозиторий', few: '{count} репозитория', many: '{count} репозиториев' },
 
   'empty.noRoots.title': 'Добавьте первую корневую папку',
   'empty.noRoots.text':
     'Forktopus найдёт Git-репозитории внутри неё на любой глубине. Файлы на диске и настройки Git не изменяются.',
-  'empty.noRepos': 'В добавленных папках пока нет найденных репозиториев.',
+  'empty.noRepos': 'В добавленных папках не найдено Git-репозиториев.',
+  'empty.scanning': 'Идёт поиск репозиториев…',
+
+  'scan.stale': 'Показан список от {time} — с прошлого запуска. Идёт проверка, данные обновятся.',
+  'scan.staleIdle': 'Показан список от {time} — с прошлого запуска. Нажмите «Проверить статусы», чтобы обновить.',
+  'scan.unknownStatus': { one: 'Статус ещё не прочитан у {count} репозитория.', few: 'Статус ещё не прочитан у {count} репозиториев.', many: 'Статус ещё не прочитан у {count} репозиториев.' },
   'empty.noMatches': 'Ничего не найдено по текущим фильтрам.',
 
   'screen.draft': 'Черновой вид режима: полноценный экран появится на следующих этапах.',
@@ -78,6 +86,8 @@ export const ru = {
   'kpi.changesFoot': 'staged, unstaged, untracked',
   'kpi.behind': 'Ветки отстают от upstream',
   'kpi.behindFoot': 'по последнему fetch',
+  'kpi.noStatus': { one: 'статус не прочитан у {count}', few: 'статус не прочитан у {count}', many: 'статус не прочитан у {count}' },
+  'kpi.none': '—',
   'kpi.prci': 'PR/MR · запуски CI',
   'kpi.partial': 'из доступных источников',
   'kpi.complete': 'по всем источникам',
@@ -88,6 +98,8 @@ export const ru = {
   'column.sync': 'Upstream',
   'column.pr': 'PR/MR',
   'column.ci': 'CI',
+
+  'status.unknown': 'статус не прочитан',
 
   'changes.clean': 'Чисто',
   'changes.count': { one: '{count} изменение', few: '{count} изменения', many: '{count} изменений' },

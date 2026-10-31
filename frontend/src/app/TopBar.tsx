@@ -25,7 +25,7 @@ export function TopBar({ onOpenTools, onOpenRoots }: Props) {
   const setMode = useApp((s) => s.setMode)
   const query = useApp((s) => s.query)
   const setQuery = useApp((s) => s.setQuery)
-  const refreshing = useApp((s) => s.refreshing)
+  const scanning = useApp((s) => s.scanning)
   const refresh = useApp((s) => s.refresh)
   const lastCheckAt = useApp((s) => s.lastCheckAt)
   const demo = useApp((s) => s.sourceKind === 'mock')
@@ -164,8 +164,8 @@ export function TopBar({ onOpenTools, onOpenRoots }: Props) {
         )}
         <Tooltip title={`${t('action.refresh')} · ${lastCheck}`}>
           <span>
-            <IconButton aria-label={t('action.refresh')} onClick={() => void refresh()} disabled={refreshing}>
-              {refreshing ? <CircularProgress size={20} /> : <RefreshIcon />}
+            <IconButton aria-label={t('action.refresh')} onClick={() => void refresh()} disabled={scanning}>
+              {scanning ? <CircularProgress size={20} /> : <RefreshIcon />}
             </IconButton>
           </span>
         </Tooltip>

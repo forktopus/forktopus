@@ -64,9 +64,12 @@ describe('KPI', () => {
       behind: 1,
       openPRs: 3,
       activeCI: 1,
+      noStatus: 0,
       partial: true,
     })
     expect(kpis([alpha, gamma], 2).partial).toBe(false)
+    // Отставание alpha без прочитанного статуса не считается, но и не теряется молча.
+    expect(kpis([{ ...alpha, branch: null, worktree: null }, gamma], 2)).toMatchObject({ noStatus: 1, behind: 0 })
   })
 
   it('хосты и проблемы интеграции', () => {

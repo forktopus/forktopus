@@ -1,20 +1,31 @@
 import CloseIcon from '@mui/icons-material/Close'
+import FolderOpenIcon from '@mui/icons-material/FolderOpen'
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { useState, type FormEvent } from 'react'
+import type { ScanIssue } from '../data/model'
 import { t } from '../i18n'
 import { useApp } from '../store/context'
 import { useRepos } from '../store/selectors'
 import { monoFontFamily } from '../theme/tokens'
 
-// Выбор папки нативным диалогом появится на шаге 05.6; пока путь вводится вручную.
+// Корень добавляется системным диалогом или вводом пути (запасной вариант, и
+// единственный в демо-режиме браузера). После добавления запускается сканирование.
 export function RootsDialog({ open, onClose }: { open: boolean; onClose(): void }) {
   const theme = useTheme()
   const roots = useApp((s) => s.roots)
   const addRoot = useApp((s) => s.addRoot)
+  const pickAndAddRoot = useApp((s) => s.pickAndAddRoot)
   const removeRoot = useApp((s) => s.removeRoot)
+  const issues = useApp((s) => s.issues)
   const repos = useRepos()
   const [path, setPath] = useState('')
   const [busy, setBusy] = useState(false)
+
+  const pick = async () => {
+    setBusy(true)
+    await pickAndAddRoot()
+    setBusy(false)
+  }
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -39,6 +50,7 @@ export function RootsDialog({ open, onClose }: { open: boolean; onClose(): void 
               <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                 {t('roots.repoCount', { count: repos.filter((r) => r.rootId === root.id).length })}
               </Typography>
+              <RootIssues issues={issues.filter((i) => i.rootId === root.id)} />
             </Box>
             <Tooltip title={t('action.remove')}>
               <IconButton aria-label={t('action.remove')} onClick={() => void removeRoot(root.id)}>
@@ -47,7 +59,13 @@ export function RootsDialog({ open, onClose }: { open: boolean; onClose(): void 
             </Tooltip>
           </Box>
         ))}
-        <Box component="form" onSubmit={(e) => void submit(e)} sx={{ display: 'flex', gap: 1, mt: 3, alignItems: 'flex-start' }}>
+        <Button variant="contained" startIcon={<FolderOpenIcon />} onClick={() => void pick()} disabled={busy} sx={{ mt: 3 }}>
+          {t('roots.pick')}
+        </Button>
+        <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mt: 2, mb: 1 }}>
+          {t('roots.orManual')}
+        </Typography>
+        <Box component="form" onSubmit={(e) => void submit(e)} sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
           <TextField
             fullWidth
             size="small"
@@ -57,7 +75,7 @@ export function RootsDialog({ open, onClose }: { open: boolean; onClose(): void 
             onChange={(e) => setPath(e.target.value)}
             autoComplete="off"
           />
-          <Button type="submit" variant="contained" disabled={busy || !path.trim()} sx={{ whiteSpace: 'nowrap' }}>
+          <Button type="submit" variant="outlined" disabled={busy || !path.trim()} sx={{ whiteSpace: 'nowrap' }}>
             {t('action.add')}
           </Button>
         </Box>
@@ -66,5 +84,21 @@ export function RootsDialog({ open, onClose }: { open: boolean; onClose(): void 
         <Button onClick={onClose}>{t('action.close')}</Button>
       </DialogActions>
     </Dialog>
+  )
+}
+
+function RootIssues({ issues }: { issues: ScanIssue[] }) {
+  if (issues.length === 0) return null
+  return (
+    <Box sx={{ mt: 0.5 }}>
+      <Typography variant="caption" sx={{ color: 'warning.main', display: 'block' }}>
+        {t('roots.issues', { count: issues.length })}
+      </Typography>
+      {issues.slice(0, 3).map((i) => (
+        <Typography key={i.path} variant="caption" sx={{ display: 'block', color: 'text.secondary', font: `11px ${monoFontFamily}`, overflowWrap: 'anywhere' }}>
+          {i.error?.message ?? i.path}
+        </Typography>
+      ))}
+    </Box>
   )
 }

@@ -160,6 +160,26 @@ export enum ErrorCode {
 };
 
 /**
+ * Nesting — почему репозиторий лежит внутри рабочей копии другого.
+ */
+export enum Nesting {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    /**
+     * сабмодуль родителя
+     */
+    NestingSubmodule = "submodule",
+
+    /**
+     * самостоятельный клон внутри чужой рабочей копии
+     */
+    NestingNested = "nested",
+};
+
+/**
  * PRSummary — открытые PR/MR, где текущая ветка — источник.
  */
 export interface PRSummary {
@@ -227,14 +247,24 @@ export interface Repository {
      * может лежать вне Path (worktree, submodule)
      */
     "gitDir": string;
+
+    /**
+     * ParentID — ближайший репозиторий, внутри рабочей копии которого лежит этот; пусто — верхний уровень.
+     */
+    "parentId"?: string;
+    "nesting"?: Nesting;
     "remotes": RemoteInfo[] | null;
 
     /**
      * имя выбранного remote; пусто — нет или неоднозначно
      */
     "remote"?: string;
-    "branch": BranchStatus;
-    "worktree": WorktreeStatus;
+
+    /**
+     * Branch и Worktree: nil — статус ещё не прочитан (или прочитать не удалось, см. Error).
+     */
+    "branch"?: BranchStatus | null;
+    "worktree"?: WorktreeStatus | null;
     "pr": PRSummary;
     "ci": CISummary;
 
@@ -246,11 +276,40 @@ export interface Repository {
 }
 
 /**
+ * RepositorySnapshot — известные репозитории. Stale — список взят из кэша
+ * прошлого запуска и ещё не подтверждён сканированием.
+ */
+export interface RepositorySnapshot {
+    "repositories": Repository[] | null;
+    "issues": ScanIssue[] | null;
+    "scannedAt"?: string | null;
+    "stale": boolean;
+}
+
+/**
  * Root — корневая папка, выбранная пользователем для сканирования.
  */
 export interface Root {
     "id": string;
     "path": string;
+}
+
+/**
+ * ScanIssue — каталог, который не удалось просмотреть при сканировании корня.
+ */
+export interface ScanIssue {
+    "rootId": string;
+    "path": string;
+    "error": Error | null;
+}
+
+/**
+ * ScanResult — итог сканирования корней.
+ */
+export interface ScanResult {
+    "repositories": Repository[] | null;
+    "issues": ScanIssue[] | null;
+    "scannedAt": string;
 }
 
 /**

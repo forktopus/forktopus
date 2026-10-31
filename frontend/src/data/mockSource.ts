@@ -5,15 +5,17 @@
 import {
   Availability,
   ErrorCode,
+  Nesting,
   Provider,
   type CISummary,
   type PRSummary,
   type Repository,
   type Root,
+  type ScanIssue,
   type ToolDiagnostic,
   type UI,
 } from './model'
-import type { DataSource } from './source'
+import type { DataSource, Snapshot } from './source'
 
 interface MockRoot {
   root: Root
@@ -36,6 +38,9 @@ interface Scenario {
   root: string
   ns: string
   name: string
+  /** каталог относительно корня, если не `ns/name` (вложенные репозитории) */
+  dir?: string
+  nesting?: Nesting
   branch?: string
   detached?: boolean
   noUpstream?: boolean
@@ -56,6 +61,8 @@ interface Scenario {
 
 const scenarios: Scenario[] = [
   { root: 'r-github', ns: 'schemor', name: 'schemor', branch: 'feature/permissions', staged: 1, unstaged: 3, untracked: 1, ahead: 1, prs: 2, drafts: 1, ciActive: 1, ciResult: 'success' },
+  { root: 'r-github', ns: 'schemor', name: 'ui-kit', dir: 'schemor/schemor/libs/ui-kit', nesting: Nesting.NestingSubmodule, detached: true, prs: 0, ciResult: 'success' },
+  { root: 'r-github', ns: 'schemor', name: 'schemor-docs', dir: 'schemor/schemor/docs-site', nesting: Nesting.NestingNested, branch: 'main', untracked: 1, prs: 0 },
   { root: 'r-github', ns: 'ai-development-harness', name: 'ai-development-harness-template', branch: 'main', behind: 3, prs: 1, ciResult: 'success' },
   { root: 'r-github', ns: 'ai-development-harness', name: 'ai-development-harness-client', branch: 'ui/activity-feed', ahead: 2, behind: 1, prs: 1, ciResult: 'failure' },
   { root: 'r-github', ns: 'ai-animation-tools', name: 'music-clip-tools', branch: 'main', ciResult: 'success' },
@@ -82,7 +89,7 @@ function idOf(path: string): string {
 
 function buildRepository(s: Scenario, index: number): Repository {
   const r = mockRoots.find((m) => m.root.id === s.root)!
-  const path = `${r.root.path}/${s.ns}/${s.name}`
+  const path = `${r.root.path}/${s.dir ?? `${s.ns}/${s.name}`}`
   const lastAttemptAt = minutesAgo(4)
   const prOk = r.pr === Availability.AvailabilityOK
   const ciAvailability = s.ciAvailability ?? r.ci
@@ -123,6 +130,7 @@ function buildRepository(s: Scenario, index: number): Repository {
       },
     ],
     remote: 'origin',
+    nesting: s.nesting,
     branch: {
       name: s.detached ? undefined : s.branch,
       detached: Boolean(s.detached),
@@ -157,6 +165,21 @@ function invalidInput(message: string): Error {
   return Object.assign(new Error(message), { cause: { code: ErrorCode.CodeInvalidInput, message } })
 }
 
+// Родитель вложенного репозитория — ближайший репозиторий выше по пути.
+function linkParents(repos: Repository[]): Repository[] {
+  return repos.map((r) => {
+    if (!r.nesting) return r
+    const parent = repos
+      .filter((p) => r.path.startsWith(p.path + '/'))
+      .sort((a, b) => b.path.length - a.path.length)[0]
+    return { ...r, parentId: parent?.id }
+  })
+}
+
+const mockIssues: ScanIssue[] = [
+  { rootId: 'r-other', path: '/srv/repos/git.example.org/private', error: { code: ErrorCode.CodeOther, message: 'open /srv/repos/git.example.org/private: permission denied' } },
+]
+
 const uiKey = 'forktopus.demo.ui'
 
 export interface MockOptions {
@@ -166,7 +189,12 @@ export interface MockOptions {
 
 export function createMockSource({ delayMs = 250 }: MockOptions = {}): DataSource {
   let roots = mockRoots.map((m) => m.root)
-  let repos = scenarios.map(buildRepository)
+  let repos = linkParents(scenarios.map(buildRepository))
+  let issues = mockIssues
+  // Как будто кэш прошлого запуска: два часа назад, не подтверждён сканированием.
+  let snapshot: Snapshot = { repositories: repos, issues, scannedAt: minutesAgo(120), stale: true }
+  let picked = 0
+  const listeners = new Set<(repo: Repository) => void>()
   let ui: UI = {}
   try {
     ui = JSON.parse(localStorage.getItem(uiKey) ?? '{}') as UI
@@ -174,7 +202,12 @@ export function createMockSource({ delayMs = 250 }: MockOptions = {}): DataSourc
     // нет localStorage (тесты) или повреждённое значение — значения по умолчанию
   }
 
-  const reply = <T>(value: T) => new Promise<T>((resolve) => setTimeout(() => resolve(structuredClone(value)), delayMs))
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+  const reply = async <T>(value: T) => {
+    await sleep(delayMs)
+    return structuredClone(value)
+  }
+  const known = (rootId: string) => roots.some((r) => r.id === rootId)
 
   return {
     kind: 'mock',
@@ -189,12 +222,34 @@ export function createMockSource({ delayMs = 250 }: MockOptions = {}): DataSourc
       return reply(root)
     },
     async removeRoot(id) {
-      if (!roots.some((r) => r.id === id)) throw invalidInput(`корневая папка "${id}" не найдена`)
+      if (!known(id)) throw invalidInput(`корневая папка "${id}" не найдена`)
       roots = roots.filter((r) => r.id !== id)
       repos = repos.filter((r) => r.rootId !== id)
+      issues = issues.filter((i) => i.rootId !== id)
+      snapshot = { ...snapshot, repositories: repos, issues }
       return reply(undefined)
     },
-    listRepositories: () => reply(repos),
+    pickFolder: () => reply(`/srv/repos/demo-folder-${++picked}`),
+    listRepositories: () => reply(snapshot),
+    async scanRoots() {
+      repos = repos.filter((r) => known(r.rootId))
+      for (const repo of repos) {
+        await sleep(delayMs / 5)
+        // Как в Go: во время сканирования parentId ещё не известен.
+        listeners.forEach((cb) => cb(structuredClone({ ...repo, parentId: undefined, updatedAt: new Date().toISOString() })))
+      }
+      const scannedAt = new Date().toISOString()
+      repos = repos.map((r) => ({ ...r, updatedAt: scannedAt }))
+      issues = issues.filter((i) => known(i.rootId))
+      snapshot = { repositories: repos, issues, scannedAt, stale: false }
+      return reply({ repositories: repos, issues, scannedAt })
+    },
+    async selectRemote(repoId, remote) {
+      const repo = repos.find((r) => r.id === repoId)
+      if (!repo) throw invalidInput(`репозиторий "${repoId}" не найден`)
+      repo.remote = remote || 'origin'
+      return reply(undefined)
+    },
     checkTools: () => reply(mockTools),
     getUI: () => reply(ui),
     async saveUI(next) {
@@ -205,6 +260,10 @@ export function createMockSource({ delayMs = 250 }: MockOptions = {}): DataSourc
         // демо работает и без localStorage
       }
       return reply(undefined)
+    },
+    onScanRepository(cb) {
+      listeners.add(cb)
+      return () => listeners.delete(cb)
     },
   }
 }

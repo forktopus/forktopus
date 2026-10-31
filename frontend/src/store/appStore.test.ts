@@ -4,12 +4,16 @@ import type { DataSource } from '../data/source'
 import { createAppStore, fromUI, toUI } from './appStore'
 
 function counted(source: DataSource) {
-  const calls = { listRepositories: 0, saveUI: 0 }
+  const calls = { listRepositories: 0, scanRoots: 0, saveUI: 0 }
   const wrapped: DataSource = {
     ...source,
     listRepositories: () => {
       calls.listRepositories++
       return source.listRepositories()
+    },
+    scanRoots: () => {
+      calls.scanRoots++
+      return source.scanRoots()
     },
     saveUI: (ui) => {
       calls.saveUI++
@@ -37,14 +41,15 @@ describe('store', () => {
     const { wrapped, calls } = counted(source)
     const store = createAppStore(wrapped)
     await store.getState().init()
-    const before = calls.listRepositories
+    const before = { ...calls }
 
     store.getState().setMode('radar')
     store.getState().setMode('explorer')
     store.getState().setTheme('light')
     store.getState().setFilters({ registry: 'dirty', asc: false })
 
-    expect(calls.listRepositories).toBe(before)
+    expect(calls.listRepositories).toBe(before.listRepositories)
+    expect(calls.scanRoots).toBe(before.scanRoots)
     expect(calls.saveUI).toBe(4)
     await new Promise((r) => setTimeout(r, 0))
 
@@ -55,6 +60,40 @@ describe('store', () => {
     expect(s.mode).toBe('explorer')
     expect(s.theme).toBe('light')
     expect(s.filters).toMatchObject({ registry: 'dirty', asc: false })
+  })
+
+  it('сначала показывает кэш с пометкой, после сканирования пометка снимается (D-027)', async () => {
+    const store = createAppStore(createMockSource({ delayMs: 0 }))
+    const states: { stale: boolean; scanning: boolean; repos: number }[] = []
+    store.subscribe((s) => states.push({ stale: s.stale, scanning: s.scanning, repos: Object.keys(s.repos).length }))
+    await store.getState().init()
+    expect(states.some((s) => s.stale && s.repos > 0)).toBe(true)
+    const s = store.getState()
+    expect(s.stale).toBe(false)
+    expect(s.scanning).toBe(false)
+    expect(s.issues.length).toBeGreaterThan(0)
+  })
+
+  it('найденные во время сканирования репозитории появляются до конца сканирования', async () => {
+    const source = createMockSource({ delayMs: 0 })
+    const store = createAppStore(source)
+    let seenDuringScan = 0
+    store.subscribe((s) => {
+      if (s.scanning) seenDuringScan = Math.max(seenDuringScan, Object.keys(s.repos).length)
+    })
+    await store.getState().removeRoot('r-github')
+    await store.getState().scan()
+    expect(seenDuringScan).toBeGreaterThan(0)
+    // Итог сканирования восстанавливает parentId вложенных.
+    expect(Object.values(store.getState().repos).every((r) => !r.nesting || r.parentId)).toBe(true)
+  })
+
+  it('выбор папки диалогом добавляет корень и сканирует', async () => {
+    const store = createAppStore(createMockSource({ delayMs: 0 }))
+    await store.getState().init()
+    const before = store.getState().roots.length
+    expect(await store.getState().pickAndAddRoot()).toBe(true)
+    expect(store.getState().roots).toHaveLength(before + 1)
   })
 
   it('ошибка источника попадает в error, а не роняет store', async () => {

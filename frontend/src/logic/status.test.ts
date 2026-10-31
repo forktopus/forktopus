@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Availability } from '../data/model'
 import { repo, unavailable } from '../test/fixtures'
-import { changesLabel, ciLabel, integrationIssue, isBehind, prLabel, remoteCount, syncLabel, syncState } from './status'
+import { changesLabel, ciLabel, hasChanges, integrationIssue, isBehind, prLabel, remoteCount, syncLabel, syncState } from './status'
 
 describe('unavailable не отображается как 0', () => {
   it('PR/CI без данных — «нет данных», а не 0', () => {
@@ -27,6 +27,16 @@ describe('unavailable не отображается как 0', () => {
     const r = repo({ pr: { open: 0 } })
     expect(remoteCount(r.pr, r.pr.open)).toBe(0)
     expect(prLabel(r).text).toBe('нет открытых')
+  })
+})
+
+describe('статус не прочитан', () => {
+  it('не выдаётся за «чисто» и «совпадает»', () => {
+    const r = { ...repo(), branch: null, worktree: undefined }
+    expect(changesLabel(r)).toEqual({ tone: 'muted', text: 'статус не прочитан' })
+    expect(syncLabel(r).text).toBe('статус не прочитан')
+    expect(hasChanges(r)).toBe(false)
+    expect(isBehind(r)).toBe(false)
   })
 })
 

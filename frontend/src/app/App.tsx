@@ -1,7 +1,7 @@
 import AddIcon from '@mui/icons-material/Add'
 import { Alert, Box, Button, CircularProgress, CssBaseline, Snackbar, ThemeProvider, Typography, useMediaQuery } from '@mui/material'
 import { useMemo, useState } from 'react'
-import { t } from '../i18n'
+import { formatDateTime, t } from '../i18n'
 import { integrationIssueCount } from '../logic/registry'
 import { useApp } from '../store/context'
 import { useRepos } from '../store/selectors'
@@ -32,6 +32,9 @@ function Content({ onOpenRoots, onOpenTools }: { onOpenRoots(): void; onOpenTool
   const ready = useApp((s) => s.ready)
   const roots = useApp((s) => s.roots)
   const mode = useApp((s) => s.mode)
+  const scanning = useApp((s) => s.scanning)
+  const stale = useApp((s) => s.stale)
+  const lastCheckAt = useApp((s) => s.lastCheckAt)
   const repos = useRepos()
   const issues = useMemo(() => integrationIssueCount(repos), [repos])
 
@@ -47,6 +50,11 @@ function Content({ onOpenRoots, onOpenTools }: { onOpenRoots(): void; onOpenTool
 
   return (
     <>
+      {stale && lastCheckAt && (
+        <Alert severity="warning" sx={{ mb: 2.5 }} icon={scanning ? <CircularProgress size={18} color="inherit" /> : undefined}>
+          {t(scanning ? 'scan.stale' : 'scan.staleIdle', { time: formatDateTime(lastCheckAt) })}
+        </Alert>
+      )}
       {issues > 0 && (
         <Alert
           severity="info"
@@ -60,7 +68,7 @@ function Content({ onOpenRoots, onOpenTools }: { onOpenRoots(): void; onOpenTool
           {t('integration.banner', { count: issues })}
         </Alert>
       )}
-      {repos.length === 0 && <Alert severity="info">{t('empty.noRepos')}</Alert>}
+      {repos.length === 0 && <Alert severity="info">{t(scanning ? 'empty.scanning' : 'empty.noRepos')}</Alert>}
       {repos.length > 0 && mode === 'registry' && <RegistryView />}
       {repos.length > 0 && mode === 'explorer' && <ExplorerView />}
       {repos.length > 0 && mode === 'radar' && <RadarView />}

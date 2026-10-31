@@ -5,32 +5,66 @@ package app
 
 import (
 	"context"
+	"log"
 	"os"
 	"path/filepath"
 	"slices"
 	"sync"
 
+	"github.com/wailsapp/wails/v3/pkg/application"
+
+	"github.com/forktopus/forktopus/internal/gitlocal"
 	"github.com/forktopus/forktopus/internal/model"
+	"github.com/forktopus/forktopus/internal/repocache"
 	"github.com/forktopus/forktopus/internal/runner"
+	"github.com/forktopus/forktopus/internal/scan"
 	"github.com/forktopus/forktopus/internal/settings"
 	"github.com/forktopus/forktopus/internal/tools"
 )
 
-// AppService — сервис Forktopus для фронтенда.
-type AppService struct {
-	store  *settings.Store
-	runner runner.Runner
+// EventScanRepository — репозиторий, найденный во время сканирования
+// (до окончания ScanRoots; parentId в нём ещё не заполнен).
+const EventScanRepository = "scan:repository"
 
-	mu  sync.Mutex
-	cfg settings.Settings
+func init() {
+	application.RegisterEvent[model.Repository](EventScanRepository)
 }
 
-// NewAppService создаёт сервис и читает настройки. Ошибка чтения настроек
-// не фатальна: сервис работает со значениями по умолчанию, а запись будет
-// отклонена с понятным сообщением (см. settings.Store).
-func NewAppService(store *settings.Store, r runner.Runner) (*AppService, error) {
+// AppService — сервис Forktopus для фронтенда.
+type AppService struct {
+	store     *settings.Store
+	runner    runner.Runner
+	cachePath string // пусто — кэш между запусками отключён
+
+	mu       sync.Mutex
+	cfg      settings.Settings
+	snapshot model.RepositorySnapshot
+
+	scanMu sync.Mutex // одно сканирование за раз
+}
+
+// NewAppService создаёт сервис, читает настройки и кэш прошлого сканирования.
+// Ошибка чтения настроек не фатальна: сервис работает со значениями по
+// умолчанию, а запись будет отклонена с понятным сообщением (см. settings.Store).
+func NewAppService(store *settings.Store, r runner.Runner, cachePath string) (*AppService, error) {
 	cfg, err := store.Load()
-	return &AppService{store: store, runner: r, cfg: cfg}, err
+	s := &AppService{store: store, runner: r, cachePath: cachePath, cfg: cfg}
+	s.snapshot = model.RepositorySnapshot{Repositories: []model.Repository{}, Issues: []model.ScanIssue{}, Stale: true}
+	if cachePath != "" {
+		if cached, ok := repocache.Load(cachePath); ok {
+			s.snapshot.Repositories = cached.Repositories
+			s.snapshot.Issues = cached.Issues
+			s.snapshot.ScannedAt = &cached.ScannedAt
+		}
+	}
+	return s, err
+}
+
+// emit отправляет событие во фронтенд; без запущенного приложения (тесты) — ничего.
+func emit(name string, data any) {
+	if a := application.Get(); a != nil {
+		a.Event.Emit(name, data)
+	}
 }
 
 // ListRoots возвращает добавленные корневые папки.
@@ -91,13 +125,124 @@ func (s *AppService) RemoveRoot(id string) error {
 		return model.AsError(err)
 	}
 	s.cfg = next
+	s.snapshot.Repositories = slices.DeleteFunc(slices.Clone(s.snapshot.Repositories), func(r model.Repository) bool { return r.RootID == id })
+	s.snapshot.Issues = slices.DeleteFunc(slices.Clone(s.snapshot.Issues), func(i model.ScanIssue) bool { return i.RootID == id })
+	s.saveCacheLocked()
 	return nil
 }
 
-// ListRepositories возвращает известные репозитории. Сканирование корней
-// появится на этапе 05; до этого список пуст.
-func (s *AppService) ListRepositories() []model.Repository {
-	return []model.Repository{}
+// PickFolder открывает системный диалог выбора папки. Пустая строка —
+// пользователь закрыл диалог.
+func (s *AppService) PickFolder() (string, error) {
+	a := application.Get()
+	if a == nil {
+		return "", model.Errorf(model.CodeUnsupported, "системный диалог доступен только в окне приложения")
+	}
+	path, err := a.Dialog.OpenFile().
+		SetTitle("Выберите корневую папку").
+		CanChooseFiles(false).
+		CanChooseDirectories(true).
+		CanCreateDirectories(false).
+		ShowHiddenFiles(true).
+		PromptForSingleSelection()
+	if err != nil {
+		return "", model.Errorf(model.CodeOther, "диалог выбора папки: %v", err)
+	}
+	return path, nil
+}
+
+// ListRepositories возвращает известные репозитории. До первого сканирования
+// в этом запуске — кэш прошлого запуска с пометкой Stale (D-027).
+func (s *AppService) ListRepositories() model.RepositorySnapshot {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	snap := s.snapshot
+	snap.Repositories = slices.Clone(snap.Repositories)
+	snap.Issues = slices.Clone(snap.Issues)
+	return snap
+}
+
+// ScanRoots сканирует все корни. Найденные репозитории приходят событиями
+// EventScanRepository по мере обнаружения, итог — в результате. Отмена вызова
+// из JS прерывает сканирование; прежний список при этом сохраняется.
+func (s *AppService) ScanRoots(ctx context.Context) (model.ScanResult, error) {
+	s.scanMu.Lock()
+	defer s.scanMu.Unlock()
+
+	s.mu.Lock()
+	roots := slices.Clone(s.cfg.Roots)
+	opts := scan.Options{
+		SkipDirs:      s.cfg.ScanSkipDirs,
+		Remotes:       s.cfg.Remotes,
+		HostProviders: s.cfg.HostProviders,
+		OnRepository:  func(r model.Repository) { emit(EventScanRepository, r) },
+	}
+	s.mu.Unlock()
+
+	res, err := scan.Run(ctx, s.runner, roots, opts)
+	if err != nil {
+		return res, err
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	// Корень могли убрать, пока шло сканирование.
+	known := map[string]bool{}
+	for _, r := range s.cfg.Roots {
+		known[r.ID] = true
+	}
+	res.Repositories = slices.DeleteFunc(res.Repositories, func(r model.Repository) bool { return !known[r.RootID] })
+	res.Issues = slices.DeleteFunc(res.Issues, func(i model.ScanIssue) bool { return !known[i.RootID] })
+	at := res.ScannedAt
+	s.snapshot = model.RepositorySnapshot{Repositories: res.Repositories, Issues: res.Issues, ScannedAt: &at}
+	s.saveCacheLocked()
+	return res, nil
+}
+
+// SelectRemote запоминает remote, по которому определяется сервер
+// репозитория. Пустое имя сбрасывает выбор. В .git/config ничего не пишется.
+func (s *AppService) SelectRemote(repoID, remote string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	i := slices.IndexFunc(s.snapshot.Repositories, func(r model.Repository) bool { return r.ID == repoID })
+	if i < 0 {
+		return model.Errorf(model.CodeInvalidInput, "репозиторий %q не найден", repoID)
+	}
+	repo := s.snapshot.Repositories[i]
+	if remote != "" && !slices.ContainsFunc(repo.Remotes, func(r model.RemoteInfo) bool { return r.Name == remote }) {
+		return model.Errorf(model.CodeInvalidInput, "у репозитория нет remote %q", remote)
+	}
+
+	next := s.cfg
+	next.Remotes = map[string]string{}
+	for k, v := range s.cfg.Remotes {
+		next.Remotes[k] = v
+	}
+	if remote == "" {
+		delete(next.Remotes, repoID)
+	} else {
+		next.Remotes[repoID] = remote
+	}
+	if err := s.store.Save(next); err != nil {
+		return model.AsError(err)
+	}
+	s.cfg = next
+	repos := slices.Clone(s.snapshot.Repositories)
+	repos[i].Remote = gitlocal.SelectRemote(repo.Remotes, remote)
+	s.snapshot.Repositories = repos
+	s.saveCacheLocked()
+	return nil
+}
+
+// saveCacheLocked пишет кэш; вызывается под s.mu. Ошибка кэша не мешает работе.
+func (s *AppService) saveCacheLocked() {
+	if s.cachePath == "" || s.snapshot.ScannedAt == nil {
+		return
+	}
+	res := model.ScanResult{Repositories: s.snapshot.Repositories, Issues: s.snapshot.Issues, ScannedAt: *s.snapshot.ScannedAt}
+	if err := repocache.Save(s.cachePath, res); err != nil {
+		log.Printf("кэш репозиториев: %v", err)
+	}
 }
 
 // GetUI возвращает сохранённое состояние интерфейса: режим, тему, фильтры.

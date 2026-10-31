@@ -53,14 +53,19 @@ export function RegistryView() {
   const metrics = useMemo(() => kpis(list, all.length), [list, all.length])
   const hosts = useMemo(() => hostsOf(searched), [searched])
 
+  // Пока статус не прочитан ни у одного, 0 был бы неправдой — показываем прочерк.
+  const gitValue = (n: number) => (metrics.shown > 0 && metrics.noStatus === metrics.shown ? t('kpi.none') : String(n))
+  const gitFoot = (key: 'kpi.changesFoot' | 'kpi.behindFoot') =>
+    metrics.noStatus > 0 ? t('kpi.noStatus', { count: metrics.noStatus }) : t(key)
+
   const sortBy = (key: SortKey) => setFilters(filters.sort === key ? { asc: !filters.asc } : { sort: key, asc: true })
 
   return (
     <Box>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 1.6, mb: 3 }}>
         <Metric label={t('kpi.repos')} value={String(metrics.shown)} foot={t('kpi.reposFoot', { total: metrics.total })} />
-        <Metric label={t('kpi.changes')} value={String(metrics.withChanges)} foot={t('kpi.changesFoot')} />
-        <Metric label={t('kpi.behind')} value={String(metrics.behind)} foot={t('kpi.behindFoot')} />
+        <Metric label={t('kpi.changes')} value={gitValue(metrics.withChanges)} foot={gitFoot('kpi.changesFoot')} />
+        <Metric label={t('kpi.behind')} value={gitValue(metrics.behind)} foot={gitFoot('kpi.behindFoot')} />
         <Metric
           label={t('kpi.prci')}
           value={`${metrics.openPRs} / ${metrics.activeCI}`}

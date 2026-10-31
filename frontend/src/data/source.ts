@@ -1,19 +1,42 @@
-import { ErrorCode, type Error as ModelError, type Repository, type Root, type ToolDiagnostic, type UI } from './model'
+import {
+  ErrorCode,
+  type Error as ModelError,
+  type Repository,
+  type RepositorySnapshot,
+  type Root,
+  type ScanIssue,
+  type ScanResult,
+  type ToolDiagnostic,
+  type UI,
+} from './model'
+
+type Lists = { repositories: Repository[]; issues: ScanIssue[] }
+/** RepositorySnapshot без null-массивов. */
+export type Snapshot = Omit<RepositorySnapshot, keyof Lists> & Lists
+/** ScanResult без null-массивов. */
+export type ScanOutcome = Omit<ScanResult, keyof Lists> & Lists
 
 /**
  * Источник данных UI. Методы повторяют AppService из internal/app; списки
- * всегда массивы (null из Go превращается в []). Подписка на события
- * появится, когда Go начнёт их отправлять (сканирование, этап 05).
+ * всегда массивы (null из Go превращается в []).
  */
 export interface DataSource {
   readonly kind: 'wails' | 'mock'
   listRoots(): Promise<Root[]>
   addRoot(path: string): Promise<Root>
   removeRoot(id: string): Promise<void>
-  listRepositories(): Promise<Repository[]>
+  /** Системный диалог выбора папки; '' — пользователь его закрыл. */
+  pickFolder(): Promise<string>
+  /** Известные репозитории; до первого сканирования — кэш прошлого запуска (stale). */
+  listRepositories(): Promise<Snapshot>
+  /** Сканирует корни; найденные по ходу репозитории приходят в onScanRepository. */
+  scanRoots(): Promise<ScanOutcome>
+  selectRemote(repoId: string, remote: string): Promise<void>
   checkTools(): Promise<ToolDiagnostic[]>
   getUI(): Promise<UI>
   saveUI(ui: UI): Promise<void>
+  /** Подписка на найденные во время сканирования репозитории; возвращает отписку. */
+  onScanRepository(cb: (repo: Repository) => void): () => void
 }
 
 /** Ошибка вызова в виде model.Error: Wails кладёт её JSON в err.cause. */
@@ -24,4 +47,13 @@ export function errorOf(err: unknown): ModelError {
   }
   const message = err instanceof globalThis.Error ? err.message : String(err)
   return { code: ErrorCode.CodeOther, message }
+}
+
+/** Приводит null-массивы из Go к пустым. */
+export function normalizeRepository(r: Repository): Repository {
+  return { ...r, remotes: r.remotes ?? [] }
+}
+
+export function normalizeSnapshot<T extends { repositories: Repository[] | null; issues: ScanIssue[] | null }>(s: T): Omit<T, keyof Lists> & Lists {
+  return { ...s, repositories: (s.repositories ?? []).map(normalizeRepository), issues: s.issues ?? [] }
 }

@@ -48,7 +48,7 @@ export function RepoIcon({ repo, size = 33 }: { repo: Repository; size?: number 
 export function BranchChip({ repo }: { repo: Repository }) {
   const theme = useTheme()
   const b = repo.branch
-  const text = b.detached ? (b.headSha ?? '').slice(0, 8) : (b.name ?? '')
+  const text = b?.detached ? (b.headSha ?? '').slice(0, 8) : (b?.name ?? '')
   if (!text) return null
   return (
     <Box

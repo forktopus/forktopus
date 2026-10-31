@@ -14,7 +14,7 @@ import (
 func newService(t *testing.T) (*AppService, string) {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "config", "config.json")
-	s, err := NewAppService(settings.NewStore(path), runner.Exec{})
+	s, err := NewAppService(settings.NewStore(path), runner.Exec{}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func TestRootsLifecycle(t *testing.T) {
 	}
 
 	// Перезапуск: список читается из файла.
-	restarted, err := NewAppService(settings.NewStore(cfgPath), runner.Exec{})
+	restarted, err := NewAppService(settings.NewStore(cfgPath), runner.Exec{}, "")
 	if err != nil || len(restarted.ListRoots()) != 1 {
 		t.Fatalf("после перезапуска: %+v err=%v", restarted.ListRoots(), err)
 	}
@@ -81,7 +81,7 @@ func TestAddRootFailsOnCorruptSettings(t *testing.T) {
 	if err := os.WriteFile(path, []byte("{"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	s, err := NewAppService(settings.NewStore(path), runner.Exec{})
+	s, err := NewAppService(settings.NewStore(path), runner.Exec{}, "")
 	if err == nil {
 		t.Fatal("ожидалась ошибка чтения настроек")
 	}
@@ -99,16 +99,13 @@ func TestUIStatePersists(t *testing.T) {
 	if err := s.SaveUI(ui); err != nil {
 		t.Fatal(err)
 	}
-	restarted, err := NewAppService(settings.NewStore(cfgPath), runner.Exec{})
+	restarted, err := NewAppService(settings.NewStore(cfgPath), runner.Exec{}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	got := restarted.GetUI()
 	if got.Theme != "light" || got.Mode != "explorer" || got.Filters["tab"] != "dirty" {
 		t.Fatalf("после перезапуска: %+v", got)
-	}
-	if repos := s.ListRepositories(); repos == nil || len(repos) != 0 {
-		t.Fatalf("ListRepositories до этапа 05: %+v", repos)
 	}
 }
 

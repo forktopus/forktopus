@@ -4,6 +4,7 @@
 export {
     Availability,
     ErrorCode,
+    Nesting,
     Provider
 } from "./models.js";
 
@@ -14,7 +15,10 @@ export type {
     PRSummary,
     RemoteInfo,
     Repository,
+    RepositorySnapshot,
     Root,
+    ScanIssue,
+    ScanResult,
     ToolDiagnostic,
     WorktreeStatus
 } from "./models.js";

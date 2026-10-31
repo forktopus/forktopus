@@ -1,7 +1,7 @@
 import type { Repository } from '../data/model'
 import { radarGroup } from './radar'
 import { repoHost, repoName, repoNamespace } from './repo'
-import { changeCount, ciFailed, hasChanges, integrationIssue, isBehind, remoteCount } from './status'
+import { changeCount, ciFailed, hasChanges, hasStatus, integrationIssue, isBehind, remoteCount } from './status'
 
 export type RegistryFilter = 'all' | 'attention' | 'dirty' | 'behind' | 'ci'
 export const registryFilters: RegistryFilter[] = ['all', 'attention', 'dirty', 'behind', 'ci']
@@ -19,7 +19,7 @@ export interface RegistryQuery {
 export function matchesQuery(r: Repository, query: string): boolean {
   const q = query.trim().toLocaleLowerCase('ru')
   if (!q) return true
-  return [repoName(r), repoNamespace(r), r.branch.name ?? '', repoHost(r), r.path]
+  return [repoName(r), repoNamespace(r), r.branch?.name ?? '', repoHost(r), r.path]
     .join(' ')
     .toLocaleLowerCase('ru')
     .includes(q)
@@ -52,11 +52,11 @@ function sortValue(r: Repository, key: SortKey): string | number {
     case 'name':
       return `${repoNamespace(r)}/${repoName(r)}`
     case 'branch':
-      return r.branch.name ?? ''
+      return r.branch?.name ?? ''
     case 'changes':
-      return changeCount(r) + r.worktree.conflicts
+      return r.worktree ? changeCount(r) + r.worktree.conflicts : -1
     case 'sync':
-      return r.branch.behind ?? -1
+      return r.branch?.behind ?? -1
     case 'pr':
       return remoteCount(r.pr, r.pr.open) ?? -1
     case 'ci':
@@ -83,6 +83,8 @@ export interface Kpis {
   behind: number
   openPRs: number
   activeCI: number
+  /** Сколько репозиториев без прочитанного git-статуса: их изменения и отставание не учтены. */
+  noStatus: number
   /** Часть репозиториев без данных PR/CI: суммы неполные. */
   partial: boolean
 }
@@ -105,6 +107,7 @@ export function kpis(shown: Repository[], total: number): Kpis {
     behind: shown.filter(isBehind).length,
     openPRs,
     activeCI,
+    noStatus: shown.filter((r) => !hasStatus(r)).length,
     partial,
   }
 }

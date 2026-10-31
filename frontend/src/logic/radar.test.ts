@@ -32,6 +32,12 @@ describe('группировка радара', () => {
     expect(radarGroup(repo({ ci: { lastResult: 'failure' } }))).toBe('ok')
   })
 
+  it('статус не прочитан — ни в одной группе, но ошибка чтения — во «внимании»', () => {
+    expect(radarGroup({ ...repo(), worktree: null, branch: null })).toBeNull()
+    expect(radarGroup({ ...repo({ error: { code: ErrorCode.CodeOther, message: 'x' } }), worktree: null })).toBe('attention')
+    expect(groupRadar([{ ...repo({ id: 'u' }), worktree: null }]).unknown.map((r) => r.id)).toEqual(['u'])
+  })
+
   it('groupRadar раскладывает все репозитории', () => {
     const groups = groupRadar([repo({ id: 'a' }), repo({ id: 'b', worktree: { conflicts: 1 } }), repo({ id: 'c', worktree: { staged: 1 } })])
     expect(groups.attention.map((r) => r.id)).toEqual(['b'])

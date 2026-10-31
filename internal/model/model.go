@@ -93,21 +93,56 @@ type CISummary struct {
 	LastAttemptAt *time.Time   `json:"lastAttemptAt,omitempty"`
 }
 
+// Nesting — почему репозиторий лежит внутри рабочей копии другого.
+type Nesting string
+
+const (
+	NestingSubmodule Nesting = "submodule" // сабмодуль родителя
+	NestingNested    Nesting = "nested"    // самостоятельный клон внутри чужой рабочей копии
+)
+
 // Repository — найденная рабочая копия Git.
 type Repository struct {
-	ID       string         `json:"id"`
-	RootID   string         `json:"rootId"`
-	Path     string         `json:"path"`   // корень рабочей копии (git rev-parse --show-toplevel)
-	GitDir   string         `json:"gitDir"` // может лежать вне Path (worktree, submodule)
-	Remotes  []RemoteInfo   `json:"remotes"`
-	Remote   string         `json:"remote,omitempty"` // имя выбранного remote; пусто — нет или неоднозначно
-	Branch   BranchStatus   `json:"branch"`
-	Worktree WorktreeStatus `json:"worktree"`
-	PR       PRSummary      `json:"pr"`
-	CI       CISummary      `json:"ci"`
+	ID     string `json:"id"`
+	RootID string `json:"rootId"`
+	Path   string `json:"path"`   // корень рабочей копии (git rev-parse --show-toplevel)
+	GitDir string `json:"gitDir"` // может лежать вне Path (worktree, submodule)
+	// ParentID — ближайший репозиторий, внутри рабочей копии которого лежит этот; пусто — верхний уровень.
+	ParentID string       `json:"parentId,omitempty"`
+	Nesting  Nesting      `json:"nesting,omitempty"`
+	Remotes  []RemoteInfo `json:"remotes"`
+	Remote   string       `json:"remote,omitempty"` // имя выбранного remote; пусто — нет или неоднозначно
+	// Branch и Worktree: nil — статус ещё не прочитан (или прочитать не удалось, см. Error).
+	Branch   *BranchStatus   `json:"branch,omitempty"`
+	Worktree *WorktreeStatus `json:"worktree,omitempty"`
+	PR       PRSummary       `json:"pr"`
+	CI       CISummary       `json:"ci"`
 	// Error — сбой чтения именно этого репозитория; остальные поля могут быть неполными.
 	Error     *Error    `json:"error,omitempty"`
 	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+// ScanIssue — каталог, который не удалось просмотреть при сканировании корня.
+type ScanIssue struct {
+	RootID string `json:"rootId"`
+	Path   string `json:"path"`
+	Error  *Error `json:"error"`
+}
+
+// ScanResult — итог сканирования корней.
+type ScanResult struct {
+	Repositories []Repository `json:"repositories"`
+	Issues       []ScanIssue  `json:"issues"`
+	ScannedAt    time.Time    `json:"scannedAt"`
+}
+
+// RepositorySnapshot — известные репозитории. Stale — список взят из кэша
+// прошлого запуска и ещё не подтверждён сканированием.
+type RepositorySnapshot struct {
+	Repositories []Repository `json:"repositories"`
+	Issues       []ScanIssue  `json:"issues"`
+	ScannedAt    *time.Time   `json:"scannedAt,omitempty"`
+	Stale        bool         `json:"stale"`
 }
 
 // ToolDiagnostic — результат проверки внешней утилиты (git, gh, glab, tea).
