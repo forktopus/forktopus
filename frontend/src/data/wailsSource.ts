@@ -1,4 +1,4 @@
-import { Events } from '@wailsio/runtime'
+import { Browser, Clipboard, Events } from '@wailsio/runtime'
 import { AppService } from '../../bindings/github.com/forktopus/forktopus/internal/app'
 import { normalizeOpResult, normalizeRepository, normalizeSnapshot, type DataSource } from './source'
 
@@ -20,6 +20,8 @@ export const wailsSource: DataSource = {
   refreshRemote: (repoId) => AppService.RefreshRemote(repoId),
   listOperations: async () => (await AppService.ListOperations()) ?? [],
   checkTools: async () => (await AppService.CheckTools()) ?? [],
+  openURL: (url) => Browser.OpenURL(url),
+  copyText: (text) => Clipboard.SetText(text),
   getUI: () => AppService.GetUI(),
   saveUI: (ui) => AppService.SaveUI(ui),
   onScanRepository: (cb) => Events.On('scan:repository', (event) => cb(normalizeRepository(event.data))),

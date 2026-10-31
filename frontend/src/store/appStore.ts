@@ -5,8 +5,11 @@
 import { createStore, type StoreApi } from 'zustand/vanilla'
 import { Operation, type BranchInfo, type OpResult, type RemoteStatus, type Repository, type Root, type ScanIssue, type ToolDiagnostic, type UI } from '../data/model'
 import { errorOf, type DataSource, type Snapshot } from '../data/source'
+import { t } from '../i18n'
 import { registryFilters, sortKeys, type RegistryFilter, type SortKey } from '../logic/registry'
-import { branchOf } from '../logic/repo'
+import { opResultLabel } from '../logic/ops'
+import { branchOf, repoName } from '../logic/repo'
+import type { Tone } from '../theme/theme'
 import type { ThemeMode } from '../theme/tokens'
 
 export type Mode = 'registry' | 'explorer' | 'radar'
@@ -23,6 +26,20 @@ export interface Filters {
 }
 
 export const defaultFilters: Filters = { registry: 'all', host: '', sort: 'name', asc: true }
+
+/** Уведомление внизу экрана: итог операции, ошибка, копирование. */
+export interface Notice {
+  id: number
+  tone: Tone
+  text: string
+}
+
+/** Операция, ждущая подтверждения пользователя. */
+export interface PendingOp {
+  id: string
+  op: Operation
+  branch?: string
+}
 
 export interface AppState {
   sourceKind: DataSource['kind']
@@ -48,8 +65,11 @@ export interface AppState {
   running: Record<string, Operation>
   /** итог последней операции над репозиторием */
   lastOps: Record<string, OpResult>
-  /** последняя ошибка для показа пользователю */
-  error: string | null
+  /** уведомления, старые — первыми */
+  notices: Notice[]
+  /** репозиторий, открытый в панели деталей */
+  detailsId: string | null
+  pendingOp: PendingOp | null
 
   init(): Promise<void>
   /** перечитать корни и пересканировать */
@@ -62,19 +82,27 @@ export interface AppState {
   removeRoot(id: string): Promise<void>
   /** перечитать локальный статус одного репозитория и мимо кэша — его PR/MR и CI */
   refreshRepo(id: string): Promise<void>
-  /** локальные ветки репозитория; null — ошибка (она уже в error) */
+  /** локальные ветки репозитория; null — ошибка (она уже в уведомлениях) */
   loadBranches(id: string): Promise<BranchInfo[] | null>
   /**
    * Fetch / ff-pull / switch. Отпечаток — ветка и HEAD из показанного статуса
    * (D-032). Итог — в lastOps, свежий статус — в repos.
    */
   runOp(id: string, op: Operation, branch?: string): Promise<OpResult | null>
+  /** Fetch выполняется сразу, Pull и Switch — после подтверждения (D-047). */
+  requestOp(id: string, op: Operation, branch?: string): void
+  confirmOp(): Promise<void>
+  cancelOp(): void
+  openDetails(id: string | null): void
+  notify(tone: Tone, text: string): void
+  dismissNotice(id: number): void
+  copyText(text: string): Promise<void>
+  openURL(url: string): void
   setMode(mode: Mode): void
   setTheme(theme: ThemeMode): void
   setFilters(patch: Partial<Filters>): void
   setQuery(query: string): void
   select(id: string | null): void
-  clearError(): void
 }
 
 export type AppStore = StoreApi<AppState>
@@ -130,7 +158,9 @@ export function createAppStore(source: DataSource): AppStore {
   }
 
   const store = createStore<AppState>()((set, get) => {
-    const fail = (err: unknown) => set({ error: errorOf(err).message })
+    let noticeSeq = 0
+    const notify = (tone: Tone, text: string) => set({ notices: [...get().notices, { id: ++noticeSeq, tone, text }] })
+    const fail = (err: unknown) => notify('bad', errorOf(err).message)
     const persist = () => {
       source.saveUI(toUI(get())).catch(fail)
     }
@@ -155,7 +185,9 @@ export function createAppStore(source: DataSource): AppStore {
       selectedId: null,
       running: {},
       lastOps: {},
-      error: null,
+      notices: [],
+      detailsId: null,
+      pendingOp: null,
 
       // Сначала — сохранённое (UI, корни, кэш), чтобы экран появился сразу;
       // затем в фоне сканирование и диагностика CLI.
@@ -271,6 +303,8 @@ export function createAppStore(source: DataSource): AppStore {
                 : await source.switchBranch(id, branch, expect)
           const repos = get().repos
           set({ lastOps: { ...get().lastOps, [id]: res }, repos: repos[id] ? { ...repos, [id]: withKnown(res.repo) } : repos })
+          const label = opResultLabel(res)
+          notify(label.tone, `${repoName(res.repo)}: ${label.text}`)
           return res
         } catch (err) {
           fail(err)
@@ -299,7 +333,35 @@ export function createAppStore(source: DataSource): AppStore {
 
       setQuery: (query) => set({ query }),
       select: (selectedId) => set({ selectedId }),
-      clearError: () => set({ error: null }),
+      requestOp(id, op, branch) {
+        if (op === Operation.OperationFetch) void get().runOp(id, op)
+        else set({ pendingOp: { id, op, branch } })
+      },
+
+      async confirmOp() {
+        const p = get().pendingOp
+        if (!p) return
+        set({ pendingOp: null })
+        await get().runOp(p.id, p.op, p.branch)
+      },
+
+      cancelOp: () => set({ pendingOp: null }),
+      openDetails: (detailsId) => set({ detailsId }),
+      notify,
+      dismissNotice: (id) => set({ notices: get().notices.filter((n) => n.id !== id) }),
+
+      async copyText(text) {
+        try {
+          await source.copyText(text)
+          notify('good', t('notice.copied'))
+        } catch {
+          notify('warn', t('notice.copyFailed', { text }))
+        }
+      },
+
+      openURL(url) {
+        source.openURL(url).catch(fail)
+      },
     }
   })
 

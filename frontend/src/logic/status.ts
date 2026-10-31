@@ -1,8 +1,8 @@
 // Статусы репозитория для отображения. Правило: «нет данных» никогда не
 // превращается в 0 — число показывается только при Availability = ok.
 
-import { Availability, type BranchStatus, type CISummary, type PRSummary, type Repository } from '../data/model'
-import { t } from '../i18n'
+import { Availability, ErrorCode, type BranchStatus, type CISummary, type PRSummary, type Repository } from '../data/model'
+import { formatRelative, t, type MessageKey } from '../i18n'
 import type { Tone } from '../theme/theme'
 
 export interface Label {
@@ -63,13 +63,72 @@ export function integrationIssue(r: Repository): boolean {
   return bad(r.pr.availability) || bad(r.ci.availability)
 }
 
-function unknownLabel(availability: Availability): Label {
-  if (availability === Availability.AvailabilityNotSupported) return { tone: 'muted', text: t('remote.notSupported') }
-  if (availability === Availability.AvailabilityError) return { tone: 'bad', text: t('remote.error') }
-  return { tone: 'muted', text: t('remote.unavailable') }
+// Причина отсутствия данных по коду ошибки: «CLI не установлен» и «нужна
+// авторизация» требуют разных действий пользователя (A16, A17).
+const reasonKeys: Partial<Record<ErrorCode, MessageKey>> = {
+  [ErrorCode.CodeCLIMissing]: 'remote.cliMissing',
+  [ErrorCode.CodeAuthRequired]: 'remote.authRequired',
+  [ErrorCode.CodeNetworkError]: 'remote.offline',
+  [ErrorCode.CodeTimeout]: 'remote.offline',
+  [ErrorCode.CodeRateLimit]: 'remote.rateLimit',
+  [ErrorCode.CodeRepoUnresolved]: 'remote.notFound',
+  [ErrorCode.CodeNoRemote]: 'remote.noRemote',
+  [ErrorCode.CodeInvalidInput]: 'remote.noBranch',
+}
+
+function unknownLabel(s: PRSummary | CISummary): Label {
+  const key = s.error ? reasonKeys[s.error.code] : undefined
+  switch (s.availability) {
+    case Availability.AvailabilityNotSupported:
+      return { tone: 'muted', text: t(key ?? 'remote.notSupported') }
+    case Availability.AvailabilityError:
+      return { tone: 'bad', text: t(key ?? 'remote.error') }
+    case Availability.AvailabilityUnavailable:
+      return { tone: 'warn', text: t(key ?? 'remote.unavailable') }
+  }
+  return { tone: 'muted', text: t('remote.pending') }
+}
+
+/**
+ * Пояснение к PR/CI: причина ошибки и возраст данных. Число не показывается
+ * при ошибке, поэтому важно, когда был последний успешный ответ (A24).
+ */
+export function remoteDetail(s: PRSummary | CISummary, now: Date = new Date()): string {
+  const parts: string[] = []
+  if (s.availability !== Availability.AvailabilityOK) {
+    if (s.error?.message) parts.push(s.error.message)
+    if (s.lastSuccessAt) parts.push(t('remote.lastSuccess', { time: formatRelative(s.lastSuccessAt, now) }))
+  } else if (s.lastAttemptAt) {
+    parts.push(t('remote.checkedAt', { time: formatRelative(s.lastAttemptAt, now) }))
+  }
+  return parts.join(' · ')
 }
 
 const statusUnknown: Label = { tone: 'muted', text: t('status.unknown') }
+
+/** Детализация изменений: staged / unstaged / untracked отдельно (A07) и незавершённая операция. */
+export function changesDetail(r: Repository): string {
+  const w = r.worktree
+  if (!w) return ''
+  const parts = [
+    w.staged > 0 && t('changes.staged', { count: w.staged }),
+    w.unstaged > 0 && t('changes.unstaged', { count: w.unstaged }),
+    w.untracked > 0 && t('changes.untracked', { count: w.untracked }),
+    w.conflicts > 0 && t('changes.conflicts', { count: w.conflicts }),
+    w.operation && t('changes.operation', { operation: w.operation }),
+  ]
+  return parts.filter(Boolean).join(' · ')
+}
+
+/**
+ * Свежесть ahead/behind: они посчитаны по remote-tracking refs последнего
+ * fetch, а не по серверу сейчас (A09). Без upstream — пусто.
+ */
+export function syncFreshness(r: Repository, now: Date = new Date()): string {
+  const b = r.branch
+  if (!b?.upstream || b.detached) return ''
+  return b.lastFetchAt ? t('sync.fetchedAt', { time: formatRelative(b.lastFetchAt, now) }) : t('sync.neverFetched')
+}
 
 export function changesLabel(r: Repository): Label {
   const w = r.worktree
@@ -106,13 +165,16 @@ export function syncLabel(r: Repository): Label {
 
 export function prLabel(r: Repository): Label {
   const open = remoteCount(r.pr, r.pr.open)
-  if (open == null) return unknownLabel(r.pr.availability)
-  return open > 0 ? { tone: 'info', text: t('pr.open', { count: open }) } : { tone: 'muted', text: t('pr.none') }
+  if (open == null) return unknownLabel(r.pr)
+  if (open === 0) return { tone: 'muted', text: t('pr.none') }
+  const draft = r.pr.draft ?? 0
+  const text = t('pr.open', { count: open })
+  return { tone: 'info', text: draft > 0 ? `${text} · ${t('pr.draft', { count: draft })}` : text }
 }
 
 export function ciLabel(r: Repository): Label {
   const active = remoteCount(r.ci, r.ci.active)
-  if (active == null) return unknownLabel(r.ci.availability)
+  if (active == null) return unknownLabel(r.ci)
   if (active > 0) return { tone: 'info', text: t('ci.active', { count: active }) }
   if (r.ci.lastResult === 'failure') return { tone: 'bad', text: t('ci.failure') }
   if (r.ci.lastResult === 'success') return { tone: 'good', text: t('ci.success') }

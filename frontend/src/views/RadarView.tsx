@@ -3,11 +3,11 @@
 
 import { Box, Paper, Typography, useTheme } from '@mui/material'
 import { useMemo } from 'react'
+import { CIIndicator, ChangesIndicator, PRIndicator, SyncIndicator } from '../components/indicators'
 import { BranchChip, RepoIcon, StatusText } from '../components/status'
 import { t, type MessageKey } from '../i18n'
 import { groupRadar, radarGroups, type RadarGroup } from '../logic/radar'
 import { repoHost, repoName, repoNamespace } from '../logic/repo'
-import { changesLabel, ciLabel, prLabel, syncLabel } from '../logic/status'
 import { useApp } from '../store/context'
 import { useSearchedRepos } from '../store/selectors'
 import type { Tone } from '../theme/theme'
@@ -68,13 +68,13 @@ export function RadarView() {
                 </Box>
                 <BranchChip repo={r} />
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 1.5 }}>
-                  {r.error ? <StatusText label={{ tone: 'bad', text: t('repo.readError') }} /> : <StatusText label={changesLabel(r)} />}
+                  <ChangesIndicator repo={r} />
                   {r.worktree?.operation && (
                     <StatusText label={{ tone: 'bad', text: t('changes.operation', { operation: r.worktree.operation }) }} />
                   )}
-                  <StatusText label={syncLabel(r)} />
-                  <StatusText label={prLabel(r)} />
-                  <StatusText label={ciLabel(r)} />
+                  <SyncIndicator repo={r} />
+                  <PRIndicator repo={r} />
+                  <CIIndicator repo={r} />
                 </Box>
               </Paper>
             ))}

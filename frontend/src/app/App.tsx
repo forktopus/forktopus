@@ -1,6 +1,9 @@
 import AddIcon from '@mui/icons-material/Add'
-import { Alert, Box, Button, CircularProgress, CssBaseline, Snackbar, ThemeProvider, Typography, useMediaQuery } from '@mui/material'
+import { Alert, Box, Button, CircularProgress, CssBaseline, ThemeProvider, Typography, useMediaQuery } from '@mui/material'
 import { useMemo, useState } from 'react'
+import { Notifications } from '../components/Notifications'
+import { OpConfirmDialog } from '../components/OpConfirmDialog'
+import { RepoDetails } from '../components/RepoDetails'
 import { formatDateTime, t } from '../i18n'
 import { integrationIssueCount } from '../logic/registry'
 import { useApp } from '../store/context'
@@ -72,7 +75,7 @@ function Content({ onOpenRoots, onOpenTools }: { onOpenRoots(): void; onOpenTool
       {repos.length > 0 && mode === 'registry' && <RegistryView />}
       {repos.length > 0 && mode === 'explorer' && <ExplorerView />}
       {repos.length > 0 && mode === 'radar' && <RadarView />}
-      {repos.length > 0 && (
+      {repos.length > 0 && mode !== 'registry' && (
         <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mt: 3, textAlign: 'center' }}>
           {t('screen.draft')}
         </Typography>
@@ -86,8 +89,6 @@ export function App() {
   const systemDark = useMediaQuery('(prefers-color-scheme: dark)')
   const mode = choice ?? (systemDark ? 'dark' : 'light')
   const theme = useMemo(() => createAppTheme(mode), [mode])
-  const error = useApp((s) => s.error)
-  const clearError = useApp((s) => s.clearError)
   const [dialog, setDialog] = useState<'tools' | 'roots' | null>(null)
 
   return (
@@ -99,11 +100,9 @@ export function App() {
       </Box>
       <ToolsDialog open={dialog === 'tools'} onClose={() => setDialog(null)} />
       <RootsDialog open={dialog === 'roots'} onClose={() => setDialog(null)} />
-      <Snackbar open={error !== null} autoHideDuration={8000} onClose={clearError} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-        <Alert severity="error" onClose={clearError} variant="filled">
-          {error}
-        </Alert>
-      </Snackbar>
+      <RepoDetails onOpenTools={() => setDialog('tools')} />
+      <OpConfirmDialog />
+      <Notifications />
     </ThemeProvider>
   )
 }

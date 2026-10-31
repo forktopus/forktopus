@@ -16,6 +16,8 @@ export function RootsDialog({ open, onClose }: { open: boolean; onClose(): void 
   const addRoot = useApp((s) => s.addRoot)
   const pickAndAddRoot = useApp((s) => s.pickAndAddRoot)
   const removeRoot = useApp((s) => s.removeRoot)
+  const scan = useApp((s) => s.scan)
+  const scanning = useApp((s) => s.scanning)
   const issues = useApp((s) => s.issues)
   const repos = useRepos()
   const [path, setPath] = useState('')
@@ -81,6 +83,9 @@ export function RootsDialog({ open, onClose }: { open: boolean; onClose(): void 
         </Box>
       </DialogContent>
       <DialogActions>
+        <Button onClick={() => void scan()} disabled={scanning || roots.length === 0}>
+          {scanning ? t('empty.scanning') : t('action.rescan')}
+        </Button>
         <Button onClick={onClose}>{t('action.close')}</Button>
       </DialogActions>
     </Dialog>
@@ -88,17 +93,23 @@ export function RootsDialog({ open, onClose }: { open: boolean; onClose(): void 
 }
 
 function RootIssues({ issues }: { issues: ScanIssue[] }) {
+  const [all, setAll] = useState(false)
   if (issues.length === 0) return null
   return (
     <Box sx={{ mt: 0.5 }}>
       <Typography variant="caption" sx={{ color: 'warning.main', display: 'block' }}>
         {t('roots.issues', { count: issues.length })}
       </Typography>
-      {issues.slice(0, 3).map((i) => (
+      {(all ? issues : issues.slice(0, 3)).map((i) => (
         <Typography key={i.path} variant="caption" sx={{ display: 'block', color: 'text.secondary', font: `11px ${monoFontFamily}`, overflowWrap: 'anywhere' }}>
           {i.error?.message ?? i.path}
         </Typography>
       ))}
+      {issues.length > 3 && (
+        <Button size="small" onClick={() => setAll(!all)} sx={{ px: 0, minWidth: 0 }}>
+          {all ? t('roots.issuesLess') : t('roots.issuesMore', { count: issues.length - 3 })}
+        </Button>
+      )}
     </Box>
   )
 }

@@ -7,6 +7,7 @@ const locale = 'ru-RU'
 const pluralRules = new Intl.PluralRules(locale)
 const numberFormat = new Intl.NumberFormat(locale)
 const dateTimeFormat = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' })
+const timeFormat = new Intl.DateTimeFormat(locale, { timeStyle: 'short' })
 const relativeFormat = new Intl.RelativeTimeFormat(locale, { numeric: 'auto', style: 'short' })
 
 /** Строка интерфейса по ключу словаря с подстановкой параметров. */
@@ -32,6 +33,11 @@ export function formatNumber(n: number): string {
 
 export function formatDateTime(value: Date | string): string {
   return dateTimeFormat.format(new Date(value))
+}
+
+/** «14:05» */
+export function formatTime(value: Date | string): string {
+  return timeFormat.format(new Date(value))
 }
 
 const MINUTE = 60

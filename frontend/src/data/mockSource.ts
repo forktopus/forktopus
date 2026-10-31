@@ -32,6 +32,7 @@ interface MockRoot {
   ci: Availability
 }
 
+const offline = (host: string) => ({ code: ErrorCode.CodeNetworkError, message: `tea: dial tcp: lookup ${host}: no such host` })
 const authRequired = { code: ErrorCode.CodeAuthRequired, message: 'glab: нужна авторизация (glab auth login)' }
 
 const mockRoots: MockRoot[] = [
@@ -67,6 +68,8 @@ interface Scenario {
   ciActive?: number
   ciResult?: string
   ciAvailability?: Availability
+  /** PR и CI не получены: сервер недоступен, последние данные — час назад */
+  offline?: boolean
   readError?: string
 }
 
@@ -84,6 +87,7 @@ const scenarios: Scenario[] = [
   { root: 'r-gitlab', ns: 'studio', name: 'landing', branch: 'main' },
   { root: 'r-gitea', ns: 'homelab', name: 'infrastructure', branch: 'main', behind: 1, prs: 1, ciActive: 2, ciResult: 'success' },
   { root: 'r-gitea', ns: 'homelab', name: 'services', branch: 'release/1.2', prs: 2, ciResult: 'failure' },
+  { root: 'r-gitea', ns: 'homelab', name: 'media-server', branch: 'main', offline: true },
   { root: 'r-gitea', ns: 'homelab', name: 'dotfiles', branch: 'main', prs: 0, ciAvailability: Availability.AvailabilityNotSupported },
   { root: 'r-other', ns: 'tools', name: 'shell-utils', branch: 'main', unstaged: 2 },
   { root: 'r-other', ns: 'tools', name: 'scratch', branch: 'main', unborn: true, noUpstream: true, untracked: 3 },
@@ -104,18 +108,20 @@ function buildRepository(s: Scenario, index: number): Repository {
   const r = mockRoots.find((m) => m.root.id === s.root)!
   const path = `${r.root.path}/${s.dir ?? `${s.ns}/${s.name}`}`
   const lastAttemptAt = minutesAgo(4)
-  const prOk = r.pr === Availability.AvailabilityOK
-  const ciAvailability = s.ciAvailability ?? r.ci
+  const prAvailability = s.offline ? Availability.AvailabilityError : r.pr
+  const prOk = prAvailability === Availability.AvailabilityOK
+  const ciAvailability = s.offline ? Availability.AvailabilityError : (s.ciAvailability ?? r.ci)
   const ciOk = ciAvailability === Availability.AvailabilityOK
-  const sourceError = r.pr === Availability.AvailabilityUnavailable ? authRequired : null
+  const sourceError = s.offline ? offline(r.host) : r.pr === Availability.AvailabilityUnavailable ? authRequired : null
+  const lastSuccessAt = s.offline ? minutesAgo(65) : lastAttemptAt
 
   const pr: PRSummary = {
-    availability: r.pr,
+    availability: prAvailability,
     open: prOk ? (s.prs ?? 0) : null,
     draft: prOk ? (s.drafts ?? 0) : null,
     url: prOk ? `https://${r.host}/${s.ns}/${s.name}/pulls` : undefined,
     error: sourceError,
-    lastSuccessAt: prOk ? lastAttemptAt : null,
+    lastSuccessAt: prOk || s.offline ? lastSuccessAt : null,
     lastAttemptAt,
   }
   const ci: CISummary = {
@@ -123,7 +129,7 @@ function buildRepository(s: Scenario, index: number): Repository {
     active: ciOk ? (s.ciActive ?? 0) : null,
     lastResult: ciOk ? s.ciResult : undefined,
     error: sourceError,
-    lastSuccessAt: ciOk ? lastAttemptAt : null,
+    lastSuccessAt: ciOk || s.offline ? lastSuccessAt : null,
     lastAttemptAt,
   }
   const upstream = s.branch && !s.detached && !s.noUpstream ? `origin/${s.branch}` : undefined
@@ -388,6 +394,10 @@ export function createMockSource({ delayMs = 250 }: MockOptions = {}): DataSourc
     refreshRemote: (repoId) => remoteStatus(repoId, true),
     listOperations: () => reply([...opLog].reverse()),
     checkTools: () => reply(mockTools),
+    async openURL(url) {
+      window.open(url, '_blank', 'noopener')
+    },
+    copyText: (text) => navigator.clipboard.writeText(text),
     getUI: () => reply(ui),
     async saveUI(next) {
       ui = structuredClone(next)

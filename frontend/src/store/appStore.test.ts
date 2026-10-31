@@ -109,7 +109,7 @@ describe('store', () => {
     const branches = await store.getState().loadBranches(id)
     expect(branches?.filter((b) => b.current)).toHaveLength(1)
     expect(await store.getState().loadBranches('nope')).toBeNull()
-    expect(store.getState().error).toMatch(/не найден/)
+    expect(store.getState().notices.at(-1)?.text).toMatch(/не найден/)
   })
 
   it('операции: итог и свежий статус, блокировка с причиной, одна операция за раз (D-031)', async () => {
@@ -136,7 +136,7 @@ describe('store', () => {
   it('ошибка источника попадает в error, а не роняет store', async () => {
     const store = createAppStore(createMockSource({ delayMs: 0 }))
     expect(await store.getState().addRoot('relative/path')).toBe(false)
-    expect(store.getState().error).toMatch(/абсолютный путь/)
+    expect(store.getState().notices.at(-1)).toMatchObject({ tone: 'bad', text: expect.stringMatching(/абсолютный путь/) })
   })
 
   it('серверные данные из события попадают в репозиторий только для его текущей ветки', async () => {
@@ -177,6 +177,32 @@ describe('store', () => {
     await store.getState().refreshRepo(id)
     expect(forced).toBe(1)
     expect(store.getState().repos[id].pr.lastAttemptAt).toBeTruthy()
+  })
+
+  it('Pull и Switch ждут подтверждения, Fetch — нет; итог приходит уведомлением (D-047)', async () => {
+    const store = createAppStore(createMockSource({ delayMs: 0 }))
+    await store.getState().init()
+    const repo = Object.values(store.getState().repos).find((r) => r.branch?.behind && !hasLocal(r))!
+
+    store.getState().requestOp(repo.id, Operation.OperationPull)
+    expect(store.getState().pendingOp).toEqual({ id: repo.id, op: Operation.OperationPull, branch: undefined })
+    expect(store.getState().running[repo.id]).toBeUndefined()
+    store.getState().cancelOp()
+    expect(store.getState().pendingOp).toBeNull()
+
+    store.getState().requestOp(repo.id, Operation.OperationPull)
+    await store.getState().confirmOp()
+    expect(store.getState().pendingOp).toBeNull()
+    expect(store.getState().lastOps[repo.id]?.op).toBe(Operation.OperationPull)
+    const notice = store.getState().notices.at(-1)!
+    expect(notice.tone).toBe('good')
+    expect(notice.text).toMatch(/Pull: готово/)
+    store.getState().dismissNotice(notice.id)
+    expect(store.getState().notices).not.toContainEqual(notice)
+
+    store.getState().requestOp(repo.id, Operation.OperationFetch)
+    expect(store.getState().pendingOp).toBeNull()
+    expect(store.getState().running[repo.id]).toBe(Operation.OperationFetch)
   })
 
   it('удаление корня убирает его репозитории из списка', async () => {

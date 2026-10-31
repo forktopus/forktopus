@@ -5,13 +5,14 @@
 import RefreshIcon from '@mui/icons-material/Refresh'
 import { Box, Button, ButtonBase, CircularProgress, IconButton, Paper, Tooltip, Typography, useTheme } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
-import { BranchChip, RepoIcon, StatusText } from '../components/status'
+import { CIIndicator, ChangesIndicator, PRIndicator, SyncIndicator } from '../components/indicators'
+import { BranchChip, RepoIcon, StatusText, caption } from '../components/status'
 import { Operation, type BranchInfo, type Repository } from '../data/model'
 import { formatRelative, t } from '../i18n'
 import { buildTree } from '../logic/explorer'
 import { opName, opResultLabel } from '../logic/ops'
 import { repoName } from '../logic/repo'
-import { changesLabel, ciLabel, prLabel, syncLabel } from '../logic/status'
+import { syncLabel } from '../logic/status'
 import { useApp } from '../store/context'
 import { useSearchedRepos } from '../store/selectors'
 import { monoFontFamily } from '../theme/tokens'
@@ -20,7 +21,7 @@ import { EmptyText } from './EmptyText'
 /** Локальные ветки выбранного репозитория; перечитываются при смене выбора и после обновления статуса. */
 function Branches({ repo }: { repo: Repository }) {
   const loadBranches = useApp((s) => s.loadBranches)
-  const runOp = useApp((s) => s.runOp)
+  const requestOp = useApp((s) => s.requestOp)
   const busy = useApp((s) => Boolean(s.running[repo.id]))
   const [branches, setBranches] = useState<BranchInfo[] | null>(null)
   useEffect(() => {
@@ -54,7 +55,7 @@ function Branches({ repo }: { repo: Repository }) {
           <Box>
             {!b.current && (
               // Причину блокировки (dirty, ветка в другом worktree…) сообщает backend до вызова Git.
-              <Button size="small" variant="text" disabled={busy} onClick={() => void runOp(repo.id, Operation.OperationSwitch, b.name)}>
+              <Button size="small" variant="text" disabled={busy} onClick={() => requestOp(repo.id, Operation.OperationSwitch, b.name)}>
                 {t('action.switch')}
               </Button>
             )}
@@ -65,8 +66,6 @@ function Branches({ repo }: { repo: Repository }) {
   )
 }
 
-const caption = { fontSize: 10, fontWeight: 800, letterSpacing: '1.3px', textTransform: 'uppercase', color: 'text.secondary' } as const
-
 export function ExplorerView() {
   const theme = useTheme()
   const roots = useApp((s) => s.roots)
@@ -76,7 +75,7 @@ export function ExplorerView() {
   const tree = useMemo(() => buildTree(roots, repos), [roots, repos])
   const selected = repos.find((r) => r.id === selectedId) ?? null
   const refreshRepo = useApp((s) => s.refreshRepo)
-  const runOp = useApp((s) => s.runOp)
+  const requestOp = useApp((s) => s.requestOp)
   const running = useApp((s) => (selectedId ? s.running[selectedId] : undefined))
   const lastOp = useApp((s) => (selectedId ? s.lastOps[selectedId] : undefined))
   const [refreshing, setRefreshing] = useState(false)
@@ -146,10 +145,10 @@ export function ExplorerView() {
               {selected.path}
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mt: 2 }}>
-              <Button size="small" variant="outlined" disabled={Boolean(running)} onClick={() => void runOp(selected.id, Operation.OperationFetch)}>
+              <Button size="small" variant="outlined" disabled={Boolean(running)} onClick={() => requestOp(selected.id, Operation.OperationFetch)}>
                 {t('action.fetch')}
               </Button>
-              <Button size="small" variant="outlined" disabled={Boolean(running)} onClick={() => void runOp(selected.id, Operation.OperationPull)}>
+              <Button size="small" variant="outlined" disabled={Boolean(running)} onClick={() => requestOp(selected.id, Operation.OperationPull)}>
                 {t('action.pull')}
               </Button>
               {running ? (
@@ -167,9 +166,9 @@ export function ExplorerView() {
                 <BranchChip repo={selected} />
               </Box>
               <Typography sx={caption}>{t('column.changes')}</Typography>
-              <StatusText label={changesLabel(selected)} />
+              <ChangesIndicator repo={selected} mode="inline" />
               <Typography sx={caption}>{t('column.sync')}</Typography>
-              <StatusText label={syncLabel(selected)} />
+              <SyncIndicator repo={selected} mode="inline" />
               {/* A09: ahead/behind — по последнему fetch, а не живое состояние сервера. */}
               <Typography sx={caption}>{t('explorer.fetch')}</Typography>
               <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>
@@ -180,9 +179,9 @@ export function ExplorerView() {
               <Typography sx={caption}>{t('explorer.status')}</Typography>
               <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{t('explorer.statusAt', { time: formatRelative(selected.updatedAt) })}</Typography>
               <Typography sx={caption}>{t('column.pr')}</Typography>
-              <StatusText label={prLabel(selected)} />
+              <PRIndicator repo={selected} mode="inline" />
               <Typography sx={caption}>{t('column.ci')}</Typography>
-              <StatusText label={ciLabel(selected)} />
+              <CIIndicator repo={selected} mode="inline" />
             </Box>
             <Typography sx={{ ...caption, mt: 3.5, mb: 1.5 }}>{t('explorer.branches')}</Typography>
             <Branches repo={selected} />

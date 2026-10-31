@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { Availability } from '../data/model'
+import { Availability, ErrorCode } from '../data/model'
 import { repo, unavailable } from '../test/fixtures'
-import { changesLabel, ciLabel, hasChanges, integrationIssue, isBehind, prLabel, remoteCount, syncLabel, syncState } from './status'
+import { changesDetail, changesLabel, ciLabel, hasChanges, integrationIssue, isBehind, prLabel, remoteCount, remoteDetail, syncFreshness, syncLabel, syncState } from './status'
 
 describe('unavailable не отображается как 0', () => {
   it('PR/CI без данных — «нет данных», а не 0', () => {
@@ -27,6 +27,45 @@ describe('unavailable не отображается как 0', () => {
     const r = repo({ pr: { open: 0 } })
     expect(remoteCount(r.pr, r.pr.open)).toBe(0)
     expect(prLabel(r).text).toBe('нет открытых')
+  })
+})
+
+describe('причина отсутствия данных PR/CI', () => {
+  const err = (availability: Availability, code: ErrorCode) => ({ availability, open: null, active: null, error: { code, message: `${code}: подробности` } })
+
+  it('нет CLI (A16), нет авторизации (A17), не поддерживается (A18) различаются', () => {
+    expect(prLabel(repo({ pr: err(Availability.AvailabilityUnavailable, ErrorCode.CodeCLIMissing) }))).toEqual({ tone: 'warn', text: 'CLI не установлен' })
+    expect(ciLabel(repo({ ci: err(Availability.AvailabilityUnavailable, ErrorCode.CodeAuthRequired) })).text).toBe('нужна авторизация')
+    expect(ciLabel(repo({ ci: err(Availability.AvailabilityNotSupported, ErrorCode.CodeUnsupported) })).text).toBe('не поддерживается')
+    expect(prLabel(repo({ pr: err(Availability.AvailabilityNotSupported, ErrorCode.CodeNoRemote) })).text).toBe('нет remote')
+    expect(prLabel(repo({ pr: err(Availability.AvailabilityError, ErrorCode.CodeNetworkError) }))).toEqual({ tone: 'bad', text: 'нет связи с сервером' })
+    expect(prLabel(repo({ pr: err(Availability.AvailabilityError, ErrorCode.CodeOther) })).text).toBe('ошибка источника')
+    expect(prLabel(repo({ pr: { availability: Availability.$zero, open: null } })).text).toBe('ещё не запрошено')
+  })
+
+  it('пояснение: сообщение ошибки и возраст последних данных (A24)', () => {
+    const now = new Date('2026-10-31T12:00:00Z')
+    const pr = { ...err(Availability.AvailabilityError, ErrorCode.CodeNetworkError), lastSuccessAt: '2026-10-31T10:00:00Z' }
+    expect(remoteDetail(pr, now)).toMatch(/^NETWORK_ERROR: подробности · последние данные 2\sч\.?\sназад$/) // Intl ставит неразрывный пробел
+    expect(remoteDetail({ availability: Availability.AvailabilityOK, lastAttemptAt: '2026-10-31T11:55:00Z' }, now)).toMatch(/^проверено 5\sмин\.?\sназад$/)
+  })
+
+  it('черновики видны в подписи PR (A19)', () => {
+    expect(prLabel(repo({ pr: { open: 2, draft: 1 } })).text).toBe('2 открыто · 1 черновик')
+  })
+})
+
+describe('детализация', () => {
+  it('staged, unstaged и untracked — отдельно (A07)', () => {
+    expect(changesDetail(repo({ worktree: { staged: 1, unstaged: 1, untracked: 1 } }))).toBe('staged 1 · unstaged 1 · untracked 1')
+    expect(changesDetail(repo())).toBe('')
+  })
+
+  it('ahead/behind подписаны временем fetch, а не «сейчас на сервере» (A09)', () => {
+    const now = new Date('2026-10-31T12:00:00Z')
+    expect(syncFreshness(repo({ branch: { lastFetchAt: '2026-10-29T12:00:00Z' } }), now)).toBe('по fetch позавчера')
+    expect(syncFreshness(repo(), now)).toBe('fetch ещё не выполнялся')
+    expect(syncFreshness(repo({ branch: { upstream: undefined } }), now)).toBe('')
   })
 })
 

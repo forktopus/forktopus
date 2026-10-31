@@ -56,6 +56,9 @@ export interface DataSource {
   /** Журнал последних операций, новые — первыми. */
   listOperations(): Promise<OpRecord[]>
   checkTools(): Promise<ToolDiagnostic[]>
+  /** Открыть ссылку (PR, CI) в браузере системы. */
+  openURL(url: string): Promise<void>
+  copyText(text: string): Promise<void>
   getUI(): Promise<UI>
   saveUI(ui: UI): Promise<void>
   /** Подписка на найденные во время сканирования репозитории; возвращает отписку. */

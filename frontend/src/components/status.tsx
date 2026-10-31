@@ -5,6 +5,9 @@ import { repoProvider } from '../logic/repo'
 import { toneColor } from '../theme/theme'
 import { monoFontFamily } from '../theme/tokens'
 
+/** Подпись поля: мелкие заглавные. */
+export const caption = { fontSize: 10, fontWeight: 800, letterSpacing: '1.3px', textTransform: 'uppercase', color: 'text.secondary' } as const
+
 /** Точка и подпись в цвете тона статуса. wrap — для длинных сообщений (причина блокировки операции). */
 export function StatusText({ label, wrap = false }: { label: Label; wrap?: boolean }) {
   const theme = useTheme()
