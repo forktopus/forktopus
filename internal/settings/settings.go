@@ -24,7 +24,8 @@ type Settings struct {
 	// Remotes — явно выбранный remote для репозитория: ID репозитория → имя remote.
 	// В .git/config ничего не записывается.
 	Remotes map[string]string `json:"remotes,omitempty"`
-	// HostProviders — тип провайдера для self-hosted хостов: host[:port] → провайдер.
+	// HostProviders — тип провайдера для self-hosted хостов: host[:port] или host → провайдер.
+	// Главнее известных хостов и логинов CLI (D-042).
 	HostProviders map[string]model.Provider `json:"hostProviders,omitempty"`
 	// ScanSkipDirs — имена каталогов, в которые сканер не заходит; пусто —
 	// scan.DefaultSkipDirs.

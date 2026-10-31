@@ -1,0 +1,1 @@
+{"hosts":{"github.com":[{"state":"error","error":"Get \"https://api.github.com/\": dial tcp: lookup api.github.com on 127.0.0.53:53: dial udp 127.0.0.53:53: connect: network is unreachable","active":true,"host":"github.com","login":"OWNER","tokenSource":"keyring","gitProtocol":"ssh"}]}}

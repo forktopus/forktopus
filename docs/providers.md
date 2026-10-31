@@ -21,7 +21,9 @@ gh auth status --hostname github.com
 | Неверный `GH_TOKEN` | 1 | `X Failed to log in to github.com using token (GH_TOKEN)` … `The token in GH_TOKEN is invalid.` |
 | **Нет сети** | 1 | `X Failed to log in to github.com account … (keyring)` … `The token in keyring is invalid.` |
 
-Важно: без сети `auth status` сообщает «токен недействителен», хотя токен в порядке. Отличить «нет авторизации» от «нет сети» по одному `auth status` нельзя — классифицировать по ошибке рабочей команды (ниже). Вывод `auth status` содержит логин, маскированный токен и scopes — в лог и UI целиком не выводить.
+Важно: без сети `auth status` сообщает «токен недействителен», хотя токен в порядке. Отличить «нет авторизации» от «нет сети» по одному `auth status` нельзя — классифицировать по ошибке рабочей команды (ниже).
+
+С `--json hosts` (`gh auth status --hostname HOST --json hosts`) код всегда 0, а различать можно: нет логина — `{"hosts":{}}`; есть — `hosts[HOST][]` с `state` (`success` / `error`), `active` и текстом `error`; без сети в `error` — сетевая ошибка (`dial tcp: lookup …`), а не «token invalid». Адаптер берёт этот вариант. Вывод `auth status` содержит логин, маскированный токен и scopes — в лог и UI целиком не выводить.
 
 ### Открытые PR, где ветка — источник
 
