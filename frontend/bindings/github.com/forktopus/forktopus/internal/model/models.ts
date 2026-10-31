@@ -507,6 +507,15 @@ export interface ScanResult {
 }
 
 /**
+ * SkipDirs — имена каталогов, в которые сканер не заходит (D-024): действующий
+ * список и значения по умолчанию (для кнопки сброса).
+ */
+export interface SkipDirs {
+    "dirs": string[] | null;
+    "defaults": string[] | null;
+}
+
+/**
  * ToolDiagnostic — результат проверки внешней утилиты (git, gh, glab, tea).
  */
 export interface ToolDiagnostic {

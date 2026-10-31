@@ -27,6 +27,7 @@ export type {
     Root,
     ScanIssue,
     ScanResult,
+    SkipDirs,
     ToolDiagnostic,
     WorktreeStatus
 } from "./models.js";

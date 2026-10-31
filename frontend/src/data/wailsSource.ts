@@ -1,12 +1,14 @@
 import { Browser, Clipboard, Events } from '@wailsio/runtime'
 import { AppService } from '../../bindings/github.com/forktopus/forktopus/internal/app'
-import { normalizeOpResult, normalizeRepository, normalizeSnapshot, type DataSource } from './source'
+import { normalizeOpResult, normalizeRepository, normalizeSkipDirs, normalizeSnapshot, type DataSource } from './source'
 
 export const wailsSource: DataSource = {
   kind: 'wails',
   listRoots: async () => (await AppService.ListRoots()) ?? [],
   addRoot: (path) => AppService.AddRoot(path),
   removeRoot: (id) => AppService.RemoveRoot(id),
+  getSkipDirs: async () => normalizeSkipDirs(await AppService.GetSkipDirs()),
+  setSkipDirs: async (dirs) => normalizeSkipDirs(await AppService.SetSkipDirs(dirs)),
   pickFolder: () => AppService.PickFolder(),
   listRepositories: async () => normalizeSnapshot(await AppService.ListRepositories()),
   scanRoots: async () => normalizeSnapshot(await AppService.ScanRoots()),

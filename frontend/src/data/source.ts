@@ -19,6 +19,8 @@ import {
 type Lists = { repositories: Repository[]; issues: ScanIssue[] }
 /** RepositorySnapshot без null-массивов. */
 export type Snapshot = Omit<RepositorySnapshot, keyof Lists> & Lists
+/** SkipDirs из Go без null-массивов. */
+export type SkipList = { dirs: string[]; defaults: string[] }
 /** ScanResult без null-массивов. */
 export type ScanOutcome = Omit<ScanResult, keyof Lists> & Lists
 
@@ -31,6 +33,10 @@ export interface DataSource {
   listRoots(): Promise<Root[]>
   addRoot(path: string): Promise<Root>
   removeRoot(id: string): Promise<void>
+  /** Имена каталогов, в которые сканер не заходит, и значения по умолчанию (D-024). */
+  getSkipDirs(): Promise<SkipList>
+  /** Сохраняет список пропусков; пустой — значения по умолчанию. Действует со следующего сканирования. */
+  setSkipDirs(dirs: string[]): Promise<SkipList>
   /** Системный диалог выбора папки; '' — пользователь его закрыл. */
   pickFolder(): Promise<string>
   /** Известные репозитории; до первого сканирования — кэш прошлого запуска (stale). */
@@ -78,6 +84,10 @@ export function errorOf(err: unknown): ModelError {
   }
   const message = err instanceof globalThis.Error ? err.message : String(err)
   return { code: ErrorCode.CodeOther, message }
+}
+
+export function normalizeSkipDirs(d: { dirs: string[] | null; defaults: string[] | null }): SkipList {
+  return { dirs: d.dirs ?? [], defaults: d.defaults ?? [] }
 }
 
 export function normalizeOpResult(r: OpResult): OpResult {

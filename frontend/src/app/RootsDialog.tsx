@@ -1,8 +1,9 @@
 import CloseIcon from '@mui/icons-material/Close'
 import FolderOpenIcon from '@mui/icons-material/FolderOpen'
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, TextField, Tooltip, Typography, useTheme } from '@mui/material'
-import { useState, type FormEvent } from 'react'
+import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, TextField, Tooltip, Typography, useTheme } from '@mui/material'
+import { useEffect, useState, type FormEvent } from 'react'
 import type { ScanIssue } from '../data/model'
+import type { SkipList } from '../data/source'
 import { t } from '../i18n'
 import { useApp } from '../store/context'
 import { useRepos } from '../store/selectors'
@@ -81,6 +82,7 @@ export function RootsDialog({ open, onClose }: { open: boolean; onClose(): void 
             {t('action.add')}
           </Button>
         </Box>
+        <SkipDirsEditor />
       </DialogContent>
       <DialogActions>
         <Button onClick={() => void scan()} disabled={scanning || roots.length === 0}>
@@ -90,6 +92,102 @@ export function RootsDialog({ open, onClose }: { open: boolean; onClose(): void 
       </DialogActions>
     </Dialog>
   )
+}
+
+// Список пропусков правится черновиком: «Применить» сохраняет его в настройках
+// Go и пересканирует корни (D-024). Пустой список Go сбрасывает к умолчанию.
+function SkipDirsEditor() {
+  const theme = useTheme()
+  const loadSkipDirs = useApp((s) => s.loadSkipDirs)
+  const saveSkipDirs = useApp((s) => s.saveSkipDirs)
+  const scanning = useApp((s) => s.scanning)
+  const [saved, setSaved] = useState<SkipList | null>(null)
+  const [draft, setDraft] = useState<string[]>([])
+  const [name, setName] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    void loadSkipDirs().then((d) => {
+      if (alive && d) {
+        setSaved(d)
+        setDraft(d.dirs)
+      }
+    })
+    return () => {
+      alive = false
+    }
+  }, [loadSkipDirs])
+
+  if (!saved) return null
+  const clean = name.trim()
+  const invalid = isSkipPath(clean)
+  const add = (e: FormEvent) => {
+    e.preventDefault()
+    if (!clean || invalid) return
+    if (!draft.includes(clean)) setDraft([...draft, clean])
+    setName('')
+  }
+  const apply = async () => {
+    setBusy(true)
+    const d = await saveSkipDirs(draft)
+    if (d) {
+      setSaved(d)
+      setDraft(d.dirs)
+    }
+    setBusy(false)
+  }
+
+  return (
+    <Box sx={{ mt: 4, pt: 2, borderTop: `1px solid ${theme.app.line}` }}>
+      <Typography variant="subtitle2">{t('roots.skipTitle')}</Typography>
+      <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1.5 }}>
+        {t('roots.skipDescription')}
+      </Typography>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1.5 }}>
+        {draft.map((d) => (
+          <Chip key={d} size="small" label={d} onDelete={() => setDraft(draft.filter((x) => x !== d))} sx={{ font: `12px ${monoFontFamily}` }} />
+        ))}
+        {draft.length === 0 && (
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            {t('roots.skipEmpty')}
+          </Typography>
+        )}
+      </Box>
+      <Box component="form" onSubmit={add} sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+        <TextField
+          fullWidth
+          size="small"
+          label={t('roots.skipLabel')}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          error={invalid}
+          helperText={invalid ? t('roots.skipInvalid') : undefined}
+          autoComplete="off"
+        />
+        <Button type="submit" variant="outlined" disabled={!clean || invalid} sx={{ whiteSpace: 'nowrap' }}>
+          {t('action.add')}
+        </Button>
+      </Box>
+      <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
+        <Button onClick={() => setDraft(saved.defaults)} disabled={sameSet(draft, saved.defaults)}>
+          {t('roots.skipReset')}
+        </Button>
+        <Button variant="contained" onClick={() => void apply()} disabled={busy || scanning || draft.join('\n') === saved.dirs.join('\n')} sx={{ ml: 'auto' }}>
+          {t('roots.skipApply')}
+        </Button>
+      </Box>
+    </Box>
+  )
+}
+
+/** Сканер сравнивает имя каталога целиком: путь и «.»/«..» не подходят. */
+function isSkipPath(name: string) {
+  return name === '.' || name === '..' || /[/\\]/.test(name)
+}
+
+function sameSet(a: string[], b: string[]) {
+  return a.length === b.length && a.every((x) => b.includes(x))
 }
 
 function RootIssues({ issues }: { issues: ScanIssue[] }) {

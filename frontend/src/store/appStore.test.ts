@@ -296,6 +296,27 @@ describe('store', () => {
     expect(broken.getState().notices.at(-1)?.text).toBe('нет связи')
   })
 
+  it('список пропусков: сохранение пересканирует, ошибка ввода — уведомление, пустой — умолчание', async () => {
+    const source = createMockSource({ delayMs: 0 })
+    const store = createAppStore(source)
+    await store.getState().init()
+    const initial = await store.getState().loadSkipDirs()
+    expect(initial?.dirs).toEqual(initial?.defaults)
+
+    let scans = 0
+    const counting = createAppStore({ ...source, scanRoots: () => (scans++, source.scanRoots()) })
+    const saved = await counting.getState().saveSkipDirs([' archive ', 'node_modules', 'archive'])
+    expect(saved?.dirs).toEqual(['archive', 'node_modules'])
+    expect(scans).toBe(1)
+
+    expect(await counting.getState().saveSkipDirs(['a/b'])).toBeNull()
+    expect(counting.getState().notices.at(-1)?.text).toMatch(/имя каталога/)
+    expect(scans).toBe(1)
+    expect((await counting.getState().loadSkipDirs())?.dirs).toEqual(['archive', 'node_modules'])
+
+    expect((await counting.getState().saveSkipDirs([]))?.dirs).toEqual(initial?.defaults)
+  })
+
   it('удаление корня убирает его репозитории из списка', async () => {
     const store = createAppStore(createMockSource({ delayMs: 0 }))
     await store.getState().init()

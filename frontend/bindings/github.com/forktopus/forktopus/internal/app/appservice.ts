@@ -84,6 +84,14 @@ export function GetRepo(id: string): $CancellablePromise<model$0.Repository> {
 }
 
 /**
+ * GetSkipDirs возвращает имена каталогов, в которые сканер не заходит, и
+ * значения по умолчанию.
+ */
+export function GetSkipDirs(): $CancellablePromise<model$0.SkipDirs> {
+    return $Call.ByID(4112210128);
+}
+
+/**
  * GetUI возвращает сохранённое состояние интерфейса: режим, тему, фильтры.
  */
 export function GetUI(): $CancellablePromise<settings$0.UI> {
@@ -166,6 +174,15 @@ export function ScanRoots(): $CancellablePromise<model$0.ScanResult> {
  */
 export function SelectRemote(repoID: string, remote: string): $CancellablePromise<void> {
     return $Call.ByID(2837537355, repoID, remote);
+}
+
+/**
+ * SetSkipDirs сохраняет список имён каталогов, в которые сканер не заходит
+ * (D-024). Пустой список или совпадающий с умолчанием сбрасывает настройку.
+ * Новый список действует со следующего сканирования.
+ */
+export function SetSkipDirs(dirs: string[] | null): $CancellablePromise<model$0.SkipDirs> {
+    return $Call.ByID(81368004, dirs);
 }
 
 /**

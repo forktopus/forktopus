@@ -304,6 +304,9 @@ export function createMockSource({ delayMs = 250, scenario = 'default' }: MockOp
   let roots = noRoots ? [] : [...mockRoots.map((m) => m.root), emptyRoot]
   let repos = noRoots ? [] : linkParents(scenarios.map(buildRepository)).map((r) => withScenario(r, scenario))
   const tools = toolsFor(scenario)
+  // Как scan.DefaultSkipDirs в Go; демо-скан список не учитывает.
+  const defaultSkipDirs = ['node_modules', 'vendor', '.venv', 'venv', '__pycache__', 'dist', 'build', 'target', '.cache']
+  let skipDirs: string[] = []
   let issues = noRoots ? [] : mockIssues
   // Как будто кэш прошлого запуска: два часа назад, не подтверждён сканированием.
   let snapshot: Snapshot = { repositories: repos, issues, scannedAt: minutesAgo(120), stale: true }
@@ -397,6 +400,19 @@ export function createMockSource({ delayMs = 250, scenario = 'default' }: MockOp
       issues = issues.filter((i) => i.rootId !== id)
       snapshot = { ...snapshot, repositories: repos, issues }
       return reply(undefined)
+    },
+    getSkipDirs: () => reply({ dirs: skipDirs.length ? skipDirs : defaultSkipDirs, defaults: defaultSkipDirs }),
+    async setSkipDirs(dirs) {
+      const clean: string[] = []
+      for (const raw of dirs) {
+        const d = raw.trim()
+        if (!d || clean.includes(d)) continue
+        if (d === '.' || d === '..' || /[/\\]/.test(d)) throw invalidInput(`нужно имя каталога, а не путь: "${d}"`)
+        clean.push(d)
+      }
+      const same = clean.length === defaultSkipDirs.length && clean.every((d) => defaultSkipDirs.includes(d))
+      skipDirs = same ? [] : clean
+      return reply({ dirs: skipDirs.length ? skipDirs : defaultSkipDirs, defaults: defaultSkipDirs })
     },
     pickFolder: () => reply(`/srv/repos/demo-folder-${++picked}`),
     listRepositories: () => reply(snapshot),

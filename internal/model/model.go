@@ -241,6 +241,13 @@ type Diagnostics struct {
 	Report string `json:"report"`
 }
 
+// SkipDirs — имена каталогов, в которые сканер не заходит (D-024): действующий
+// список и значения по умолчанию (для кнопки сброса).
+type SkipDirs struct {
+	Dirs     []string `json:"dirs"`
+	Defaults []string `json:"defaults"`
+}
+
 // PathID — устойчивый идентификатор для пути файловой системы.
 func PathID(path string) string {
 	sum := sha256.Sum256([]byte(filepath.Clean(path)))

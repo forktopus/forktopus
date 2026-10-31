@@ -79,6 +79,13 @@ export const ru = {
   'roots.issues': { one: '{count} каталог не удалось просмотреть', few: '{count} каталога не удалось просмотреть', many: '{count} каталогов не удалось просмотреть' },
   'roots.issuesMore': 'ещё {count}',
   'roots.issuesLess': 'свернуть',
+  'roots.skipTitle': 'Пропускаемые каталоги',
+  'roots.skipDescription': 'Сканер не заходит в каталоги с такими именами на любой глубине: в них зависимости и сборки, а не ваши репозитории.',
+  'roots.skipLabel': 'Имя каталога',
+  'roots.skipInvalid': 'Нужно имя каталога, а не путь',
+  'roots.skipEmpty': 'Список пуст — после применения вернутся значения по умолчанию.',
+  'roots.skipReset': 'Сбросить по умолчанию',
+  'roots.skipApply': 'Применить и пересканировать',
   'roots.repoCount': { one: '{count} репозиторий', few: '{count} репозитория', many: '{count} репозиториев' },
 
   'empty.noRoots.title': 'Добавьте первую корневую папку',

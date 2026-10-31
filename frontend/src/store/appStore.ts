@@ -4,7 +4,7 @@
 
 import { createStore, type StoreApi } from 'zustand/vanilla'
 import { Operation, type BranchInfo, type Diagnostics, type OpResult, type RemoteStatus, type Repository, type Root, type ScanIssue, type ToolDiagnostic, type UI } from '../data/model'
-import { errorOf, type DataSource, type Snapshot } from '../data/source'
+import { errorOf, type DataSource, type SkipList, type Snapshot } from '../data/source'
 import { t } from '../i18n'
 import { registryFilters, sortKeys, type RegistryFilter, type SortKey } from '../logic/registry'
 import { opResultLabel } from '../logic/ops'
@@ -92,6 +92,10 @@ export interface AppState {
   /** отчёт диагностики; null — ошибка (она уже в уведомлениях) */
   loadDiagnostics(): Promise<Diagnostics | null>
   addRoot(path: string): Promise<boolean>
+  /** каталоги, в которые сканер не заходит (D-024); null — ошибка (она уже в уведомлениях) */
+  loadSkipDirs(): Promise<SkipList | null>
+  /** сохраняет список пропусков и пересканирует; null — ошибка */
+  saveSkipDirs(dirs: string[]): Promise<SkipList | null>
   /** системный диалог выбора папки + addRoot; false — диалог закрыт или ошибка */
   pickAndAddRoot(): Promise<boolean>
   removeRoot(id: string): Promise<void>
@@ -311,6 +315,27 @@ export function createAppStore(source: DataSource): AppStore {
           fail(err)
           return null
         }
+      },
+
+      async loadSkipDirs() {
+        try {
+          return await source.getSkipDirs()
+        } catch (err) {
+          fail(err)
+          return null
+        }
+      },
+
+      async saveSkipDirs(dirs) {
+        let saved: SkipList
+        try {
+          saved = await source.setSkipDirs(dirs)
+        } catch (err) {
+          fail(err)
+          return null
+        }
+        void get().scan()
+        return saved
       },
 
       async addRoot(path) {
