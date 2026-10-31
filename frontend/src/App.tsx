@@ -1,120 +1,77 @@
-import { useState, useEffect, useRef } from 'react'
-import {Events, WML} from "@wailsio/runtime";
-import {GreetService} from "../bindings/github.com/forktopus/forktopus";
+// Временный экран для проверки связки Go ↔ фронтенд (этап 04).
+// Заменяется полноценным интерфейсом на этапе 09.
+import { useEffect, useState } from 'react'
+import { AppService } from '../bindings/github.com/forktopus/forktopus/internal/app'
+import type { Root, ToolDiagnostic } from '../bindings/github.com/forktopus/forktopus/internal/model'
 
-// Show the actual Wails version this project was generated against.
-const wailsVersion = "v3.0.0";
+// Сообщение из ошибки Wails: ошибки ядра приходят в cause как { code, message }.
+function errorText(err: unknown): string {
+  const cause = (err as { cause?: { code?: string; message?: string } })?.cause
+  if (cause?.code) {
+    return `${cause.code}: ${cause.message ?? ''}`
+  }
+  return err instanceof Error ? err.message : String(err)
+}
 
 function App() {
-  const [name, setName] = useState<string>('');
-  const [time, setTime] = useState<string>('Listening for Time event...');
+  const [tools, setTools] = useState<ToolDiagnostic[]>([])
+  const [roots, setRoots] = useState<Root[]>([])
+  const [path, setPath] = useState('')
+  const [error, setError] = useState('')
 
-  const titleNameRef = useRef<HTMLSpanElement | null>(null);
-  const toastRef = useRef<HTMLDivElement | null>(null);
-  const resultRef = useRef<HTMLSpanElement | null>(null);
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-
-  // Crossfade the framework word in the heading ("Wails + React") to the name
-  // the user entered ("Wails + <name>"): the old word fades out while the new one
-  // fades in over the same spot.
-  const swapTitleName = (name: string) => {
-    const titleNameElement = titleNameRef.current;
-    if (!titleNameElement) {
-      return;
-    }
-    const current = titleNameElement.querySelector('.title-name-text:not(.is-outgoing)');
-    if (!current || current.textContent === name) {
-      return;
-    }
-    const incoming = document.createElement('span');
-    incoming.className = 'title-name-text is-entering';
-    incoming.textContent = name;
-    current.classList.add('is-outgoing');
-    titleNameElement.appendChild(incoming);
-    // Force a reflow so the transitions run from the starting state.
-    void incoming.offsetWidth;
-    incoming.classList.remove('is-entering');
-    current.classList.add('is-leaving');
-    current.addEventListener('transitionend', () => current.remove(), {once: true});
-  };
-
-  // Pop the toast with the message Go returned, then auto-dismiss it.
-  const showToast = (message: string) => {
-    if (resultRef.current) {
-      resultRef.current.innerText = message;
-    }
-    if (toastRef.current) {
-      toastRef.current.classList.add('is-visible');
-    }
-    clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => {
-      if (toastRef.current) {
-        toastRef.current.classList.remove('is-visible');
-      }
-    }, 4000);
-  };
-
-  const doGreet = () => {
-    let n = name || 'anonymous';
-    swapTitleName(n);
-    GreetService.Greet(n).then(showToast).catch(console.error);
-  };
+  const refreshRoots = () =>
+    AppService.ListRoots().then((r) => setRoots(r ?? [])).catch((e) => setError(errorText(e)))
 
   useEffect(() => {
-    Events.On('time', (timeValue: any) => {
-      // On a narrow screen the full RFC1123 stamp is too wide for the footer, so
-      // show just the clock time there (matching the CSS breakpoint).
-      const full = timeValue.data;
-      const compact = (full.match(/\d{1,2}:\d{2}:\d{2}/) || [full])[0];
-      setTime(window.matchMedia('(max-width: 640px)').matches ? compact : full);
-    });
-    // Reload WML so it picks up the wml tags
-    WML.Reload();
-  }, []);
+    AppService.CheckTools().then((t) => setTools(t ?? [])).catch((e) => setError(errorText(e)))
+    refreshRoots()
+  }, [])
+
+  const addRoot = () => {
+    setError('')
+    AppService.AddRoot(path.trim())
+      .then(() => {
+        setPath('')
+        return refreshRoots()
+      })
+      .catch((e) => setError(errorText(e)))
+  }
+
+  const removeRoot = (id: string) => {
+    setError('')
+    AppService.RemoveRoot(id).then(refreshRoots).catch((e) => setError(errorText(e)))
+  }
 
   return (
-    <>
-      <main className="container">
-        <header className="brand">
-          <a className="brand-mark" data-wml-openURL="https://v3.wails.io" aria-label="Wails website">
-            <img src="/wails.png" className="brand-logo" alt="Wails logo"/>
-          </a>
-          <a className="brand-badge" data-wml-openURL="https://reactjs.org" aria-label="React">
-            <img src="/react.svg" alt="React logo"/>
-          </a>
-        </header>
+    <main style={{ padding: 32, fontFamily: 'sans-serif', color: '#e9edf5' }}>
+      <h1>Forktopus</h1>
 
-        <h1 className="title"><span className="title-accent">Wails +</span> <span className="title-name" ref={titleNameRef}><span className="title-name-text">React</span></span></h1>
-        <p className="subtitle">Build beautiful cross-platform apps with Go and React.</p>
+      <h2>Утилиты</h2>
+      <ul>
+        {tools.map((t) => (
+          <li key={t.name}>
+            {t.name}: {t.availability} {t.version} {t.error?.message}
+          </li>
+        ))}
+      </ul>
 
-        <div className="greet">
-          <div className="input-box">
-            <svg className="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            <input aria-label="input" className="input" value={name} onChange={(e) => setName(e.target.value)} type="text" placeholder="Your name" autoComplete="off"/>
-            <button aria-label="greet-btn" className="btn" onClick={doGreet}>Greet
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-            </button>
-          </div>
-        </div>
-      </main>
-
-      <hr className="footer-divider"/>
-      <footer className="footer">
-        <span className="footer-version"><span>{wailsVersion}</span></span>
-        <span className="footer-time">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          <span>{time}</span>
-        </span>
-        <a className="footer-docs" data-wml-openURL="https://v3.wails.io" aria-label="Wails documentation">Docs
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
-        </a>
-      </footer>
-
-      <div className="toast" ref={toastRef} role="status" aria-live="polite">
-        <span className="toast-label">From Go</span>
-        <span aria-label="result" className="toast-msg" ref={resultRef}></span>
-      </div>
-    </>
+      <h2>Корневые папки</h2>
+      <ul>
+        {roots.map((r) => (
+          <li key={r.id}>
+            {r.path} <button onClick={() => removeRoot(r.id)}>Убрать</button>
+          </li>
+        ))}
+      </ul>
+      <input
+        value={path}
+        onChange={(e) => setPath(e.target.value)}
+        placeholder="Абсолютный путь к папке"
+        style={{ width: 480 }}
+      />{' '}
+      <button onClick={addRoot}>Добавить</button>
+      {error && <p style={{ color: '#fb788a' }}>{error}</p>}
+    </main>
   )
 }
 

@@ -1,0 +1,138 @@
+// Package settings хранит пользовательские настройки Forktopus в JSON-файле
+// в конфигурационном каталоге ОС. Секреты и токены здесь не хранятся.
+package settings
+
+import (
+	"encoding/json"
+	"errors"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"sync"
+
+	"github.com/forktopus/forktopus/internal/model"
+)
+
+// FormatVersion — версия формата файла настроек.
+const FormatVersion = 1
+
+// Settings — содержимое файла настроек.
+type Settings struct {
+	Version int          `json:"version"`
+	Roots   []model.Root `json:"roots"`
+	// Remotes — явно выбранный remote для репозитория: ID репозитория → имя remote.
+	// В .git/config ничего не записывается.
+	Remotes map[string]string `json:"remotes,omitempty"`
+	// HostProviders — тип провайдера для self-hosted хостов: host[:port] → провайдер.
+	HostProviders map[string]model.Provider `json:"hostProviders,omitempty"`
+	UI            UI                        `json:"ui"`
+}
+
+// UI — состояние интерфейса, которое переживает перезапуск.
+type UI struct {
+	Theme   string            `json:"theme,omitempty"` // light | dark; пусто — как в системе
+	Mode    string            `json:"mode,omitempty"`  // registry | explorer | radar
+	Filters map[string]string `json:"filters,omitempty"`
+}
+
+// Default возвращает настройки первого запуска.
+func Default() Settings {
+	return Settings{Version: FormatVersion, Roots: []model.Root{}}
+}
+
+// DefaultPath — путь к файлу настроек в конфигурационном каталоге ОС.
+func DefaultPath() (string, error) {
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "forktopus", "config.json"), nil
+}
+
+// Store читает и атомарно записывает файл настроек.
+type Store struct {
+	path string
+	mu   sync.Mutex
+	// broken — файл не удалось разобрать; запись запрещена, чтобы не затереть
+	// данные пользователя, пока он сам не разберётся с файлом.
+	broken bool
+}
+
+// NewStore создаёт хранилище для файла path.
+func NewStore(path string) *Store {
+	return &Store{path: path}
+}
+
+// Path — путь к файлу настроек.
+func (s *Store) Path() string { return s.path }
+
+// Load читает настройки. Отсутствующий файл — не ошибка: возвращаются значения
+// по умолчанию. При повреждённом файле возвращаются значения по умолчанию
+// вместе с ошибкой, а последующие Save отклоняются.
+func (s *Store) Load() (Settings, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	data, err := os.ReadFile(s.path)
+	if errors.Is(err, fs.ErrNotExist) {
+		s.broken = false
+		return Default(), nil
+	}
+	if err != nil {
+		return Default(), model.Errorf(model.CodeOther, "не удалось прочитать настройки %s: %v", s.path, err)
+	}
+
+	cfg := Default()
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		s.broken = true
+		return Default(), model.Errorf(model.CodeOther, "файл настроек %s повреждён и не будет перезаписан: %v", s.path, err)
+	}
+	if cfg.Roots == nil {
+		cfg.Roots = []model.Root{}
+	}
+	s.broken = false
+	return cfg, nil
+}
+
+// Save атомарно записывает настройки: временный файл в том же каталоге,
+// затем rename. Каталог создаётся с правами 0700, файл — 0600.
+func (s *Store) Save(cfg Settings) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.broken {
+		return model.Errorf(model.CodeOther, "файл настроек %s повреждён; исправьте или удалите его вручную", s.path)
+	}
+	cfg.Version = FormatVersion
+
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return err
+	}
+	dir := filepath.Dir(s.path)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(dir, ".config-*.json")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name()) // после успешного rename файла уже нет
+
+	if err := tmp.Chmod(0o600); err != nil {
+		tmp.Close()
+		return err
+	}
+	if _, err := tmp.Write(append(data, '\n')); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Sync(); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmp.Name(), s.path)
+}
