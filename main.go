@@ -3,10 +3,14 @@ package main
 import (
 	"embed"
 	"log"
+	"log/slog"
+	"os"
+	"runtime"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"github.com/forktopus/forktopus/internal/app"
+	"github.com/forktopus/forktopus/internal/applog"
 	"github.com/forktopus/forktopus/internal/repocache"
 	"github.com/forktopus/forktopus/internal/runner"
 	"github.com/forktopus/forktopus/internal/settings"
@@ -17,7 +21,28 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+// setupLog направляет лог (и стандартный log) в файл в каталоге кэша;
+// если файл недоступен — в stderr.
+func setupLog() *slog.Logger {
+	var logger *slog.Logger
+	path, err := applog.DefaultPath()
+	if err == nil {
+		var f *applog.File
+		if f, err = applog.Open(path, applog.MaxSize); err == nil {
+			logger, _ = applog.New(f)
+		}
+	}
+	if logger == nil {
+		logger, _ = applog.New(os.Stderr)
+		logger.Warn("лог в файл отключён", "error", err)
+	}
+	slog.SetDefault(logger)
+	logger.Info("запуск", "os", runtime.GOOS, "arch", runtime.GOARCH)
+	return logger
+}
+
 func main() {
+	logger := setupLog()
 	configPath, err := settings.DefaultPath()
 	if err != nil {
 		log.Fatalf("не удалось определить каталог настроек: %v", err)
@@ -26,7 +51,7 @@ func main() {
 	if err != nil {
 		log.Printf("кэш репозиториев отключён: %v", err)
 	}
-	service, err := app.NewAppService(settings.NewStore(configPath), runner.Exec{}, cachePath)
+	service, err := app.NewAppService(settings.NewStore(configPath), runner.Logged(runner.Exec{}, logger), cachePath)
 	if err != nil {
 		// Приложение продолжает работу со значениями по умолчанию.
 		log.Printf("настройки: %v", err)
