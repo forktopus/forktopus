@@ -34,6 +34,21 @@ export function CheckTools(): $CancellablePromise<model$0.ToolDiagnostic[] | nul
 }
 
 /**
+ * GetBranches читает локальные ветки репозитория: upstream, ahead/behind и
+ * ветки, занятые другими рабочими копиями.
+ */
+export function GetBranches(id: string): $CancellablePromise<model$0.BranchInfo[] | null> {
+    return $Call.ByID(3547239135, id);
+}
+
+/**
+ * GetRepo возвращает репозиторий из текущего списка (без обращения к Git).
+ */
+export function GetRepo(id: string): $CancellablePromise<model$0.Repository> {
+    return $Call.ByID(1256431935, id);
+}
+
+/**
  * GetUI возвращает сохранённое состояние интерфейса: режим, тему, фильтры.
  */
 export function GetUI(): $CancellablePromise<settings$0.UI> {
@@ -61,6 +76,14 @@ export function ListRoots(): $CancellablePromise<model$0.Root[] | null> {
  */
 export function PickFolder(): $CancellablePromise<string> {
     return $Call.ByID(239958924);
+}
+
+/**
+ * RefreshRepo перечитывает локальный статус одного репозитория и обновляет
+ * его в списке и кэше.
+ */
+export function RefreshRepo(id: string): $CancellablePromise<model$0.Repository> {
+    return $Call.ByID(4225707712, id);
 }
 
 /**

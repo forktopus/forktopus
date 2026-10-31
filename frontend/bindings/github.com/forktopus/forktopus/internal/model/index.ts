@@ -9,6 +9,7 @@ export {
 } from "./models.js";
 
 export type {
+    BranchInfo,
     BranchStatus,
     CISummary,
     Error,

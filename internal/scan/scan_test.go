@@ -95,6 +95,37 @@ func TestScanFindsRepositories(t *testing.T) {
 		if r.ID != model.PathID(r.Path) || r.RootID != "r" || r.Error != nil || r.ParentID != "" {
 			t.Errorf("запись %+v", r)
 		}
+		// Статус читается вместе со сканированием.
+		if r.Branch == nil || r.Branch.Name != "main" || r.Worktree == nil || r.UpdatedAt.IsZero() {
+			t.Errorf("статус не прочитан: %+v", r)
+		}
+	}
+}
+
+func TestRefresh(t *testing.T) {
+	root := tempRoot(t)
+	repo := gittest.Init(t, mkdir(t, root, "repo"))
+	res := run(t, []model.Root{{ID: "r", Path: root}}, Options{})
+	found := res.Repositories[0]
+	found.ParentID, found.Nesting = "parent", model.NestingNested
+
+	gittest.WriteFile(t, repo, "new.txt", "x\n")
+	gittest.Git(t, repo, "remote", "add", "origin", "https://gitlab.com/g/repo.git")
+	got := Refresh(context.Background(), runner.Exec{}, found, Options{})
+	if got.Worktree == nil || got.Worktree.Untracked != 1 || got.Remote != "origin" || !got.UpdatedAt.After(found.UpdatedAt) {
+		t.Errorf("после обновления: %+v", got)
+	}
+	if got.ID != found.ID || got.ParentID != "parent" || got.Nesting != model.NestingNested {
+		t.Errorf("расположение и связи должны сохраниться: %+v", got)
+	}
+
+	// Каталог исчез — ошибка у записи, статус сброшен, а не оставлен старым.
+	if err := os.RemoveAll(repo); err != nil {
+		t.Fatal(err)
+	}
+	gone := Refresh(context.Background(), runner.Exec{}, got, Options{})
+	if gone.Error == nil || gone.Branch != nil || gone.Worktree != nil {
+		t.Errorf("исчезнувший репозиторий: %+v", gone)
 	}
 }
 

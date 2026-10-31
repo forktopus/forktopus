@@ -108,6 +108,8 @@ export const ru = {
 
   'sync.detached': 'detached HEAD',
   'sync.noUpstream': 'нет upstream',
+  'sync.unborn': 'нет коммитов',
+  'sync.gone': 'upstream удалён',
   'sync.inSync': 'Совпадает',
   'sync.ahead': '↑ {ahead} впереди',
   'sync.behind': '↓ {behind} отстаёт',
@@ -139,4 +141,14 @@ export const ru = {
 
   'explorer.noRemote': 'Без remote',
   'explorer.pickRepo': 'Выберите репозиторий в дереве слева.',
+  'explorer.fetch': 'Remote-tracking',
+  'explorer.fetchedAt': 'по данным fetch {time}',
+  'explorer.neverFetched': 'время последнего fetch неизвестно',
+  'explorer.status': 'Статус',
+  'explorer.statusAt': 'прочитан {time}',
+  'explorer.branches': 'Локальные ветки',
+  'explorer.noBranches': 'Веток пока нет.',
+  'explorer.branchCurrent': 'текущая',
+  'explorer.branchBusy': 'занята в {path}',
+  'action.refreshRepo': 'Перечитать статус',
 } satisfies Record<string, string | PluralForms>

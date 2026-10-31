@@ -32,6 +32,37 @@ export enum Availability {
 };
 
 /**
+ * BranchInfo — локальная ветка репозитория.
+ */
+export interface BranchInfo {
+    "name": string;
+
+    /**
+     * checked out в этой рабочей копии
+     */
+    "current": boolean;
+    "headSha": string;
+
+    /**
+     * дата коммита на вершине ветки
+     */
+    "commitAt"?: string | null;
+    "upstream"?: string;
+
+    /**
+     * UpstreamGone, Ahead, Behind — как в BranchStatus.
+     */
+    "upstreamGone"?: boolean;
+    "ahead"?: number | null;
+    "behind"?: number | null;
+
+    /**
+     * WorktreePath — другая рабочая копия, где ветка сейчас checked out; переключиться на неё здесь нельзя (A15).
+     */
+    "worktreePath"?: string;
+}
+
+/**
  * BranchStatus — состояние текущей ветки.
  */
 export interface BranchStatus {
@@ -41,7 +72,17 @@ export interface BranchStatus {
     "name"?: string;
     "detached": boolean;
     "headSha"?: string;
+
+    /**
+     * Unborn — в репозитории ещё нет коммитов: ветка названа, но HEAD никуда не указывает.
+     */
+    "unborn"?: boolean;
     "upstream"?: string;
+
+    /**
+     * UpstreamGone — upstream настроен, но его remote-tracking ветки нет (удалена на сервере и подрезана fetch --prune).
+     */
+    "upstreamGone"?: boolean;
 
     /**
      * Ahead/Behind считаются по локальным remote-tracking refs; nil — нет upstream.
@@ -50,7 +91,8 @@ export interface BranchStatus {
     "behind"?: number | null;
 
     /**
-     * LastFetchAt — время последнего fetch; nil — fetch не выполнялся.
+     * LastFetchAt — время последнего fetch (mtime FETCH_HEAD); nil — неизвестно: fetch не выполнялся
+     * или репозиторий только склонирован (clone не пишет FETCH_HEAD).
      */
     "lastFetchAt"?: string | null;
 }
@@ -272,6 +314,10 @@ export interface Repository {
      * Error — сбой чтения именно этого репозитория; остальные поля могут быть неполными.
      */
     "error"?: Error | null;
+
+    /**
+     * UpdatedAt — когда локальный статус прочитан («обновлено …»).
+     */
     "updatedAt": string;
 }
 
@@ -333,7 +379,7 @@ export interface WorktreeStatus {
     "conflicts": number;
 
     /**
-     * Operation — незавершённая операция Git: merge, rebase, cherry-pick, revert; пусто, если нет.
+     * Operation — незавершённая операция Git: merge, rebase, am, cherry-pick, revert; пусто, если нет.
      */
     "operation"?: string;
 }

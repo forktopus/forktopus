@@ -53,12 +53,32 @@ type BranchStatus struct {
 	Name     string `json:"name,omitempty"` // пусто при detached HEAD
 	Detached bool   `json:"detached"`
 	HeadSHA  string `json:"headSha,omitempty"`
+	// Unborn — в репозитории ещё нет коммитов: ветка названа, но HEAD никуда не указывает.
+	Unborn   bool   `json:"unborn,omitempty"`
 	Upstream string `json:"upstream,omitempty"`
+	// UpstreamGone — upstream настроен, но его remote-tracking ветки нет (удалена на сервере и подрезана fetch --prune).
+	UpstreamGone bool `json:"upstreamGone,omitempty"`
 	// Ahead/Behind считаются по локальным remote-tracking refs; nil — нет upstream.
 	Ahead  *int `json:"ahead,omitempty"`
 	Behind *int `json:"behind,omitempty"`
-	// LastFetchAt — время последнего fetch; nil — fetch не выполнялся.
+	// LastFetchAt — время последнего fetch (mtime FETCH_HEAD); nil — неизвестно: fetch не выполнялся
+	// или репозиторий только склонирован (clone не пишет FETCH_HEAD).
 	LastFetchAt *time.Time `json:"lastFetchAt,omitempty"`
+}
+
+// BranchInfo — локальная ветка репозитория.
+type BranchInfo struct {
+	Name     string     `json:"name"`
+	Current  bool       `json:"current"` // checked out в этой рабочей копии
+	HeadSHA  string     `json:"headSha"`
+	CommitAt *time.Time `json:"commitAt,omitempty"` // дата коммита на вершине ветки
+	Upstream string     `json:"upstream,omitempty"`
+	// UpstreamGone, Ahead, Behind — как в BranchStatus.
+	UpstreamGone bool `json:"upstreamGone,omitempty"`
+	Ahead        *int `json:"ahead,omitempty"`
+	Behind       *int `json:"behind,omitempty"`
+	// WorktreePath — другая рабочая копия, где ветка сейчас checked out; переключиться на неё здесь нельзя (A15).
+	WorktreePath string `json:"worktreePath,omitempty"`
 }
 
 // WorktreeStatus — локальные изменения рабочей копии.
@@ -67,7 +87,7 @@ type WorktreeStatus struct {
 	Unstaged  int `json:"unstaged"`
 	Untracked int `json:"untracked"`
 	Conflicts int `json:"conflicts"`
-	// Operation — незавершённая операция Git: merge, rebase, cherry-pick, revert; пусто, если нет.
+	// Operation — незавершённая операция Git: merge, rebase, am, cherry-pick, revert; пусто, если нет.
 	Operation string `json:"operation,omitempty"`
 }
 
@@ -118,7 +138,8 @@ type Repository struct {
 	PR       PRSummary       `json:"pr"`
 	CI       CISummary       `json:"ci"`
 	// Error — сбой чтения именно этого репозитория; остальные поля могут быть неполными.
-	Error     *Error    `json:"error,omitempty"`
+	Error *Error `json:"error,omitempty"`
+	// UpdatedAt — когда локальный статус прочитан («обновлено …»).
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 

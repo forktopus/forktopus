@@ -3,6 +3,7 @@
 // ошибка чтения. Git и CLI не вызываются, данные вымышлены.
 
 import {
+  type BranchInfo,
   Availability,
   ErrorCode,
   Nesting,
@@ -44,6 +45,10 @@ interface Scenario {
   branch?: string
   detached?: boolean
   noUpstream?: boolean
+  /** upstream настроен, но ветка на сервере удалена */
+  upstreamGone?: boolean
+  /** репозиторий без коммитов */
+  unborn?: boolean
   ahead?: number
   behind?: number
   staged?: number
@@ -75,6 +80,8 @@ const scenarios: Scenario[] = [
   { root: 'r-gitea', ns: 'homelab', name: 'services', branch: 'release/1.2', prs: 2, ciResult: 'failure' },
   { root: 'r-gitea', ns: 'homelab', name: 'dotfiles', branch: 'main', prs: 0, ciAvailability: Availability.AvailabilityNotSupported },
   { root: 'r-other', ns: 'tools', name: 'shell-utils', branch: 'main', unstaged: 2 },
+  { root: 'r-other', ns: 'tools', name: 'scratch', branch: 'main', unborn: true, noUpstream: true, untracked: 3 },
+  { root: 'r-gitlab', ns: 'studio', name: 'promo-2025', branch: 'promo/autumn', upstreamGone: true },
   { root: 'r-other', ns: 'tools', name: 'firmware', detached: true },
   { root: 'r-other', ns: 'archive', name: 'legacy-site', readError: 'нет доступа к каталогу: permission denied' },
 ]
@@ -114,6 +121,7 @@ function buildRepository(s: Scenario, index: number): Repository {
     lastAttemptAt,
   }
   const upstream = s.branch && !s.detached && !s.noUpstream ? `origin/${s.branch}` : undefined
+  const tracked = upstream && !s.upstreamGone
 
   return {
     id: idOf(path),
@@ -134,10 +142,12 @@ function buildRepository(s: Scenario, index: number): Repository {
     branch: {
       name: s.detached ? undefined : s.branch,
       detached: Boolean(s.detached),
-      headSha: s.readError ? undefined : (index * 2654435761 >>> 0).toString(16).padStart(8, '0') + 'c0ffee',
+      headSha: s.readError || s.unborn ? undefined : (index * 2654435761 >>> 0).toString(16).padStart(8, '0') + 'c0ffee',
+      unborn: s.unborn,
       upstream,
-      ahead: upstream ? (s.ahead ?? 0) : null,
-      behind: upstream ? (s.behind ?? 0) : null,
+      upstreamGone: s.upstreamGone,
+      ahead: tracked ? (s.ahead ?? 0) : null,
+      behind: tracked ? (s.behind ?? 0) : null,
       lastFetchAt: upstream ? minutesAgo(15 + index * 7) : null,
     },
     worktree: {
@@ -160,6 +170,23 @@ const mockTools: ToolDiagnostic[] = [
   { name: 'glab', availability: Availability.AvailabilityUnavailable, path: '/usr/local/bin/glab', version: '1.126.0', error: authRequired },
   { name: 'tea', availability: Availability.AvailabilityOK, path: '/usr/local/bin/tea', version: '0.16.0' },
 ]
+
+/** Ветки для демо: текущая, main и у каждого третьего — ветка, занятая соседним worktree. */
+function mockBranches(repo: Repository, index: number): BranchInfo[] {
+  const b = repo.branch
+  if (!b || b.unborn) return []
+  const list: BranchInfo[] = []
+  if (b.name) {
+    list.push({ name: b.name, current: true, headSha: b.headSha ?? '', commitAt: minutesAgo(30 + index * 11), upstream: b.upstream, upstreamGone: b.upstreamGone, ahead: b.ahead, behind: b.behind })
+  }
+  if (b.name !== 'main') {
+    list.push({ name: 'main', current: false, headSha: 'a1b2c3d4e5f6', commitAt: minutesAgo(60 * 24 * (index + 1)), upstream: 'origin/main', ahead: 0, behind: index % 2 })
+  }
+  if (index % 3 === 0) {
+    list.push({ name: 'wip/experiment', current: false, headSha: '0badc0de1234', commitAt: minutesAgo(60 * 5), worktreePath: `${repo.path}-wip` })
+  }
+  return list
+}
 
 function invalidInput(message: string): Error {
   return Object.assign(new Error(message), { cause: { code: ErrorCode.CodeInvalidInput, message } })
@@ -249,6 +276,17 @@ export function createMockSource({ delayMs = 250 }: MockOptions = {}): DataSourc
       if (!repo) throw invalidInput(`репозиторий "${repoId}" не найден`)
       repo.remote = remote || 'origin'
       return reply(undefined)
+    },
+    async getBranches(repoId) {
+      const index = repos.findIndex((r) => r.id === repoId)
+      if (index < 0) throw invalidInput(`репозиторий "${repoId}" не найден`)
+      return reply(mockBranches(repos[index], index))
+    },
+    async refreshRepo(repoId) {
+      const repo = repos.find((r) => r.id === repoId)
+      if (!repo) throw invalidInput(`репозиторий "${repoId}" не найден`)
+      repo.updatedAt = new Date().toISOString()
+      return reply(repo)
     },
     checkTools: () => reply(mockTools),
     getUI: () => reply(ui),

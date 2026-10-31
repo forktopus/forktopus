@@ -84,6 +84,56 @@ func TestScanRootsAndCache(t *testing.T) {
 	}
 }
 
+func TestRepoStatusMethods(t *testing.T) {
+	ctx := context.Background()
+	s, _ := newService(t)
+	root := t.TempDir()
+	repo := gittest.Init(t, filepath.Join(root, "repo"))
+	other := gittest.Init(t, filepath.Join(root, "other"))
+	gittest.Git(t, repo, "branch", "-q", "feature")
+	if _, err := s.AddRoot(root); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.ScanRoots(ctx); err != nil {
+		t.Fatal(err)
+	}
+	id := model.PathID(mustEval(t, repo))
+
+	got, err := s.GetRepo(id)
+	if err != nil || got.Worktree == nil || got.Worktree.Untracked != 0 {
+		t.Fatalf("GetRepo: %+v err=%v", got, err)
+	}
+	if _, err := s.GetRepo("nope"); model.CodeOf(err) != model.CodeInvalidInput {
+		t.Errorf("неизвестный репозиторий: %v", err)
+	}
+
+	branches, err := s.GetBranches(ctx, id)
+	if err != nil || len(branches) != 2 {
+		t.Fatalf("GetBranches: %+v err=%v", branches, err)
+	}
+
+	gittest.WriteFile(t, repo, "new.txt", "x\n")
+	refreshed, err := s.RefreshRepo(ctx, id)
+	if err != nil || refreshed.Worktree.Untracked != 1 {
+		t.Fatalf("RefreshRepo: %+v err=%v", refreshed, err)
+	}
+	if again, _ := s.GetRepo(id); again.Worktree.Untracked != 1 {
+		t.Errorf("обновление не попало в список: %+v", again.Worktree)
+	}
+
+	// Сбой одного репозитория — ошибка только у него (06.7).
+	if err := os.RemoveAll(other); err != nil {
+		t.Fatal(err)
+	}
+	broken, err := s.RefreshRepo(ctx, model.PathID(filepath.Join(mustEval(t, root), "other")))
+	if err != nil || broken.Error == nil {
+		t.Errorf("исчезнувший репозиторий: %+v err=%v", broken, err)
+	}
+	if ok, _ := s.GetRepo(id); ok.Error != nil {
+		t.Errorf("ошибка задела соседний репозиторий: %+v", ok)
+	}
+}
+
 func TestBrokenCacheIgnored(t *testing.T) {
 	dir := t.TempDir()
 	cachePath := filepath.Join(dir, "repositories.json")

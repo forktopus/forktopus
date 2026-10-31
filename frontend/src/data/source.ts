@@ -1,4 +1,5 @@
 import {
+  type BranchInfo,
   ErrorCode,
   type Error as ModelError,
   type Repository,
@@ -32,6 +33,10 @@ export interface DataSource {
   /** Сканирует корни; найденные по ходу репозитории приходят в onScanRepository. */
   scanRoots(): Promise<ScanOutcome>
   selectRemote(repoId: string, remote: string): Promise<void>
+  /** Локальные ветки: upstream, ahead/behind, занятые другими worktree. */
+  getBranches(repoId: string): Promise<BranchInfo[]>
+  /** Перечитывает локальный статус одного репозитория. */
+  refreshRepo(repoId: string): Promise<Repository>
   checkTools(): Promise<ToolDiagnostic[]>
   getUI(): Promise<UI>
   saveUI(ui: UI): Promise<void>

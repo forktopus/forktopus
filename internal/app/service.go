@@ -171,12 +171,8 @@ func (s *AppService) ScanRoots(ctx context.Context) (model.ScanResult, error) {
 
 	s.mu.Lock()
 	roots := slices.Clone(s.cfg.Roots)
-	opts := scan.Options{
-		SkipDirs:      s.cfg.ScanSkipDirs,
-		Remotes:       s.cfg.Remotes,
-		HostProviders: s.cfg.HostProviders,
-		OnRepository:  func(r model.Repository) { emit(EventScanRepository, r) },
-	}
+	opts := s.scanOptionsLocked()
+	opts.OnRepository = func(r model.Repository) { emit(EventScanRepository, r) }
 	s.mu.Unlock()
 
 	res, err := scan.Run(ctx, s.runner, roots, opts)
@@ -199,14 +195,81 @@ func (s *AppService) ScanRoots(ctx context.Context) (model.ScanResult, error) {
 	return res, nil
 }
 
+func (s *AppService) scanOptionsLocked() scan.Options {
+	return scan.Options{SkipDirs: s.cfg.ScanSkipDirs, Remotes: s.cfg.Remotes, HostProviders: s.cfg.HostProviders}
+}
+
+// findLocked возвращает индекс репозитория в снимке или ошибку INVALID_INPUT.
+func (s *AppService) findLocked(id string) (int, error) {
+	i := slices.IndexFunc(s.snapshot.Repositories, func(r model.Repository) bool { return r.ID == id })
+	if i < 0 {
+		return -1, model.Errorf(model.CodeInvalidInput, "репозиторий %q не найден", id)
+	}
+	return i, nil
+}
+
+// GetRepo возвращает репозиторий из текущего списка (без обращения к Git).
+func (s *AppService) GetRepo(id string) (model.Repository, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	i, err := s.findLocked(id)
+	if err != nil {
+		return model.Repository{}, err
+	}
+	return s.snapshot.Repositories[i], nil
+}
+
+// GetBranches читает локальные ветки репозитория: upstream, ahead/behind и
+// ветки, занятые другими рабочими копиями.
+func (s *AppService) GetBranches(ctx context.Context, id string) ([]model.BranchInfo, error) {
+	repo, err := s.GetRepo(id)
+	if err != nil {
+		return nil, err
+	}
+	branches, err := gitlocal.Branches(ctx, s.runner, repo.Path)
+	if err != nil {
+		return nil, model.AsError(err)
+	}
+	return branches, nil
+}
+
+// RefreshRepo перечитывает локальный статус одного репозитория и обновляет
+// его в списке и кэше.
+func (s *AppService) RefreshRepo(ctx context.Context, id string) (model.Repository, error) {
+	s.mu.Lock()
+	i, err := s.findLocked(id)
+	if err != nil {
+		s.mu.Unlock()
+		return model.Repository{}, err
+	}
+	repo, opts := s.snapshot.Repositories[i], s.scanOptionsLocked()
+	s.mu.Unlock()
+
+	repo = scan.Refresh(ctx, s.runner, repo, opts)
+	if err := ctx.Err(); err != nil {
+		return model.Repository{}, model.Errorf(model.CodeOpCancelled, "обновление отменено")
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	// Пока читали, репозиторий мог исчезнуть из списка (удалён корень, пересканирование).
+	if i, err := s.findLocked(id); err == nil {
+		repos := slices.Clone(s.snapshot.Repositories)
+		repos[i] = repo
+		s.snapshot.Repositories = repos
+		s.saveCacheLocked()
+	}
+	return repo, nil
+}
+
 // SelectRemote запоминает remote, по которому определяется сервер
 // репозитория. Пустое имя сбрасывает выбор. В .git/config ничего не пишется.
 func (s *AppService) SelectRemote(repoID, remote string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	i := slices.IndexFunc(s.snapshot.Repositories, func(r model.Repository) bool { return r.ID == repoID })
-	if i < 0 {
-		return model.Errorf(model.CodeInvalidInput, "репозиторий %q не найден", repoID)
+	i, err := s.findLocked(repoID)
+	if err != nil {
+		return err
 	}
 	repo := s.snapshot.Repositories[i]
 	if remote != "" && !slices.ContainsFunc(repo.Remotes, func(r model.RemoteInfo) bool { return r.Name == remote }) {

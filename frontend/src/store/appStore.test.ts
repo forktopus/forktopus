@@ -96,6 +96,19 @@ describe('store', () => {
     expect(store.getState().roots).toHaveLength(before + 1)
   })
 
+  it('перечитывает статус одного репозитория и отдаёт его ветки', async () => {
+    const store = createAppStore(createMockSource({ delayMs: 0 }))
+    await store.getState().init()
+    const [id, before] = Object.entries(store.getState().repos)[0]
+    await new Promise((r) => setTimeout(r, 5))
+    await store.getState().refreshRepo(id)
+    expect(store.getState().repos[id].updatedAt > before.updatedAt).toBe(true)
+    const branches = await store.getState().loadBranches(id)
+    expect(branches?.filter((b) => b.current)).toHaveLength(1)
+    expect(await store.getState().loadBranches('nope')).toBeNull()
+    expect(store.getState().error).toMatch(/не найден/)
+  })
+
   it('ошибка источника попадает в error, а не роняет store', async () => {
     const store = createAppStore(createMockSource({ delayMs: 0 }))
     expect(await store.getState().addRoot('relative/path')).toBe(false)

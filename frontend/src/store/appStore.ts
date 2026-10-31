@@ -3,7 +3,7 @@
 // фильтры сохраняются в настройках Go через DataSource.saveUI.
 
 import { createStore, type StoreApi } from 'zustand/vanilla'
-import type { Repository, Root, ScanIssue, ToolDiagnostic, UI } from '../data/model'
+import type { BranchInfo, Repository, Root, ScanIssue, ToolDiagnostic, UI } from '../data/model'
 import { errorOf, type DataSource, type Snapshot } from '../data/source'
 import { registryFilters, sortKeys, type RegistryFilter, type SortKey } from '../logic/registry'
 import type { ThemeMode } from '../theme/tokens'
@@ -55,6 +55,10 @@ export interface AppState {
   /** системный диалог выбора папки + addRoot; false — диалог закрыт или ошибка */
   pickAndAddRoot(): Promise<boolean>
   removeRoot(id: string): Promise<void>
+  /** перечитать локальный статус одного репозитория */
+  refreshRepo(id: string): Promise<void>
+  /** локальные ветки репозитория; null — ошибка (она уже в error) */
+  loadBranches(id: string): Promise<BranchInfo[] | null>
   setMode(mode: Mode): void
   setTheme(theme: ThemeMode): void
   setFilters(patch: Partial<Filters>): void
@@ -198,6 +202,25 @@ export function createAppStore(source: DataSource): AppStore {
           applySnapshot(snap)
         } catch (err) {
           fail(err)
+        }
+      },
+
+      async refreshRepo(id) {
+        try {
+          const repo = await source.refreshRepo(id)
+          const prev = get().repos[id]
+          if (prev) set({ repos: { ...get().repos, [id]: repo } })
+        } catch (err) {
+          fail(err)
+        }
+      },
+
+      async loadBranches(id) {
+        try {
+          return await source.getBranches(id)
+        } catch (err) {
+          fail(err)
+          return null
         }
       },
 

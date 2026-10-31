@@ -56,6 +56,16 @@ describe('синхронизация с upstream', () => {
     expect(syncLabel(r).text).toBe('нет upstream')
   })
 
+  it('без коммитов и с удалённым upstream — без выдуманных чисел', () => {
+    const unborn = repo({ branch: { unborn: true, headSha: undefined, upstream: undefined, ahead: null, behind: null } })
+    expect(syncState(unborn.branch)).toBe('unborn')
+    expect(syncLabel(unborn).text).toBe('нет коммитов')
+    const gone = repo({ branch: { upstreamGone: true, ahead: null, behind: null } })
+    expect(syncState(gone.branch)).toBe('gone')
+    expect(syncLabel(gone)).toEqual({ tone: 'warn', text: 'upstream удалён' })
+    expect(isBehind(gone)).toBe(false)
+  })
+
   it('подписи с числами', () => {
     expect(syncLabel(repo({ branch: { behind: 3 } })).text).toBe('↓ 3 отстаёт')
     expect(syncLabel(repo({ branch: { ahead: 2, behind: 1 } })).tone).toBe('bad')

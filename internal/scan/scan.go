@@ -158,7 +158,25 @@ func inspect(ctx context.Context, r runner.Runner, c candidate, opts Options) fo
 	}
 	repo.ID = model.PathID(repo.Path)
 	repo.GitDir = info.GitDir
+	readLocal(ctx, r, &repo, opts)
+	return found{repo: repo, superproject: info.Superproject}
+}
 
+// Refresh перечитывает remote и локальный статус уже найденного репозитория
+// (после fetch/pull/switch или по запросу пользователя). Расположение и связи
+// с родителем сохраняются; сбой чтения — в Error этого репозитория.
+func Refresh(ctx context.Context, r runner.Runner, repo model.Repository, opts Options) model.Repository {
+	repo.Error = nil
+	repo.Remotes = []model.RemoteInfo{}
+	repo.Remote = ""
+	repo.Branch, repo.Worktree = nil, nil
+	readLocal(ctx, r, &repo, opts)
+	return repo
+}
+
+// readLocal заполняет remote и локальный статус. Ошибка одного шага не
+// отменяет другой: без remote статус всё равно полезен, и наоборот.
+func readLocal(ctx context.Context, r runner.Runner, repo *model.Repository, opts Options) {
 	remotes, err := gitlocal.Remotes(ctx, r, repo.Path, opts.HostProviders)
 	if err != nil {
 		repo.Error = model.AsError(err)
@@ -166,7 +184,15 @@ func inspect(ctx context.Context, r runner.Runner, c candidate, opts Options) fo
 		repo.Remotes = remotes
 		repo.Remote = gitlocal.SelectRemote(remotes, opts.Remotes[repo.ID])
 	}
-	return found{repo: repo, superproject: info.Superproject}
+	st, err := gitlocal.ReadStatus(ctx, r, repo.Path)
+	if err != nil {
+		if repo.Error == nil {
+			repo.Error = model.AsError(err)
+		}
+	} else {
+		repo.Branch, repo.Worktree = &st.Branch, &st.Worktree
+	}
+	repo.UpdatedAt = time.Now()
 }
 
 // linkParents заполняет ParentID ближайшим найденным репозиторием, внутри

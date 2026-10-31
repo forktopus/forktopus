@@ -25,11 +25,13 @@ export function hasChanges(r: Repository): boolean {
   return changeCount(r) + (r.worktree?.conflicts ?? 0) > 0
 }
 
-export type SyncState = 'unknown' | 'detached' | 'noUpstream' | 'inSync' | 'ahead' | 'behind' | 'diverged'
+export type SyncState = 'unknown' | 'detached' | 'unborn' | 'gone' | 'noUpstream' | 'inSync' | 'ahead' | 'behind' | 'diverged'
 
 export function syncState(b: BranchStatus | null | undefined): SyncState {
   if (!b) return 'unknown'
   if (b.detached) return 'detached'
+  if (b.unborn) return 'unborn'
+  if (b.upstreamGone) return 'gone'
   if (!b.upstream || b.ahead == null || b.behind == null) return 'noUpstream'
   if (b.ahead > 0 && b.behind > 0) return 'diverged'
   if (b.behind > 0) return 'behind'
@@ -85,6 +87,10 @@ export function syncLabel(r: Repository): Label {
       return statusUnknown
     case 'detached':
       return { tone: 'warn', text: t('sync.detached') }
+    case 'unborn':
+      return { tone: 'muted', text: t('sync.unborn') }
+    case 'gone':
+      return { tone: 'warn', text: t('sync.gone') }
     case 'noUpstream':
       return { tone: 'muted', text: t('sync.noUpstream') }
     case 'diverged':
