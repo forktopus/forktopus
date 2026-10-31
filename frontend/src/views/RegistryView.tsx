@@ -33,7 +33,8 @@ import { Nesting, Operation, type Repository } from '../data/model'
 import { formatTime, t, type MessageKey } from '../i18n'
 import { opName, pullBlock } from '../logic/ops'
 import { hostSources, kpis, registryFilters, registryRows, type RegistryFilter, type SortKey } from '../logic/registry'
-import { repoHost, repoName, repoNamespace, selectedRemote } from '../logic/repo'
+import { repoHost, repoName, repoNamespace } from '../logic/repo'
+import { remoteCaption } from '../logic/status'
 import { useApp } from '../store/context'
 import { toneColor } from '../theme/theme'
 import { useRegistryRepos, useRepos, useSearchedRepos } from '../store/selectors'
@@ -165,12 +166,6 @@ function RowActions({ repo }: { repo: Repository }) {
 const nestingKey: Partial<Record<Nesting, MessageKey>> = {
   [Nesting.NestingSubmodule]: 'registry.submodule',
   [Nesting.NestingNested]: 'registry.nested',
-}
-
-/** Подпись без namespace: remote нет совсем или это локальный путь. */
-function remoteCaption(repo: Repository): string {
-  if (repoHost(repo)) return ''
-  return selectedRemote(repo) ? t('repo.localRemote') : t('repo.noRemote')
 }
 
 function RepoCell({ repo, depth, nested, collapsed, onToggle }: { repo: Repository; depth: number; nested: number; collapsed: boolean; onToggle(): void }) {

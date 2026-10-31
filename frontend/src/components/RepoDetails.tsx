@@ -32,7 +32,7 @@ import { monoFontFamily } from '../theme/tokens'
 import { CIIndicator, ChangesIndicator, PRIndicator, SyncIndicator } from './indicators'
 import { BranchChip, RepoIcon, StatusText, caption } from './status'
 
-const providerName: Record<Provider, MessageKey> = {
+export const providerName: Record<Provider, MessageKey> = {
   [Provider.$zero]: 'provider.other',
   [Provider.ProviderGitHub]: 'provider.github',
   [Provider.ProviderGitLab]: 'provider.gitlab',
@@ -40,7 +40,7 @@ const providerName: Record<Provider, MessageKey> = {
   [Provider.ProviderOther]: 'provider.other',
 }
 
-const nestingName: Partial<Record<Nesting, MessageKey>> = {
+export const nestingName: Partial<Record<Nesting, MessageKey>> = {
   [Nesting.NestingSubmodule]: 'nesting.submodule',
   [Nesting.NestingNested]: 'nesting.nested',
 }
@@ -65,10 +65,22 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 /** Кнопка, которая при блокировке объясняет причину подсказкой. */
-function GuardedButton({ reason, disabled, onClick, children }: { reason: string | null; disabled: boolean; onClick(): void; children: ReactNode }) {
+export function GuardedButton({
+  reason,
+  disabled,
+  onClick,
+  children,
+  variant = 'outlined',
+}: {
+  reason: string | null
+  disabled: boolean
+  onClick(): void
+  children: ReactNode
+  variant?: 'outlined' | 'contained' | 'text'
+}) {
   const button = (
     <span>
-      <Button size="small" variant="outlined" disabled={disabled || reason !== null} onClick={onClick}>
+      <Button size="small" variant={variant} disabled={disabled || reason !== null} onClick={onClick}>
         {children}
       </Button>
     </span>
@@ -190,13 +202,34 @@ function LocalSection({ repo }: { repo: Repository }) {
   )
 }
 
-function RemoteSection({ repo, onOpenTools }: { repo: Repository; onOpenTools(): void }) {
+/** CLI хоста репозитория: готовность и что сделать, если он не готов. */
+export function CliStatus({ repo }: { repo: Repository }) {
   const theme = useTheme()
+  const tool = useApp((s) => (repoHost(repo) ? s.tools.find((d) => d.host === repoHost(repo)) : undefined))
+  if (!tool) return null
+  const hint = toolHint(tool)
+  return (
+    <>
+      <StatusText label={{ tone: availabilityTone[tool.availability] ?? 'muted', text: `${tool.name} · ${t(`availability.${tool.availability || 'unavailable'}`)}` }} />
+      {hint && (
+        <Typography variant="caption" component="div" sx={{ color: 'text.secondary', mt: 0.5 }}>
+          {hint.text}
+          {hint.command && (
+            <Box component="code" sx={{ display: 'block', font: `11px ${monoFontFamily}`, bgcolor: theme.app.chip, borderRadius: '6px', px: 1, py: 0.5, mt: 0.5 }}>
+              {hint.command}
+            </Box>
+          )}
+        </Typography>
+      )}
+    </>
+  )
+}
+
+function RemoteSection({ repo, onOpenTools }: { repo: Repository; onOpenTools(): void }) {
   const tools = useApp((s) => s.tools)
   const host = repoHost(repo)
   const provider = repoProvider(repo)
   const tool = host ? tools.find((d) => d.host === host) : undefined
-  const hint = tool ? toolHint(tool) : null
 
   return (
     <Section title={t('details.remote')}>
@@ -206,17 +239,7 @@ function RemoteSection({ repo, onOpenTools }: { repo: Repository; onOpenTools():
         </Row>
         {tool && (
           <Row name="CLI">
-            <StatusText label={{ tone: availabilityTone[tool.availability] ?? 'muted', text: `${tool.name} · ${t(`availability.${tool.availability || 'unavailable'}`)}` }} />
-            {hint && (
-              <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mt: 0.5 }}>
-                {hint.text}
-                {hint.command && (
-                  <Box component="code" sx={{ display: 'block', font: `11px ${monoFontFamily}`, bgcolor: theme.app.chip, borderRadius: '6px', px: 1, py: 0.5, mt: 0.5 }}>
-                    {hint.command}
-                  </Box>
-                )}
-              </Typography>
-            )}
+            <CliStatus repo={repo} />
           </Row>
         )}
         <Row name={t('column.pr')}>

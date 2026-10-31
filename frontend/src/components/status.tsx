@@ -1,5 +1,5 @@
 import { Box, useTheme } from '@mui/material'
-import type { Repository } from '../data/model'
+import type { Provider, Repository } from '../data/model'
 import type { Label } from '../logic/status'
 import { repoProvider } from '../logic/repo'
 import { toneColor } from '../theme/theme'
@@ -26,8 +26,12 @@ export function StatusText({ label, wrap = false }: { label: Label; wrap?: boole
 const providerSymbol = { github: 'GH', gitlab: 'GL', gitea: 'GT', other: 'GIT' } as const
 
 export function RepoIcon({ repo, size = 33 }: { repo: Repository; size?: number }) {
+  return <ProviderIcon provider={repoProvider(repo)} size={size} />
+}
+
+/** Значок типа сервера (GitHub, GitLab, Gitea, прочий Git). */
+export function ProviderIcon({ provider, size = 33 }: { provider: Provider; size?: number }) {
   const theme = useTheme()
-  const provider = repoProvider(repo)
   const key = provider === 'github' || provider === 'gitlab' || provider === 'gitea' ? provider : 'other'
   const colors = theme.app.provider[key]
   return (
@@ -35,11 +39,11 @@ export function RepoIcon({ repo, size = 33 }: { repo: Repository; size?: number 
       sx={{
         width: size,
         height: size,
-        borderRadius: '10px',
+        borderRadius: size < 24 ? '5px' : '10px',
         display: 'grid',
         placeItems: 'center',
         flexShrink: 0,
-        fontSize: 12,
+        fontSize: Math.round(size * 0.36),
         fontWeight: 900,
         bgcolor: colors.bg,
         color: colors.fg,

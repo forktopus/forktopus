@@ -4,6 +4,7 @@
 import { Availability, ErrorCode, type BranchStatus, type CISummary, type PRSummary, type Repository } from '../data/model'
 import { formatRelative, t, type MessageKey } from '../i18n'
 import type { Tone } from '../theme/theme'
+import { repoHost, selectedRemote } from './repo'
 
 export interface Label {
   tone: Tone
@@ -102,6 +103,12 @@ export function remoteDetail(s: PRSummary | CISummary, now: Date = new Date()): 
     parts.push(t('remote.checkedAt', { time: formatRelative(s.lastAttemptAt, now) }))
   }
   return parts.join(' · ')
+}
+
+/** Почему у репозитория нет сервера: remote нет совсем или это локальный путь; есть хост — пусто. */
+export function remoteCaption(r: Repository): string {
+  if (repoHost(r)) return ''
+  return selectedRemote(r) ? t('repo.localRemote') : t('repo.noRemote')
 }
 
 const statusUnknown: Label = { tone: 'muted', text: t('status.unknown') }

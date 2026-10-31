@@ -73,9 +73,9 @@ function Content({ onOpenRoots, onOpenTools }: { onOpenRoots(): void; onOpenTool
       )}
       {repos.length === 0 && <Alert severity="info">{t(scanning ? 'empty.scanning' : 'empty.noRepos')}</Alert>}
       {repos.length > 0 && mode === 'registry' && <RegistryView />}
-      {repos.length > 0 && mode === 'explorer' && <ExplorerView />}
+      {repos.length > 0 && mode === 'explorer' && <ExplorerView onOpenTools={onOpenTools} />}
       {repos.length > 0 && mode === 'radar' && <RadarView />}
-      {repos.length > 0 && mode !== 'registry' && (
+      {repos.length > 0 && mode === 'radar' && (
         <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mt: 3, textAlign: 'center' }}>
           {t('screen.draft')}
         </Typography>

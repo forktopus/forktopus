@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Availability, ErrorCode } from '../data/model'
 import { repo, unavailable } from '../test/fixtures'
-import { changesDetail, changesLabel, ciLabel, hasChanges, integrationIssue, isBehind, prLabel, remoteCount, remoteDetail, syncFreshness, syncLabel, syncState } from './status'
+import { changesDetail, changesLabel, ciLabel, hasChanges, integrationIssue, isBehind, prLabel, remoteCaption, remoteCount, remoteDetail, syncFreshness, syncLabel, syncState } from './status'
 
 describe('unavailable не отображается как 0', () => {
   it('PR/CI без данных — «нет данных», а не 0', () => {
@@ -131,5 +131,15 @@ describe('интеграция', () => {
         }),
       ),
     ).toBe(false)
+  })
+})
+
+describe('подпись без сервера', () => {
+  it('нет remote, remote — локальный путь, есть хост', () => {
+    expect(remoteCaption(repo({ remotePath: null }))).toBe('без remote')
+    const local = repo()
+    local.remotes = [{ ...local.remotes![0], host: '', fetchUrl: '/srv/remotes/demo.git' }]
+    expect(remoteCaption(local)).toBe('remote — локальный путь')
+    expect(remoteCaption(repo())).toBe('')
   })
 })
