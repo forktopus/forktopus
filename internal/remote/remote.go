@@ -172,9 +172,16 @@ func (f *Fetcher) Status(ctx context.Context, req Request) Result {
 	return res
 }
 
-// fetch опрашивает адаптер с учётом ограничений хоста.
-func (f *Fetcher) fetch(ctx context.Context, h *host, a providers.RemoteProvider, q providers.Query, force bool) Result {
+// fetch опрашивает адаптер с учётом ограничений хоста. Паника адаптера
+// становится ошибкой этого запроса: иначе запрос остался бы «в полёте»
+// навсегда и склеенные с ним ждали бы вечно.
+func (f *Fetcher) fetch(ctx context.Context, h *host, a providers.RemoteProvider, q providers.Query, force bool) (res Result) {
 	p := q.Target.Provider
+	defer func() {
+		if r := recover(); r != nil {
+			res = failed(p, model.Errorf(model.CodeOther, "внутренняя ошибка адаптера %s: %v", p, r), model.AvailabilityError)
+		}
+	}()
 	if e := f.gate(h, q.Target.Host, force); e != nil {
 		return failed(p, e, providers.AvailabilityOf(e.Code))
 	}
@@ -189,7 +196,7 @@ func (f *Fetcher) fetch(ctx context.Context, h *host, a providers.RemoteProvider
 		return failed(p, e, providers.AvailabilityOf(e.Code))
 	}
 
-	res := Result{Provider: p, PR: a.PullRequests(ctx, q)}
+	res = Result{Provider: p, PR: a.PullRequests(ctx, q)}
 	if hostWide(res.PR.Error) {
 		// Нет сети или лимит — второй запрос ответит так же, но позже.
 		res.CI = model.CISummary{Availability: res.PR.Availability, Error: res.PR.Error, LastAttemptAt: res.PR.LastAttemptAt}

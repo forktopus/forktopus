@@ -46,6 +46,8 @@ func (s *AppService) ListOperations() []model.OpRecord {
 // неизвестного репозитория; блокировки и сбои Git — в OpResult.Error вместе
 // со свежим статусом.
 func (s *AppService) runOp(ctx context.Context, id string, op model.Operation, target string, expect model.OpExpect) (model.OpResult, error) {
+	ctx, done := s.bind(ctx)
+	defer done()
 	start := time.Now()
 	repo, err := s.GetRepo(id)
 	if err != nil {
@@ -134,7 +136,7 @@ func (s *AppService) storeRepo(repo model.Repository) model.Repository {
 		s.saveCacheLocked()
 		// Ветка сменилась (switch, переключение в терминале) — нужны PR/CI новой.
 		if s.needsRemoteLocked(repo) {
-			go s.remoteStatus(context.Background(), repo.ID, false) //nolint:errcheck // итог приходит событием
+			go s.remoteStatus(s.life, repo.ID, false) //nolint:errcheck // итог приходит событием
 		}
 	}
 	return repo

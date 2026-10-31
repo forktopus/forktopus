@@ -148,8 +148,17 @@ func Run(ctx context.Context, r runner.Runner, roots []model.Root, opts Options)
 	return result, nil
 }
 
-func inspect(ctx context.Context, r runner.Runner, c candidate, opts Options) found {
+func inspect(ctx context.Context, r runner.Runner, c candidate, opts Options) (f found) {
 	repo := model.Repository{RootID: c.rootID, Path: c.dir, Remotes: []model.RemoteInfo{}, UpdatedAt: time.Now()}
+	// Паника при чтении одного репозитория — его ошибка, а не падение скана
+	// и приложения (воркер — отдельная горутина, Wails её не перехватит).
+	defer func() {
+		if p := recover(); p != nil {
+			repo.ID = model.PathID(repo.Path)
+			repo.Error = model.Errorf(model.CodeOther, "внутренняя ошибка при чтении репозитория: %v", p)
+			f = found{repo: repo}
+		}
+	}()
 	info, err := gitlocal.Inspect(ctx, r, c.dir)
 	if model.CodeOf(err) == model.CodeUnsupported {
 		return found{skip: true}
@@ -180,7 +189,13 @@ func inspect(ctx context.Context, r runner.Runner, c candidate, opts Options) fo
 // Refresh перечитывает remote и локальный статус уже найденного репозитория
 // (после fetch/pull/switch или по запросу пользователя). Расположение и связи
 // с родителем сохраняются; сбой чтения — в Error этого репозитория.
-func Refresh(ctx context.Context, r runner.Runner, repo model.Repository, opts Options) model.Repository {
+func Refresh(ctx context.Context, r runner.Runner, repo model.Repository, opts Options) (out model.Repository) {
+	defer func() {
+		if p := recover(); p != nil {
+			repo.Error = model.Errorf(model.CodeOther, "внутренняя ошибка при чтении репозитория: %v", p)
+			out = repo
+		}
+	}()
 	repo.Error = nil
 	repo.Remotes = []model.RemoteInfo{}
 	repo.Remote = ""

@@ -2,9 +2,11 @@ package app
 
 import (
 	"context"
+	"log/slog"
 	"slices"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 
@@ -33,18 +35,35 @@ func (s *AppService) RefreshRemote(ctx context.Context, id string) (model.Remote
 	return s.remoteStatus(ctx, id, true)
 }
 
-func (s *AppService) remoteStatus(ctx context.Context, id string, force bool) (model.RemoteStatus, error) {
+func (s *AppService) remoteStatus(ctx context.Context, id string, force bool) (st model.RemoteStatus, err error) {
+	ctx, done := s.bind(ctx)
+	defer done()
+	// Паника в разборе ответа CLI превращается в ошибку PR/CI этого
+	// репозитория, а не роняет приложение (запрос идёт и в фоновой горутине).
+	defer func() {
+		if p := recover(); p != nil {
+			e := model.Errorf(model.CodeOther, "внутренняя ошибка при запросе к серверу: %v", p)
+			slog.Error("паника при запросе PR/CI", "error", e.Message)
+			at := time.Now()
+			st = model.RemoteStatus{RepoID: id, Branch: st.Branch,
+				PR: model.PRSummary{Availability: model.AvailabilityError, Error: e, LastAttemptAt: &at},
+				CI: model.CISummary{Availability: model.AvailabilityError, Error: e, LastAttemptAt: &at}}
+			emit(EventRemoteStatus, st)
+			err = nil
+		}
+	}()
 	repo, err := s.GetRepo(id)
 	if err != nil {
 		return model.RemoteStatus{}, err
 	}
 	s.mu.Lock()
-	overrides := s.cfg.HostProviders
+	overrides, fetcher := s.cfg.HostProviders, s.remote
 	s.mu.Unlock()
 
 	branch := branchOf(repo)
-	res := s.remote.Status(ctx, remote.Request{Dir: repo.Path, Remote: selectedRemote(repo), Branch: branch, Overrides: overrides, Force: force})
-	st := model.RemoteStatus{RepoID: id, Branch: branch, Provider: res.Provider, PR: res.PR, CI: res.CI}
+	st.Branch = branch
+	res := fetcher.Status(ctx, remote.Request{Dir: repo.Path, Remote: selectedRemote(repo), Branch: branch, Overrides: overrides, Force: force})
+	st = model.RemoteStatus{RepoID: id, Branch: branch, Provider: res.Provider, PR: res.PR, CI: res.CI}
 	if err := ctx.Err(); err != nil {
 		return st, model.Errorf(model.CodeOpCancelled, "запрос серверных данных отменён")
 	}
@@ -85,7 +104,7 @@ func (s *AppService) refreshRemoteAll() {
 	}
 	s.mu.Unlock()
 	for _, id := range ids {
-		go s.remoteStatus(context.Background(), id, false) //nolint:errcheck // итог приходит событием
+		go s.remoteStatus(s.life, id, false) //nolint:errcheck // итог приходит событием
 	}
 }
 
@@ -147,9 +166,11 @@ var cliOf = map[model.Provider]string{
 // репозитории, — версию и авторизацию (по одной проверке на CLI, сервер и
 // логин), для остальных CLI — только наличие и версию.
 func (s *AppService) CheckTools(ctx context.Context) []model.ToolDiagnostic {
+	ctx, done := s.bind(ctx)
+	defer done()
 	s.mu.Lock()
 	repos := slices.Clone(s.snapshot.Repositories)
-	overrides := s.cfg.HostProviders
+	overrides, fetcher := s.cfg.HostProviders, s.remote
 	s.mu.Unlock()
 
 	type check struct {
@@ -163,7 +184,7 @@ func (s *AppService) CheckTools(ctx context.Context) []model.ToolDiagnostic {
 		if rm == nil || rm.Host == "" {
 			continue
 		}
-		t, e := s.remote.Resolve(ctx, *rm, overrides, false)
+		t, e := fetcher.Resolve(ctx, *rm, overrides, false)
 		if e != nil {
 			continue
 		}
@@ -180,7 +201,14 @@ func (s *AppService) CheckTools(ctx context.Context) []model.ToolDiagnostic {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			diags[i] = s.remote.Diagnose(ctx, c.dir, c.t)
+			defer func() {
+				if p := recover(); p != nil {
+					e := model.Errorf(model.CodeOther, "внутренняя ошибка проверки: %v", p)
+					slog.Error("паника при проверке CLI", "error", e.Message)
+					diags[i] = model.ToolDiagnostic{Name: cliOf[c.t.Provider], Host: c.t.Host, Availability: model.AvailabilityError, Error: e}
+				}
+			}()
+			diags[i] = fetcher.Diagnose(ctx, c.dir, c.t)
 		}()
 	}
 	wg.Wait()

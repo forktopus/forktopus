@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/forktopus/forktopus/internal/model"
 	"github.com/forktopus/forktopus/internal/runner"
@@ -122,5 +123,59 @@ func TestCheckTools(t *testing.T) {
 		if d.Name != name || d.Host != "" || (d.Availability == model.AvailabilityOK) == (d.Version == "") {
 			t.Errorf("%s: %+v", name, d)
 		}
+	}
+}
+
+// blockingRunner ждёт отмены контекста — как долгий fetch или зависший CLI.
+type blockingRunner struct{ started chan struct{} }
+
+func (b blockingRunner) Run(ctx context.Context, _ runner.Command) (runner.Result, error) {
+	select {
+	case b.started <- struct{}{}:
+	default:
+	}
+	<-ctx.Done()
+	return runner.Result{}, model.Errorf(model.CodeOpCancelled, "отменено")
+}
+
+// Завершение приложения отменяет идущие команды (11.4).
+func TestShutdownCancelsCommands(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "repo", ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	r := blockingRunner{started: make(chan struct{}, 1)}
+	s, err := NewAppService(settings.NewStore(filepath.Join(t.TempDir(), "config.json")), r, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.AddRoot(root); err != nil {
+		t.Fatal(err)
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		_, err := s.ScanRoots(context.Background())
+		done <- err
+	}()
+	select {
+	case <-r.started:
+	case <-time.After(2 * time.Second):
+		t.Fatal("скан не начался")
+	}
+	if err := s.ServiceShutdown(); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case err := <-done:
+		if model.CodeOf(err) != model.CodeOpCancelled {
+			t.Fatalf("ожидался OP_CANCELLED, получено %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("скан не отменился при завершении")
+	}
+	// После завершения новые вызовы сразу отменены.
+	if _, err := s.ScanRoots(context.Background()); model.CodeOf(err) != model.CodeOpCancelled {
+		t.Fatalf("после завершения: %v", err)
 	}
 }

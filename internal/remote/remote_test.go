@@ -280,3 +280,32 @@ func TestLoginsRefresh(t *testing.T) {
 		t.Errorf("логины прочитаны %d раз, ожидалось 3", n)
 	}
 }
+
+// panicAdapter — адаптер со сломанным разбором ответа CLI.
+type panicAdapter struct{ fakeAdapter }
+
+func (*panicAdapter) PullRequests(context.Context, providers.Query) model.PRSummary {
+	panic("сломанный разбор ответа")
+}
+
+// Паника адаптера — ошибка этого запроса; склеенные запросы и следующие не зависают (11.4).
+func TestAdapterPanicIsolated(t *testing.T) {
+	a := &panicAdapter{}
+	f := newFetcher(map[model.Provider]providers.RemoteProvider{model.ProviderGitHub: a}, func(context.Context) []providers.Login { return nil }, Options{})
+	done := make(chan Result, 3)
+	for range 3 {
+		go func() {
+			done <- f.Status(context.Background(), Request{Dir: "/repo", Remote: req("o/r", "main").Remote, Branch: "main", Force: true})
+		}()
+	}
+	for range 3 {
+		select {
+		case res := <-done:
+			if res.PR.Availability != model.AvailabilityError || res.CI.Availability != model.AvailabilityError || model.CodeOf(res.PR.Error) != model.CodeOther {
+				t.Fatalf("ожидалась ошибка: %+v", res)
+			}
+		case <-time.After(2 * time.Second):
+			t.Fatal("запрос завис после паники адаптера")
+		}
+	}
+}

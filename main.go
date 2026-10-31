@@ -5,7 +5,9 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"os/signal"
 	"runtime"
+	"syscall"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 
@@ -87,6 +89,19 @@ func main() {
 		BackgroundColour: application.NewRGB(6, 7, 15),
 		URL:              "/",
 	})
+
+	// SIGINT/SIGTERM (выход из сессии, kill): команды отменяются сразу, а не
+	// после остановки сервера, и приложение завершается штатно — иначе git и
+	// ssh в своей сессии пережили бы его (11.4). Закрытие окна идёт через
+	// ServiceShutdown без этого.
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		sig := <-signals
+		slog.Info("получен сигнал завершения", "signal", sig.String())
+		_ = service.ServiceShutdown()
+		wailsApp.Quit()
+	}()
 
 	if err := wailsApp.Run(); err != nil {
 		log.Fatal(err)

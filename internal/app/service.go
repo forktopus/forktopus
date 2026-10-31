@@ -50,6 +50,11 @@ type AppService struct {
 	// remoteByRepo — последнее серверное состояние по репозиторию (под mu);
 	// в список попадает, только пока ветка та же.
 	remoteByRepo map[string]model.RemoteStatus
+
+	// life отменяется при завершении приложения (ServiceShutdown): с ним
+	// прерываются все команды — и вызванные из UI, и фоновые.
+	life context.Context
+	stop context.CancelFunc
 }
 
 // NewAppService создаёт сервис, читает настройки и кэш прошлого сканирования.
@@ -59,6 +64,7 @@ func NewAppService(store *settings.Store, r runner.Runner, cachePath string) (*A
 	cfg, err := store.Load()
 	s := &AppService{store: store, runner: r, cachePath: cachePath, cfg: cfg,
 		remote: remote.New(r, remote.Options{}), remoteByRepo: map[string]model.RemoteStatus{}}
+	s.life, s.stop = context.WithCancel(context.Background())
 	s.snapshot = model.RepositorySnapshot{Repositories: []model.Repository{}, Issues: []model.ScanIssue{}, Stale: true}
 	if cachePath != "" {
 		if cached, ok := repocache.Load(cachePath); ok {
@@ -68,6 +74,23 @@ func NewAppService(store *settings.Store, r runner.Runner, cachePath string) (*A
 		}
 	}
 	return s, err
+}
+
+// ServiceShutdown вызывается Wails при завершении приложения: активные
+// команды (скан, fetch, запросы CLI) отменяются, их процессы завершаются.
+func (s *AppService) ServiceShutdown() error {
+	s.stop()
+	return nil
+}
+
+// bind — контекст вызова, который отменяется и при завершении приложения.
+func (s *AppService) bind(ctx context.Context) (context.Context, context.CancelFunc) {
+	ctx, cancel := context.WithCancel(ctx)
+	stop := context.AfterFunc(s.life, cancel)
+	return ctx, func() {
+		stop()
+		cancel()
+	}
 }
 
 // emit отправляет событие во фронтенд; без запущенного приложения (тесты) — ничего.
@@ -178,6 +201,8 @@ func (s *AppService) ListRepositories() model.RepositorySnapshot {
 // Серверные данные (PR/CI) после сканирования запрашиваются в фоне и приходят
 // событиями EventRemoteStatus; до тех пор показываются прежние той же ветки.
 func (s *AppService) ScanRoots(ctx context.Context) (model.ScanResult, error) {
+	ctx, done := s.bind(ctx)
+	defer done()
 	s.scanMu.Lock()
 	defer s.scanMu.Unlock()
 
@@ -253,6 +278,8 @@ func (s *AppService) GetRepo(id string) (model.Repository, error) {
 // GetBranches читает локальные ветки репозитория: upstream, ahead/behind и
 // ветки, занятые другими рабочими копиями.
 func (s *AppService) GetBranches(ctx context.Context, id string) ([]model.BranchInfo, error) {
+	ctx, done := s.bind(ctx)
+	defer done()
 	repo, err := s.GetRepo(id)
 	if err != nil {
 		return nil, err
@@ -267,6 +294,8 @@ func (s *AppService) GetBranches(ctx context.Context, id string) ([]model.Branch
 // RefreshRepo перечитывает локальный статус одного репозитория и обновляет
 // его в списке и кэше. Если над репозиторием идёт операция, ждёт её конца.
 func (s *AppService) RefreshRepo(ctx context.Context, id string) (model.Repository, error) {
+	ctx, done := s.bind(ctx)
+	defer done()
 	if _, err := s.GetRepo(id); err != nil {
 		return model.Repository{}, err
 	}
@@ -327,7 +356,7 @@ func (s *AppService) SelectRemote(repoID, remote string) error {
 	repos[i].PR, repos[i].CI = model.PRSummary{}, model.CISummary{}
 	s.snapshot.Repositories = repos
 	s.saveCacheLocked()
-	go s.remoteStatus(context.Background(), repoID, false) //nolint:errcheck // итог приходит событием
+	go s.remoteStatus(s.life, repoID, false) //nolint:errcheck // итог приходит событием
 	return nil
 }
 
