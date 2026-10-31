@@ -19,6 +19,7 @@ export type {
     OpResult,
     PRSummary,
     RemoteInfo,
+    RemoteStatus,
     Repository,
     RepositorySnapshot,
     Root,

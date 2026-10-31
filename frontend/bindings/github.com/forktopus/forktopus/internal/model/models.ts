@@ -376,6 +376,26 @@ export interface RemoteInfo {
 }
 
 /**
+ * RemoteStatus — серверное состояние ветки репозитория: PR/MR и CI.
+ */
+export interface RemoteStatus {
+    "repoId": string;
+
+    /**
+     * Branch — ветка, для которой получены данные; пусто — detached HEAD.
+     */
+    "branch": string;
+
+    /**
+     * Provider — тип сервера по резолверу (с учётом логинов CLI); у выбранного
+     * remote в списке репозиториев он заменяет определённый сканером.
+     */
+    "provider": Provider;
+    "pr": PRSummary;
+    "ci": CISummary;
+}
+
+/**
  * Repository — найденная рабочая копия Git.
  */
 export interface Repository {
@@ -465,6 +485,11 @@ export interface ScanResult {
  */
 export interface ToolDiagnostic {
     "name": string;
+
+    /**
+     * Host — сервер, для которого проверена авторизация; пусто — проверена только утилита.
+     */
+    "host"?: string;
     "availability": Availability;
     "path"?: string;
     "version"?: string;

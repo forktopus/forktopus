@@ -3,9 +3,10 @@
 // фильтры сохраняются в настройках Go через DataSource.saveUI.
 
 import { createStore, type StoreApi } from 'zustand/vanilla'
-import { Operation, type BranchInfo, type OpResult, type Repository, type Root, type ScanIssue, type ToolDiagnostic, type UI } from '../data/model'
+import { Operation, type BranchInfo, type OpResult, type RemoteStatus, type Repository, type Root, type ScanIssue, type ToolDiagnostic, type UI } from '../data/model'
 import { errorOf, type DataSource, type Snapshot } from '../data/source'
 import { registryFilters, sortKeys, type RegistryFilter, type SortKey } from '../logic/registry'
+import { branchOf } from '../logic/repo'
 import type { ThemeMode } from '../theme/tokens'
 
 export type Mode = 'registry' | 'explorer' | 'radar'
@@ -59,7 +60,7 @@ export interface AppState {
   /** системный диалог выбора папки + addRoot; false — диалог закрыт или ошибка */
   pickAndAddRoot(): Promise<boolean>
   removeRoot(id: string): Promise<void>
-  /** перечитать локальный статус одного репозитория */
+  /** перечитать локальный статус одного репозитория и мимо кэша — его PR/MR и CI */
   refreshRepo(id: string): Promise<void>
   /** локальные ветки репозитория; null — ошибка (она уже в error) */
   loadBranches(id: string): Promise<BranchInfo[] | null>
@@ -108,14 +109,33 @@ export function toUI(s: Pick<AppState, 'mode' | 'theme' | 'filters'>): UI {
 
 const byId = (repos: Repository[]) => Object.fromEntries(repos.map((r) => [r.id, r]))
 
+/** Серверные данные в репозитории, если получены для его текущей ветки (как withRemoteLocked в Go). */
+export function withRemote(repo: Repository, st: RemoteStatus | undefined): Repository {
+  if (!st || branchOf(repo) !== st.branch) return repo
+  const remotes = st.provider && repo.remotes ? repo.remotes.map((r) => (r.name === repo.remote ? { ...r, provider: st.provider } : r)) : repo.remotes
+  return { ...repo, pr: st.pr, ci: st.ci, remotes }
+}
+
 export function createAppStore(source: DataSource): AppStore {
+  // Последние серверные данные по репозиториям. Событие может прийти раньше
+  // ответа сканирования или обновления, где они ещё прежние, — поэтому они
+  // накладываются на каждый пришедший из Go репозиторий.
+  const remote = new Map<string, RemoteStatus>()
+  const withKnown = (repo: Repository) => withRemote(repo, remote.get(repo.id))
+  const known = (repos: Repository[]) => byId(repos.map(withKnown))
+  const applyRemote = (st: RemoteStatus) => {
+    remote.set(st.repoId, st)
+    const { repos } = store.getState()
+    if (repos[st.repoId]) store.setState({ repos: { ...repos, [st.repoId]: withRemote(repos[st.repoId], st) } })
+  }
+
   const store = createStore<AppState>()((set, get) => {
     const fail = (err: unknown) => set({ error: errorOf(err).message })
     const persist = () => {
       source.saveUI(toUI(get())).catch(fail)
     }
     const applySnapshot = (snap: Snapshot) =>
-      set({ repos: byId(snap.repositories), issues: snap.issues, stale: snap.stale, lastCheckAt: snap.scannedAt ?? null })
+      set({ repos: known(snap.repositories), issues: snap.issues, stale: snap.stale, lastCheckAt: snap.scannedAt ?? null })
 
     return {
       sourceKind: source.kind,
@@ -166,7 +186,7 @@ export function createAppStore(source: DataSource): AppStore {
         set({ scanning: true })
         try {
           const res = await source.scanRoots()
-          set({ repos: byId(res.repositories), issues: res.issues, stale: false, lastCheckAt: res.scannedAt })
+          set({ repos: known(res.repositories), issues: res.issues, stale: false, lastCheckAt: res.scannedAt })
         } catch (err) {
           fail(err)
         } finally {
@@ -216,11 +236,13 @@ export function createAppStore(source: DataSource): AppStore {
         }
       },
 
+      // Сначала локальный статус (быстро), затем сервер: так ответ Go с
+      // прежними PR/CI не перекроет свежие.
       async refreshRepo(id) {
         try {
           const repo = await source.refreshRepo(id)
-          const prev = get().repos[id]
-          if (prev) set({ repos: { ...get().repos, [id]: repo } })
+          if (get().repos[id]) set({ repos: { ...get().repos, [id]: withKnown(repo) } })
+          applyRemote(await source.refreshRemote(id))
         } catch (err) {
           fail(err)
         }
@@ -248,7 +270,7 @@ export function createAppStore(source: DataSource): AppStore {
                 ? await source.pullRepo(id, expect)
                 : await source.switchBranch(id, branch, expect)
           const repos = get().repos
-          set({ lastOps: { ...get().lastOps, [id]: res }, repos: repos[id] ? { ...repos, [id]: res.repo } : repos })
+          set({ lastOps: { ...get().lastOps, [id]: res }, repos: repos[id] ? { ...repos, [id]: withKnown(res.repo) } : repos })
           return res
         } catch (err) {
           fail(err)
@@ -287,8 +309,11 @@ export function createAppStore(source: DataSource): AppStore {
     const { scanning, repos } = store.getState()
     if (!scanning) return
     const prev = repos[repo.id]
-    store.setState({ repos: { ...repos, [repo.id]: { ...repo, parentId: repo.parentId ?? prev?.parentId } } })
+    store.setState({ repos: { ...repos, [repo.id]: withKnown({ ...repo, parentId: repo.parentId ?? prev?.parentId }) } })
   })
+
+  // PR/MR и CI приходят в фоне после сканирования, смены ветки и обновления.
+  source.onRemoteStatus(applyRemote)
 
   return store
 }

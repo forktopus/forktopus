@@ -16,11 +16,11 @@ import (
 	"github.com/forktopus/forktopus/internal/gitlocal"
 	"github.com/forktopus/forktopus/internal/gitops"
 	"github.com/forktopus/forktopus/internal/model"
+	"github.com/forktopus/forktopus/internal/remote"
 	"github.com/forktopus/forktopus/internal/repocache"
 	"github.com/forktopus/forktopus/internal/runner"
 	"github.com/forktopus/forktopus/internal/scan"
 	"github.com/forktopus/forktopus/internal/settings"
-	"github.com/forktopus/forktopus/internal/tools"
 )
 
 // EventScanRepository — репозиторий, найденный во время сканирования
@@ -45,6 +45,11 @@ type AppService struct {
 	// locks — одна изменяющая операция на репозиторий; чтение статуса её ждёт.
 	locks gitops.Locks
 	opLog []model.OpRecord // под mu
+
+	remote *remote.Fetcher
+	// remoteByRepo — последнее серверное состояние по репозиторию (под mu);
+	// в список попадает, только пока ветка та же.
+	remoteByRepo map[string]model.RemoteStatus
 }
 
 // NewAppService создаёт сервис, читает настройки и кэш прошлого сканирования.
@@ -52,7 +57,8 @@ type AppService struct {
 // умолчанию, а запись будет отклонена с понятным сообщением (см. settings.Store).
 func NewAppService(store *settings.Store, r runner.Runner, cachePath string) (*AppService, error) {
 	cfg, err := store.Load()
-	s := &AppService{store: store, runner: r, cachePath: cachePath, cfg: cfg}
+	s := &AppService{store: store, runner: r, cachePath: cachePath, cfg: cfg,
+		remote: remote.New(r, remote.Options{}), remoteByRepo: map[string]model.RemoteStatus{}}
 	s.snapshot = model.RepositorySnapshot{Repositories: []model.Repository{}, Issues: []model.ScanIssue{}, Stale: true}
 	if cachePath != "" {
 		if cached, ok := repocache.Load(cachePath); ok {
@@ -169,6 +175,8 @@ func (s *AppService) ListRepositories() model.RepositorySnapshot {
 // ScanRoots сканирует все корни. Найденные репозитории приходят событиями
 // EventScanRepository по мере обнаружения, итог — в результате. Отмена вызова
 // из JS прерывает сканирование; прежний список при этом сохраняется.
+// Серверные данные (PR/CI) после сканирования запрашиваются в фоне и приходят
+// событиями EventRemoteStatus; до тех пор показываются прежние той же ветки.
 func (s *AppService) ScanRoots(ctx context.Context) (model.ScanResult, error) {
 	s.scanMu.Lock()
 	defer s.scanMu.Unlock()
@@ -176,7 +184,12 @@ func (s *AppService) ScanRoots(ctx context.Context) (model.ScanResult, error) {
 	s.mu.Lock()
 	roots := slices.Clone(s.cfg.Roots)
 	opts := s.scanOptionsLocked()
-	opts.OnRepository = func(r model.Repository) { emit(EventScanRepository, r) }
+	opts.OnRepository = func(r model.Repository) {
+		s.mu.Lock()
+		r = s.withRemoteLocked(r, s.prevLocked(r.ID))
+		s.mu.Unlock()
+		emit(EventScanRepository, r)
+	}
 	opts.Lock = s.locks.Lock
 	s.mu.Unlock()
 
@@ -194,10 +207,23 @@ func (s *AppService) ScanRoots(ctx context.Context) (model.ScanResult, error) {
 	}
 	res.Repositories = slices.DeleteFunc(res.Repositories, func(r model.Repository) bool { return !known[r.RootID] })
 	res.Issues = slices.DeleteFunc(res.Issues, func(i model.ScanIssue) bool { return !known[i.RootID] })
+	for i, r := range res.Repositories {
+		res.Repositories[i] = s.withRemoteLocked(r, s.prevLocked(r.ID))
+	}
 	at := res.ScannedAt
 	s.snapshot = model.RepositorySnapshot{Repositories: res.Repositories, Issues: res.Issues, ScannedAt: &at}
 	s.saveCacheLocked()
+	go s.refreshRemoteAll()
 	return res, nil
+}
+
+// prevLocked — прежняя запись репозитория в списке или nil.
+func (s *AppService) prevLocked(id string) *model.Repository {
+	if i, err := s.findLocked(id); err == nil {
+		r := s.snapshot.Repositories[i]
+		return &r
+	}
+	return nil
 }
 
 func (s *AppService) scanOptionsLocked() scan.Options {
@@ -296,8 +322,12 @@ func (s *AppService) SelectRemote(repoID, remote string) error {
 	s.cfg = next
 	repos := slices.Clone(s.snapshot.Repositories)
 	repos[i].Remote = gitlocal.SelectRemote(repo.Remotes, remote)
+	// Серверные данные относились к прежнему remote.
+	delete(s.remoteByRepo, repoID)
+	repos[i].PR, repos[i].CI = model.PRSummary{}, model.CISummary{}
 	s.snapshot.Repositories = repos
 	s.saveCacheLocked()
+	go s.remoteStatus(context.Background(), repoID, false) //nolint:errcheck // итог приходит событием
 	return nil
 }
 
@@ -330,10 +360,4 @@ func (s *AppService) SaveUI(ui settings.UI) error {
 	}
 	s.cfg = next
 	return nil
-}
-
-// CheckTools проверяет внешние утилиты. Пока только git; серверные CLI
-// добавятся вместе с адаптерами провайдеров.
-func (s *AppService) CheckTools(ctx context.Context) []model.ToolDiagnostic {
-	return []model.ToolDiagnostic{tools.CheckGit(ctx, s.runner)}
 }

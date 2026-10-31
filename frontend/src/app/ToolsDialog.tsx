@@ -34,9 +34,9 @@ export function ToolsDialog({ open, onClose }: { open: boolean; onClose(): void 
         {tools.length === 0 && <Typography color="text.secondary">{t('tools.empty')}</Typography>}
         {tools.map((tool) => {
           const color = toneColor(theme, availabilityTone[tool.availability] ?? 'muted')
-          const details = [tool.version && t('tools.version', { version: tool.version }), tool.path].filter(Boolean).join(' · ')
+          const details = [tool.host, tool.version && t('tools.version', { version: tool.version }), tool.path].filter(Boolean).join(' · ')
           return (
-            <Box key={tool.name} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1.5, borderBottom: `1px solid ${theme.app.line}` }}>
+            <Box key={`${tool.name}|${tool.host ?? ''}`} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1.5, borderBottom: `1px solid ${theme.app.line}` }}>
               <Box
                 component="code"
                 sx={{ font: `12px ${monoFontFamily}`, bgcolor: theme.app.chip, border: `1px solid ${theme.app.chipLine}`, borderRadius: '7px', px: 1, py: 0.5 }}

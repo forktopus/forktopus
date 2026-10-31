@@ -112,7 +112,15 @@ func TestUIStatePersists(t *testing.T) {
 func TestCheckTools(t *testing.T) {
 	s, _ := newService(t)
 	diags := s.CheckTools(context.Background())
-	if len(diags) != 1 || diags[0].Name != "git" || diags[0].Availability != model.AvailabilityOK {
+	// Репозиториев с серверными remote нет — CLI провайдеров проверяются без хоста.
+	// Установлены ли они в окружении теста, неважно: важно, что не «ок» без версии.
+	if len(diags) != 4 || diags[0].Name != "git" || diags[0].Availability != model.AvailabilityOK {
 		t.Fatalf("CheckTools: %+v", diags)
+	}
+	for i, name := range []string{"gh", "glab", "tea"} {
+		d := diags[i+1]
+		if d.Name != name || d.Host != "" || (d.Availability == model.AvailabilityOK) == (d.Version == "") {
+			t.Errorf("%s: %+v", name, d)
+		}
 	}
 }

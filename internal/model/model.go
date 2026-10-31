@@ -199,9 +199,23 @@ type OpResult struct {
 	Repo Repository `json:"repo"`
 }
 
+// RemoteStatus — серверное состояние ветки репозитория: PR/MR и CI.
+type RemoteStatus struct {
+	RepoID string `json:"repoId"`
+	// Branch — ветка, для которой получены данные; пусто — detached HEAD.
+	Branch string `json:"branch"`
+	// Provider — тип сервера по резолверу (с учётом логинов CLI); у выбранного
+	// remote в списке репозиториев он заменяет определённый сканером.
+	Provider Provider  `json:"provider"`
+	PR       PRSummary `json:"pr"`
+	CI       CISummary `json:"ci"`
+}
+
 // ToolDiagnostic — результат проверки внешней утилиты (git, gh, glab, tea).
 type ToolDiagnostic struct {
-	Name         string       `json:"name"`
+	Name string `json:"name"`
+	// Host — сервер, для которого проверена авторизация; пусто — проверена только утилита.
+	Host         string       `json:"host,omitempty"`
 	Availability Availability `json:"availability"`
 	Path         string       `json:"path,omitempty"`
 	Version      string       `json:"version,omitempty"`

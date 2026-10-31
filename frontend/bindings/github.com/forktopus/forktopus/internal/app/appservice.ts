@@ -26,8 +26,9 @@ export function AddRoot(path: string): $CancellablePromise<model$0.Root> {
 }
 
 /**
- * CheckTools проверяет внешние утилиты. Пока только git; серверные CLI
- * добавятся вместе с адаптерами провайдеров.
+ * CheckTools проверяет git и CLI провайдеров: для серверов, к которым относятся
+ * репозитории, — версию и авторизацию (по одной проверке на CLI, сервер и
+ * логин), для остальных CLI — только наличие и версию.
  */
 export function CheckTools(): $CancellablePromise<model$0.ToolDiagnostic[] | null> {
     return $Call.ByID(476914070);
@@ -54,6 +55,15 @@ export function FetchRepo(id: string, expect: model$0.OpExpect): $CancellablePro
  */
 export function GetBranches(id: string): $CancellablePromise<model$0.BranchInfo[] | null> {
     return $Call.ByID(3547239135, id);
+}
+
+/**
+ * GetRemoteStatus возвращает PR/MR и CI текущей ветки: из кэша, если данные
+ * свежие (D-046), иначе от CLI провайдера. Итог также приходит событием
+ * EventRemoteStatus и попадает в список репозиториев.
+ */
+export function GetRemoteStatus(id: string): $CancellablePromise<model$0.RemoteStatus> {
+    return $Call.ByID(234623583, id);
 }
 
 /**
@@ -101,6 +111,13 @@ export function PickFolder(): $CancellablePromise<string> {
 }
 
 /**
+ * RefreshRemote — то же без кэша: ручное обновление серверных данных.
+ */
+export function RefreshRemote(id: string): $CancellablePromise<model$0.RemoteStatus> {
+    return $Call.ByID(277965634, id);
+}
+
+/**
  * RefreshRepo перечитывает локальный статус одного репозитория и обновляет
  * его в списке и кэше. Если над репозиторием идёт операция, ждёт её конца.
  */
@@ -126,6 +143,8 @@ export function SaveUI(ui: settings$0.UI): $CancellablePromise<void> {
  * ScanRoots сканирует все корни. Найденные репозитории приходят событиями
  * EventScanRepository по мере обнаружения, итог — в результате. Отмена вызова
  * из JS прерывает сканирование; прежний список при этом сохраняется.
+ * Серверные данные (PR/CI) после сканирования запрашиваются в фоне и приходят
+ * событиями EventRemoteStatus; до тех пор показываются прежние той же ветки.
  */
 export function ScanRoots(): $CancellablePromise<model$0.ScanResult> {
     return $Call.ByID(1248533849);

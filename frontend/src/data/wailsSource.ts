@@ -16,9 +16,12 @@ export const wailsSource: DataSource = {
   fetchRepo: async (repoId, expect) => normalizeOpResult(await AppService.FetchRepo(repoId, expect)),
   pullRepo: async (repoId, expect) => normalizeOpResult(await AppService.FastForwardPull(repoId, expect)),
   switchBranch: async (repoId, branch, expect) => normalizeOpResult(await AppService.SwitchBranch(repoId, branch, expect)),
+  getRemoteStatus: (repoId) => AppService.GetRemoteStatus(repoId),
+  refreshRemote: (repoId) => AppService.RefreshRemote(repoId),
   listOperations: async () => (await AppService.ListOperations()) ?? [],
   checkTools: async () => (await AppService.CheckTools()) ?? [],
   getUI: () => AppService.GetUI(),
   saveUI: (ui) => AppService.SaveUI(ui),
   onScanRepository: (cb) => Events.On('scan:repository', (event) => cb(normalizeRepository(event.data))),
+  onRemoteStatus: (cb) => Events.On('remote:status', (event) => cb(event.data)),
 }

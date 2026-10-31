@@ -15,6 +15,7 @@ import {
   Provider,
   type CISummary,
   type PRSummary,
+  type RemoteStatus,
   type Repository,
   type Root,
   type ScanIssue,
@@ -171,9 +172,9 @@ function buildRepository(s: Scenario, index: number): Repository {
 
 const mockTools: ToolDiagnostic[] = [
   { name: 'git', availability: Availability.AvailabilityOK, path: '/usr/bin/git', version: '2.43.0' },
-  { name: 'gh', availability: Availability.AvailabilityOK, path: '/usr/bin/gh', version: '2.103.3' },
-  { name: 'glab', availability: Availability.AvailabilityUnavailable, path: '/usr/local/bin/glab', version: '1.126.0', error: authRequired },
-  { name: 'tea', availability: Availability.AvailabilityOK, path: '/usr/local/bin/tea', version: '0.16.0' },
+  { name: 'gh', host: 'github.com', availability: Availability.AvailabilityOK, path: '/usr/bin/gh', version: '2.103.3' },
+  { name: 'glab', host: 'gitlab.com', availability: Availability.AvailabilityUnavailable, path: '/usr/local/bin/glab', version: '1.126.0', error: authRequired },
+  { name: 'tea', host: 'git.home.test', availability: Availability.AvailabilityOK, path: '/usr/local/bin/tea', version: '0.16.0' },
 ]
 
 /** Ветки для демо: текущая, main и у каждого третьего — ветка, занятая соседним worktree. */
@@ -261,6 +262,7 @@ export function createMockSource({ delayMs = 250 }: MockOptions = {}): DataSourc
   const opLog: OpRecord[] = []
   const running = new Set<string>()
   const listeners = new Set<(repo: Repository) => void>()
+  const remoteListeners = new Set<(status: RemoteStatus) => void>()
   let ui: UI = {}
   try {
     ui = JSON.parse(localStorage.getItem(uiKey) ?? '{}') as UI
@@ -308,6 +310,23 @@ export function createMockSource({ delayMs = 250 }: MockOptions = {}): DataSourc
     } finally {
       running.delete(repoId)
     }
+  }
+
+  // Как AppService.remoteStatus: данные ветки из сценария; обновление
+  // освежает время попытки и рассылает событие.
+  async function remoteStatus(repoId: string, force: boolean): Promise<RemoteStatus> {
+    const repo = repos.find((r) => r.id === repoId)
+    if (!repo) throw invalidInput(`репозиторий "${repoId}" не найден`)
+    if (force) {
+      await sleep(delayMs * 2)
+      const at = new Date().toISOString()
+      repo.pr = { ...repo.pr, lastAttemptAt: at, lastSuccessAt: repo.pr.availability === Availability.AvailabilityOK ? at : repo.pr.lastSuccessAt }
+      repo.ci = { ...repo.ci, lastAttemptAt: at, lastSuccessAt: repo.ci.availability === Availability.AvailabilityOK ? at : repo.ci.lastSuccessAt }
+    }
+    const remote = repo.remotes?.find((r) => r.name === repo.remote)
+    const status: RemoteStatus = { repoId, branch: repo.branch?.detached ? '' : (repo.branch?.name ?? ''), provider: remote?.provider ?? Provider.$zero, pr: repo.pr, ci: repo.ci }
+    remoteListeners.forEach((cb) => cb(structuredClone(status)))
+    return reply(status)
   }
 
   return {
@@ -365,6 +384,8 @@ export function createMockSource({ delayMs = 250 }: MockOptions = {}): DataSourc
     fetchRepo: (repoId, expect) => runOp(repoId, Operation.OperationFetch, '', expect),
     pullRepo: (repoId, expect) => runOp(repoId, Operation.OperationPull, '', expect),
     switchBranch: (repoId, branch, expect) => runOp(repoId, Operation.OperationSwitch, branch, expect),
+    getRemoteStatus: (repoId) => remoteStatus(repoId, false),
+    refreshRemote: (repoId) => remoteStatus(repoId, true),
     listOperations: () => reply([...opLog].reverse()),
     checkTools: () => reply(mockTools),
     getUI: () => reply(ui),
@@ -380,6 +401,10 @@ export function createMockSource({ delayMs = 250 }: MockOptions = {}): DataSourc
     onScanRepository(cb) {
       listeners.add(cb)
       return () => listeners.delete(cb)
+    },
+    onRemoteStatus(cb) {
+      remoteListeners.add(cb)
+      return () => remoteListeners.delete(cb)
     },
   }
 }

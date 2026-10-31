@@ -42,3 +42,21 @@ func TestCheckGitReal(t *testing.T) {
 		t.Fatalf("реальный git: %+v", diag)
 	}
 }
+
+func TestCheckCLI(t *testing.T) {
+	ctx := context.Background()
+	for out, want := range map[string]string{
+		"gh version 2.103.3 (2026-10-26)\n":               "2.103.3",
+		"glab 1.126.0 (4dd0d32d1)\n":                      "1.126.0",
+		"Version: \x1b[1m0.16.0\x1b[0m\tgolang: 1.26.6\n": "0.16.0",
+	} {
+		d := CheckCLI(ctx, fakeRunner{res: runner.Result{Stdout: []byte(out)}}, "x")
+		if d.Availability != model.AvailabilityOK || d.Version != want {
+			t.Errorf("%q: %+v", out, d)
+		}
+	}
+	missing := CheckCLI(ctx, fakeRunner{err: model.Errorf(model.CodeCLIMissing, "нет")}, "tea")
+	if missing.Availability != model.AvailabilityUnavailable || missing.Error.Code != model.CodeCLIMissing || missing.Name != "tea" {
+		t.Errorf("нет tea: %+v", missing)
+	}
+}

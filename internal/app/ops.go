@@ -121,15 +121,21 @@ func (s *AppService) runOp(ctx context.Context, id string, op model.Operation, t
 }
 
 // storeRepo заменяет запись репозитория в списке и кэше, если она ещё там
-// (пока шла операция, корень могли убрать или пересканировать).
+// (пока шла операция, корень могли убрать или пересканировать). Серверные
+// данные текущей ветки сохраняются; для новой ветки запрашиваются в фоне.
 func (s *AppService) storeRepo(repo model.Repository) model.Repository {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if i, err := s.findLocked(repo.ID); err == nil {
+		repo = s.withRemoteLocked(repo, s.prevLocked(repo.ID))
 		repos := slices.Clone(s.snapshot.Repositories)
 		repos[i] = repo
 		s.snapshot.Repositories = repos
 		s.saveCacheLocked()
+		// Ветка сменилась (switch, переключение в терминале) — нужны PR/CI новой.
+		if s.needsRemoteLocked(repo) {
+			go s.remoteStatus(context.Background(), repo.ID, false) //nolint:errcheck // итог приходит событием
+		}
 	}
 	return repo
 }

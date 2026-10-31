@@ -5,6 +5,7 @@ import {
   type OpExpect,
   type OpRecord,
   type OpResult,
+  type RemoteStatus,
   type Repository,
   type RepositorySnapshot,
   type Root,
@@ -48,6 +49,10 @@ export interface DataSource {
   /** Pull только fast-forward. */
   pullRepo(repoId: string, expect: OpExpect): Promise<OpResult>
   switchBranch(repoId: string, branch: string, expect: OpExpect): Promise<OpResult>
+  /** PR/MR и CI текущей ветки; свежие данные — из кэша Go (D-046). */
+  getRemoteStatus(repoId: string): Promise<RemoteStatus>
+  /** То же мимо кэша: ручное обновление. */
+  refreshRemote(repoId: string): Promise<RemoteStatus>
   /** Журнал последних операций, новые — первыми. */
   listOperations(): Promise<OpRecord[]>
   checkTools(): Promise<ToolDiagnostic[]>
@@ -55,6 +60,8 @@ export interface DataSource {
   saveUI(ui: UI): Promise<void>
   /** Подписка на найденные во время сканирования репозитории; возвращает отписку. */
   onScanRepository(cb: (repo: Repository) => void): () => void
+  /** Подписка на серверные данные веток, полученные в фоне; возвращает отписку. */
+  onRemoteStatus(cb: (status: RemoteStatus) => void): () => void
 }
 
 /** Ошибка вызова в виде model.Error: Wails кладёт её JSON в err.cause. */

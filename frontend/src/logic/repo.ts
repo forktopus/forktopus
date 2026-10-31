@@ -9,6 +9,11 @@ export function repoHost(r: Repository): string {
   return selectedRemote(r)?.host ?? ''
 }
 
+/** Текущая ветка, как её понимает Go (branchOf); пусто — detached HEAD или статус не прочитан. */
+export function branchOf(r: Repository): string {
+  return !r.branch || r.branch.detached ? '' : (r.branch.name ?? '')
+}
+
 export function repoProvider(r: Repository): Provider {
   return selectedRemote(r)?.provider || Provider.ProviderOther
 }

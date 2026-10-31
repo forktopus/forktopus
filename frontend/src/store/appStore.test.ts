@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { createMockSource } from '../data/mockSource'
-import { ErrorCode, Operation, type Repository } from '../data/model'
+import { Availability, ErrorCode, Operation, Provider, type RemoteStatus, type Repository } from '../data/model'
 import type { DataSource } from '../data/source'
-import { createAppStore, fromUI, toUI } from './appStore'
+import { createAppStore, fromUI, toUI, withRemote } from './appStore'
 
 const hasLocal = (r: Repository) => Boolean(r.worktree && r.worktree.staged + r.worktree.unstaged + r.worktree.untracked + r.worktree.conflicts > 0)
 
@@ -139,6 +139,46 @@ describe('store', () => {
     expect(store.getState().error).toMatch(/абсолютный путь/)
   })
 
+  it('серверные данные из события попадают в репозиторий только для его текущей ветки', async () => {
+    const source = createMockSource({ delayMs: 0 })
+    let emit: (st: RemoteStatus) => void = () => {}
+    const store = createAppStore({ ...source, onRemoteStatus: (cb) => ((emit = cb), () => {}) })
+    await store.getState().init()
+    const repo = Object.values(store.getState().repos).find((r) => r.branch?.name && !r.branch.detached)!
+    const one = 1
+    const status: RemoteStatus = {
+      repoId: repo.id,
+      branch: repo.branch!.name!,
+      provider: Provider.ProviderGitea,
+      pr: { availability: Availability.AvailabilityOK, open: one, draft: 0 },
+      ci: { availability: Availability.AvailabilityOK, active: 0, lastResult: 'failure' },
+    }
+
+    emit({ ...status, branch: 'other', pr: { ...status.pr, open: 7 } })
+    expect(store.getState().repos[repo.id].pr).toEqual(repo.pr)
+
+    emit(status)
+    const got = store.getState().repos[repo.id]
+    expect(got.pr.open).toBe(1)
+    expect(got.ci.lastResult).toBe('failure')
+    expect(got.remotes?.find((r) => r.name === got.remote)?.provider).toBe(Provider.ProviderGitea)
+
+    // Сканирование, ответ которого собран до события, не возвращает прежние данные.
+    await store.getState().scan()
+    expect(store.getState().repos[repo.id].ci.lastResult).toBe('failure')
+  })
+
+  it('обновление репозитория запрашивает и серверные данные мимо кэша', async () => {
+    const source = createMockSource({ delayMs: 0 })
+    let forced = 0
+    const store = createAppStore({ ...source, refreshRemote: (id) => (forced++, source.refreshRemote(id)) })
+    await store.getState().init()
+    const id = Object.values(store.getState().repos).find((r) => r.pr.availability === Availability.AvailabilityOK)!.id
+    await store.getState().refreshRepo(id)
+    expect(forced).toBe(1)
+    expect(store.getState().repos[id].pr.lastAttemptAt).toBeTruthy()
+  })
+
   it('удаление корня убирает его репозитории из списка', async () => {
     const store = createAppStore(createMockSource({ delayMs: 0 }))
     await store.getState().init()
@@ -147,6 +187,17 @@ describe('store', () => {
     const s = store.getState()
     expect(s.roots.some((r) => r.id === root.id)).toBe(false)
     expect(Object.values(s.repos).some((r) => r.rootId === root.id)).toBe(false)
+  })
+})
+
+describe('withRemote', () => {
+  it('detached HEAD сопоставляется с пустой веткой, provider "" не трогает remote', () => {
+    const repo = { id: 'r', remote: 'origin', remotes: [{ name: 'origin', provider: Provider.ProviderGitHub }], branch: { detached: true, headSha: 'abc' } } as Repository
+    const st = { repoId: 'r', branch: '', provider: Provider.$zero, pr: { availability: Availability.AvailabilityNotSupported }, ci: { availability: Availability.AvailabilityNotSupported } } as RemoteStatus
+    const got = withRemote(repo, st)
+    expect(got.pr.availability).toBe(Availability.AvailabilityNotSupported)
+    expect(got.remotes?.[0].provider).toBe(Provider.ProviderGitHub)
+    expect(withRemote(repo, undefined)).toBe(repo)
   })
 })
 
