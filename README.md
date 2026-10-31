@@ -37,6 +37,40 @@ wails3 dev     # нативное окно с hot reload
 wails3 build   # бинарник в bin/
 ```
 
+## Разработка
+
+Два контура:
+
+- **Хост** — всё, что требует нативного окна, системных диалогов и настоящих `git`/`gh`/`glab`/`tea`: `wails3 dev`, `wails3 build`, Git-фикстуры.
+- **Docker** (`compose.dev.yaml`) — воспроизводимые проверки без установки Go/Node: `npm ci`, сборка фронтенда, Go-тесты, Vite-превью на моковых данных. Контейнер видит только каталог проекта; GTK/WebKit в нём нет, поэтому Go собирается с `-tags server` и `CGO_ENABLED=0`.
+
+### Подготовка Docker
+
+```bash
+cp .env.dev.example .env.dev   # при необходимости поправить LOCAL_UID/LOCAL_GID (id -u, id -g)
+docker compose --env-file .env.dev -f compose.dev.yaml build toolbox
+```
+
+### Команды
+
+| Что | Где | Команда |
+|---|---|---|
+| Нативное окно с hot reload | хост | `wails3 dev` |
+| Production-сборка | хост | `wails3 build` → `bin/forktopus` |
+| Зависимости фронтенда | Docker | `docker compose --env-file .env.dev -f compose.dev.yaml run --rm toolbox sh -lc 'cd frontend && npm ci'` |
+| Сборка фронтенда | Docker | `docker compose --env-file .env.dev -f compose.dev.yaml run --rm toolbox sh -lc 'cd frontend && npm run build'` |
+| Go-тесты | Docker | `docker compose --env-file .env.dev -f compose.dev.yaml run --rm toolbox sh -lc 'go test -tags server ./...'` |
+| Go-тесты | хост | `go test ./...` |
+| Vite-превью (моки) | Docker | `docker compose --env-file .env.dev -f compose.dev.yaml up ui` → http://127.0.0.1:5173 |
+| Git-фикстуры | хост | `bash scripts/create-demo-repos.sh` → `.local/git-fixtures/` |
+
+Замечания:
+
+- `wails3 dev` использует порт 9245, контейнерный `ui` — 5173, их можно запускать одновременно.
+- `node_modules` общий для хоста и контейнера (оба linux/amd64). На macOS/Windows перед `wails3 dev` выполнить `npm ci` на хосте.
+- Фикстуры создаются **на хосте**: скрипт прописывает remote абсолютным путём, и созданные в контейнере (`/workspace/...`) репозитории на хосте будут со сломанным remote. Повторный запуск не перезаписывает существующую папку — сначала удалить `.local/git-fixtures/` вручную.
+- `frontend/bindings/` генерируется Wails (`wails3 generate bindings`, а также при `dev`/`build`) и хранится в репозитории, чтобы фронтенд собирался без wails3.
+
 ## Лицензия
 
 [MIT](LICENSE)

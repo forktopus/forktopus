@@ -1,0 +1,35 @@
+# Локальная dev-конфигурация: инструменты разработки (Go + Node) в Docker.
+# Контейнеры не получают ~/ и не наследуют gh/glab/tea credentials.
+# Wails Desktop Window запускается на хосте, не в Docker.
+
+x-dev-common: &dev-common
+  build:
+    context: .
+    dockerfile: docker/Dockerfile.dev
+  working_dir: /workspace
+  user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+  volumes:
+    - .:/workspace
+  environment:
+    MODULE_PATH: "${MODULE_PATH:-github.com/forktopus/forktopus}"
+    GOPATH: /workspace/.local/cache/go
+    GOCACHE: /workspace/.local/cache/go-build
+    NPM_CONFIG_CACHE: /workspace/.local/cache/npm
+    GOTOOLCHAIN: auto
+    # В контейнере нет GTK/WebKit: Go собирается только с `-tags server` и без CGO.
+    CGO_ENABLED: "0"
+    HOME: /tmp
+  init: true
+
+services:
+  # Одноразовые команды: docker compose ... run --rm toolbox sh -lc '...'
+  toolbox:
+    <<: *dev-common
+    command: ["sleep", "infinity"]
+
+  # Только UI-превью. Данные Git — моковые, Wails bridge здесь недоступен.
+  ui:
+    <<: *dev-common
+    command: ["sh", "-lc", "cd frontend && npm run dev -- --host 0.0.0.0 --port 5173"]
+    ports:
+      - "127.0.0.1:5173:5173"

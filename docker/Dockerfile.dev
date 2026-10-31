@@ -1,0 +1,32 @@
+# Dev-only образ: Go + Node без установки их в систему разработчика.
+# Система исполнения готового приложения от этого контейнера не зависит.
+FROM node:24-bookworm AS node
+
+FROM golang:1.26-bookworm
+
+# Образы одной базы Debian Bookworm: переносим только runtime Node/npm.
+COPY --from=node /usr/local/bin/node /usr/local/bin/node
+COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+    && ln -s /usr/local/lib/node_modules/corepack/dist/corepack.js /usr/local/bin/corepack
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git ca-certificates bash \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace
+
+# Кэши храним внутри .local/ проекта, чтобы они переживали пересоздание контейнера.
+# .local/ должен быть в .gitignore.
+ENV GOPATH=/workspace/.local/cache/go \
+    GOCACHE=/workspace/.local/cache/go-build \
+    NPM_CONFIG_CACHE=/workspace/.local/cache/npm \
+    GOTOOLCHAIN=auto
+
+# Login-shell (`sh -lc`) читает /etc/profile, который в Debian заново задаёт PATH
+# без Go; возвращаем Go и $GOPATH/bin (туда ставится wails3).
+RUN printf '%s\n' 'export PATH="/usr/local/go/bin:${GOPATH}/bin:${PATH}"' > /etc/profile.d/go.sh
+
+RUN go version && node --version && npm --version && git --version
+
+CMD ["bash"]
