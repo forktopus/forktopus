@@ -93,6 +93,25 @@ func TestAddRootFailsOnCorruptSettings(t *testing.T) {
 	}
 }
 
+func TestUIStatePersists(t *testing.T) {
+	s, cfgPath := newService(t)
+	ui := settings.UI{Theme: "light", Mode: "explorer", Filters: map[string]string{"tab": "dirty"}}
+	if err := s.SaveUI(ui); err != nil {
+		t.Fatal(err)
+	}
+	restarted, err := NewAppService(settings.NewStore(cfgPath), runner.Exec{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := restarted.GetUI()
+	if got.Theme != "light" || got.Mode != "explorer" || got.Filters["tab"] != "dirty" {
+		t.Fatalf("после перезапуска: %+v", got)
+	}
+	if repos := s.ListRepositories(); repos == nil || len(repos) != 0 {
+		t.Fatalf("ListRepositories до этапа 05: %+v", repos)
+	}
+}
+
 func TestCheckTools(t *testing.T) {
 	s, _ := newService(t)
 	diags := s.CheckTools(context.Background())

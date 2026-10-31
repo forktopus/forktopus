@@ -1,0 +1,130 @@
+// Словарь строк интерфейса. Параметры подставляются как {name}; числовые
+// параметры форматируются по ru-RU. Объект с формами one/few/many — строка
+// с множественным числом, форма выбирается по параметру {count}.
+
+export interface PluralForms {
+  one: string
+  few: string
+  many: string
+  other?: string
+}
+
+export const ru = {
+  'app.name': 'Forktopus',
+  'app.mascotAlt': 'Маскот Forktopus',
+  'app.loading': 'Загрузка…',
+  'app.demoBadge': 'демо-данные',
+  'app.demoHint': 'Данные вымышлены: окно Wails недоступно или включён VITE_FORKTOPUS_DEMO. Git и CLI не вызываются.',
+
+  'mode.tabsLabel': 'Режим просмотра',
+  'mode.registry': 'Реестр',
+  'mode.explorer': 'Проводник',
+  'mode.radar': 'Радар',
+
+  'search.label': 'Поиск репозиториев',
+  'search.placeholder': 'Поиск по имени, ветке, каталогу…',
+
+  'action.refresh': 'Проверить статусы',
+  'action.tools': 'Диагностика CLI',
+  'action.addRoot': 'Добавить корень',
+  'action.add': 'Добавить',
+  'action.remove': 'Убрать из списка',
+  'action.close': 'Закрыть',
+  'action.recheck': 'Проверить снова',
+  'action.themeToLight': 'Включить светлую тему',
+  'action.themeToDark': 'Включить тёмную тему',
+
+  'lastCheck.never': 'ещё не проверялось',
+  'lastCheck.at': 'проверено {when}',
+
+  'time.justNow': 'только что',
+
+  'tools.title': 'Диагностика CLI',
+  'tools.empty': 'Проверка ещё не выполнялась.',
+  'tools.version': 'версия {version}',
+  'tools.notFound': 'не найден в PATH',
+
+  'availability.ok': 'Готов',
+  'availability.unavailable': 'Недоступен',
+  'availability.error': 'Ошибка',
+  'availability.not_supported': 'Не поддерживается',
+
+  'roots.title': 'Корневые папки',
+  'roots.description':
+    'Корень может содержать любое число вложенных Git-репозиториев. Сервер определяется по git remote, а не по имени папки. Убрать корень из списка — не значит удалить файлы.',
+  'roots.empty': 'Корневых папок пока нет.',
+  'roots.pathLabel': 'Абсолютный путь к папке',
+  'roots.pathPlaceholder': '/srv/repos/github.com',
+  'roots.repoCount': { one: '{count} репозиторий', few: '{count} репозитория', many: '{count} репозиториев' },
+
+  'empty.noRoots.title': 'Добавьте первую корневую папку',
+  'empty.noRoots.text':
+    'Forktopus найдёт Git-репозитории внутри неё на любой глубине. Файлы на диске и настройки Git не изменяются.',
+  'empty.noRepos': 'В добавленных папках пока нет найденных репозиториев.',
+  'empty.noMatches': 'Ничего не найдено по текущим фильтрам.',
+
+  'screen.draft': 'Черновой вид режима: полноценный экран появится на следующих этапах.',
+
+  'filter.all': 'Все',
+  'filter.attention': 'Требуют внимания',
+  'filter.dirty': 'Изменения',
+  'filter.behind': 'Отстают',
+  'filter.ci': 'Ошибки CI',
+  'filter.allHosts': 'Все хосты',
+
+  'kpi.repos': 'Репозиториев в выборке',
+  'kpi.reposFoot': 'из {total} всего',
+  'kpi.changes': 'Есть локальные изменения',
+  'kpi.changesFoot': 'staged, unstaged, untracked',
+  'kpi.behind': 'Ветки отстают от upstream',
+  'kpi.behindFoot': 'по последнему fetch',
+  'kpi.prci': 'PR/MR · запуски CI',
+  'kpi.partial': 'из доступных источников',
+  'kpi.complete': 'по всем источникам',
+
+  'column.repo': 'Репозиторий',
+  'column.branch': 'Ветка',
+  'column.changes': 'Изменения',
+  'column.sync': 'Upstream',
+  'column.pr': 'PR/MR',
+  'column.ci': 'CI',
+
+  'changes.clean': 'Чисто',
+  'changes.count': { one: '{count} изменение', few: '{count} изменения', many: '{count} изменений' },
+  'changes.conflicts': { one: '{count} конфликт', few: '{count} конфликта', many: '{count} конфликтов' },
+  'changes.operation': 'Незавершённая операция: {operation}',
+
+  'sync.detached': 'detached HEAD',
+  'sync.noUpstream': 'нет upstream',
+  'sync.inSync': 'Совпадает',
+  'sync.ahead': '↑ {ahead} впереди',
+  'sync.behind': '↓ {behind} отстаёт',
+  'sync.diverged': '↑ {ahead} ↓ {behind}',
+
+  'remote.unavailable': 'нет данных',
+  'remote.error': 'ошибка источника',
+  'remote.notSupported': 'не поддерживается',
+
+  'pr.open': { one: '{count} открыт', few: '{count} открыто', many: '{count} открыто' },
+  'pr.none': 'нет открытых',
+  'ci.active': '{count} выполняется',
+  'ci.success': 'Успешно',
+  'ci.failure': 'Ошибка',
+  'ci.none': 'нет запусков',
+
+  'repo.noRemote': 'без remote',
+  'repo.readError': 'Ошибка чтения репозитория',
+
+  'radar.attention': 'Требует внимания',
+  'radar.progress': 'В работе',
+  'radar.ok': 'В порядке',
+
+  'integration.banner': {
+    one: 'У {count} репозитория нет данных PR/CI: проверьте подключения в диагностике CLI.',
+    few: 'У {count} репозиториев нет данных PR/CI: проверьте подключения в диагностике CLI.',
+    many: 'У {count} репозиториев нет данных PR/CI: проверьте подключения в диагностике CLI.',
+  },
+
+  'explorer.noRemote': 'Без remote',
+  'explorer.pickRepo': 'Выберите репозиторий в дереве слева.',
+} satisfies Record<string, string | PluralForms>

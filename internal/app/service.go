@@ -94,6 +94,32 @@ func (s *AppService) RemoveRoot(id string) error {
 	return nil
 }
 
+// ListRepositories возвращает известные репозитории. Сканирование корней
+// появится на этапе 05; до этого список пуст.
+func (s *AppService) ListRepositories() []model.Repository {
+	return []model.Repository{}
+}
+
+// GetUI возвращает сохранённое состояние интерфейса: режим, тему, фильтры.
+func (s *AppService) GetUI() settings.UI {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.cfg.UI
+}
+
+// SaveUI сохраняет состояние интерфейса.
+func (s *AppService) SaveUI(ui settings.UI) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	next := s.cfg
+	next.UI = ui
+	if err := s.store.Save(next); err != nil {
+		return model.AsError(err)
+	}
+	s.cfg = next
+	return nil
+}
+
 // CheckTools проверяет внешние утилиты. Пока только git; серверные CLI
 // добавятся вместе с адаптерами провайдеров.
 func (s *AppService) CheckTools(ctx context.Context) []model.ToolDiagnostic {

@@ -13,6 +13,9 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as model$0 from "../model/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as settings$0 from "../settings/models.js";
 
 /**
  * AddRoot добавляет корневую папку. Повторное добавление той же папки
@@ -31,6 +34,21 @@ export function CheckTools(): $CancellablePromise<model$0.ToolDiagnostic[] | nul
 }
 
 /**
+ * GetUI возвращает сохранённое состояние интерфейса: режим, тему, фильтры.
+ */
+export function GetUI(): $CancellablePromise<settings$0.UI> {
+    return $Call.ByID(1723516525);
+}
+
+/**
+ * ListRepositories возвращает известные репозитории. Сканирование корней
+ * появится на этапе 05; до этого список пуст.
+ */
+export function ListRepositories(): $CancellablePromise<model$0.Repository[] | null> {
+    return $Call.ByID(2103912973);
+}
+
+/**
  * ListRoots возвращает добавленные корневые папки.
  */
 export function ListRoots(): $CancellablePromise<model$0.Root[] | null> {
@@ -42,4 +60,11 @@ export function ListRoots(): $CancellablePromise<model$0.Root[] | null> {
  */
 export function RemoveRoot(id: string): $CancellablePromise<void> {
     return $Call.ByID(329411949, id);
+}
+
+/**
+ * SaveUI сохраняет состояние интерфейса.
+ */
+export function SaveUI(ui: settings$0.UI): $CancellablePromise<void> {
+    return $Call.ByID(3434843930, ui);
 }

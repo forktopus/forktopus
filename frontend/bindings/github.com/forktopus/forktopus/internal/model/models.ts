@@ -32,6 +32,47 @@ export enum Availability {
 };
 
 /**
+ * BranchStatus — состояние текущей ветки.
+ */
+export interface BranchStatus {
+    /**
+     * пусто при detached HEAD
+     */
+    "name"?: string;
+    "detached": boolean;
+    "headSha"?: string;
+    "upstream"?: string;
+
+    /**
+     * Ahead/Behind считаются по локальным remote-tracking refs; nil — нет upstream.
+     */
+    "ahead"?: number | null;
+    "behind"?: number | null;
+
+    /**
+     * LastFetchAt — время последнего fetch; nil — fetch не выполнялся.
+     */
+    "lastFetchAt"?: string | null;
+}
+
+/**
+ * CISummary — CI-запуски на текущей ветке.
+ */
+export interface CISummary {
+    "availability": Availability;
+
+    /**
+     * queued / in progress
+     */
+    "active"?: number | null;
+    "lastResult"?: string;
+    "url"?: string;
+    "error"?: Error | null;
+    "lastSuccessAt"?: string | null;
+    "lastAttemptAt"?: string | null;
+}
+
+/**
  * Error — типизированная ошибка ядра. Сериализуется в JSON и в таком виде
  * приходит во фронтенд как cause отклонённого вызова Wails.
  * Message должен быть безопасным для показа: без токенов и userinfo в URL.
@@ -119,6 +160,92 @@ export enum ErrorCode {
 };
 
 /**
+ * PRSummary — открытые PR/MR, где текущая ветка — источник.
+ */
+export interface PRSummary {
+    "availability": Availability;
+    "open"?: number | null;
+    "draft"?: number | null;
+    "url"?: string;
+    "error"?: Error | null;
+    "lastSuccessAt"?: string | null;
+    "lastAttemptAt"?: string | null;
+}
+
+/**
+ * Provider — тип Git-хостинга.
+ */
+export enum Provider {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    ProviderGitHub = "github",
+    ProviderGitLab = "gitlab",
+    ProviderGitea = "gitea",
+    ProviderOther = "other",
+};
+
+/**
+ * RemoteInfo — remote репозитория с разобранным адресом сервера.
+ */
+export interface RemoteInfo {
+    "name": string;
+
+    /**
+     * без userinfo
+     */
+    "fetchUrl": string;
+    "pushUrl"?: string;
+
+    /**
+     * host[:port]
+     */
+    "host"?: string;
+
+    /**
+     * namespace/repo, с base path для self-hosted
+     */
+    "path"?: string;
+    "provider": Provider;
+}
+
+/**
+ * Repository — найденная рабочая копия Git.
+ */
+export interface Repository {
+    "id": string;
+    "rootId": string;
+
+    /**
+     * корень рабочей копии (git rev-parse --show-toplevel)
+     */
+    "path": string;
+
+    /**
+     * может лежать вне Path (worktree, submodule)
+     */
+    "gitDir": string;
+    "remotes": RemoteInfo[] | null;
+
+    /**
+     * имя выбранного remote; пусто — нет или неоднозначно
+     */
+    "remote"?: string;
+    "branch": BranchStatus;
+    "worktree": WorktreeStatus;
+    "pr": PRSummary;
+    "ci": CISummary;
+
+    /**
+     * Error — сбой чтения именно этого репозитория; остальные поля могут быть неполными.
+     */
+    "error"?: Error | null;
+    "updatedAt": string;
+}
+
+/**
  * Root — корневая папка, выбранная пользователем для сканирования.
  */
 export interface Root {
@@ -135,4 +262,19 @@ export interface ToolDiagnostic {
     "path"?: string;
     "version"?: string;
     "error"?: Error | null;
+}
+
+/**
+ * WorktreeStatus — локальные изменения рабочей копии.
+ */
+export interface WorktreeStatus {
+    "staged": number;
+    "unstaged": number;
+    "untracked": number;
+    "conflicts": number;
+
+    /**
+     * Operation — незавершённая операция Git: merge, rebase, cherry-pick, revert; пусто, если нет.
+     */
+    "operation"?: string;
 }

@@ -1,0 +1,74 @@
+import { Box, useTheme } from '@mui/material'
+import type { Repository } from '../data/model'
+import type { Label } from '../logic/status'
+import { repoProvider } from '../logic/repo'
+import { toneColor } from '../theme/theme'
+import { monoFontFamily } from '../theme/tokens'
+
+/** Точка и подпись в цвете тона статуса. */
+export function StatusText({ label }: { label: Label }) {
+  const theme = useTheme()
+  const color = toneColor(theme, label.tone)
+  return (
+    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, fontSize: 12, whiteSpace: 'nowrap', color }}>
+      <Box component="i" sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: color, flexShrink: 0 }} />
+      {label.text}
+    </Box>
+  )
+}
+
+const providerSymbol = { github: 'GH', gitlab: 'GL', gitea: 'GT', other: 'GIT' } as const
+
+export function RepoIcon({ repo, size = 33 }: { repo: Repository; size?: number }) {
+  const theme = useTheme()
+  const provider = repoProvider(repo)
+  const key = provider === 'github' || provider === 'gitlab' || provider === 'gitea' ? provider : 'other'
+  const colors = theme.app.provider[key]
+  return (
+    <Box
+      sx={{
+        width: size,
+        height: size,
+        borderRadius: '10px',
+        display: 'grid',
+        placeItems: 'center',
+        flexShrink: 0,
+        fontSize: 12,
+        fontWeight: 900,
+        bgcolor: colors.bg,
+        color: colors.fg,
+      }}
+    >
+      {providerSymbol[key]}
+    </Box>
+  )
+}
+
+/** Имя ветки моноширинным шрифтом; detached — короткий SHA. */
+export function BranchChip({ repo }: { repo: Repository }) {
+  const theme = useTheme()
+  const b = repo.branch
+  const text = b.detached ? (b.headSha ?? '').slice(0, 8) : (b.name ?? '')
+  if (!text) return null
+  return (
+    <Box
+      component="span"
+      sx={{
+        display: 'inline-block',
+        maxWidth: 220,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        verticalAlign: 'middle',
+        font: `11px ${monoFontFamily}`,
+        border: `1px solid ${theme.app.chipLine}`,
+        bgcolor: theme.app.chip,
+        borderRadius: '7px',
+        px: 1,
+        py: 0.5,
+      }}
+    >
+      {text}
+    </Box>
+  )
+}

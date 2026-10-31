@@ -3,11 +3,18 @@
 
 export {
     Availability,
-    ErrorCode
+    ErrorCode,
+    Provider
 } from "./models.js";
 
 export type {
+    BranchStatus,
+    CISummary,
     Error,
+    PRSummary,
+    RemoteInfo,
+    Repository,
     Root,
-    ToolDiagnostic
+    ToolDiagnostic,
+    WorktreeStatus
 } from "./models.js";
