@@ -13,9 +13,12 @@ import (
 	"github.com/forktopus/forktopus/internal/runner"
 )
 
-// Concurrency — сколько кандидатов проверяется одновременно (git rev-parse и
-// git remote -v на каждый). Idea советует 4–8; 6 — середина, уточнить замерами.
-const Concurrency = 6
+// Concurrency — сколько репозиториев читается одновременно (rev-parse,
+// remote -v, status). По замерам 11.2 (TestLoad) время скана падает почти
+// линейно до 8 и слабо — дальше; 8 — верхняя граница рекомендации idea (4–8),
+// чтобы не забивать диск на больших рабочих копиях. Переменная — только чтобы
+// нагрузочный тест сравнивал уровни.
+var Concurrency = 8
 
 // Options — параметры сканирования.
 type Options struct {

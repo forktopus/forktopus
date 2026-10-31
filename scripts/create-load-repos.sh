@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
 # Создаёт много Git-репозиториев для нагрузочного прогона в .local/load-repos/.
 # Пишет только туда, не трогает существующие репозитории и ничего не удаляет.
-# Использование: scripts/create-load-repos.sh [число репозиториев, по умолчанию 240]
+# Использование: scripts/create-load-repos.sh [репозиториев, 240] [файлов в каждом, 1]
+# С файлами больше одного — отдельный каталог .local/load-repos-<N>x<файлов>:
+# крупные рабочие копии, на которых git status дороже.
 set -euo pipefail
 
 COUNT="${1:-240}"
+FILES="${2:-1}"
 PROJECT_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 DEST="$PROJECT_ROOT/.local/load-repos"
+if ((FILES > 1)); then
+  DEST="$DEST-${COUNT}x${FILES}"
+fi
 
 if [[ -e "$DEST" || -L "$DEST" ]]; then
   echo "Каталог уже существует: $DEST" >&2
@@ -24,7 +30,12 @@ mkdir -p -- "$DEST/.remotes" "$DEST/.internal"
 git init -q --bare -b main "$REMOTE"
 git init -q -b main "$SEED"
 printf '%s\n' 'Load fixture' > "$SEED/README.md"
-git -C "$SEED" add README.md
+for ((f = 2; f <= FILES; f++)); do
+  d="$SEED/src/m$((f % 50))"
+  mkdir -p -- "$d"
+  printf 'file %d\n' "$f" > "$d/f$f.txt"
+done
+git -C "$SEED" add .
 git -C "$SEED" commit -qm 'Initial load commit'
 printf '%s\n' 'Second line' >> "$SEED/README.md"
 git -C "$SEED" commit -qam 'Second load commit'
