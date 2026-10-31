@@ -1,6 +1,6 @@
 import type { Repository } from '../data/model'
 import { radarGroup } from './radar'
-import { repoHost, repoName, repoNamespace } from './repo'
+import { compareText, repoHost, repoName, repoNamespace } from './repo'
 import { changeCount, ciFailed, hasChanges, hasStatus, integrationIssue, isBehind, remoteCount } from './status'
 
 /** integration — нет данных PR/CI из-за незавершённой настройки (05 §3: отдельный фильтр). */
@@ -74,8 +74,8 @@ export function sortRepos(repos: Repository[], key: SortKey, asc: boolean): Repo
   return [...repos].sort((a, b) => {
     const x = sortValue(a, key)
     const y = sortValue(b, key)
-    const cmp = typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'ru')
-    return cmp * dir || a.path.localeCompare(b.path, 'ru')
+    const cmp = typeof x === 'number' && typeof y === 'number' ? x - y : compareText(String(x), String(y))
+    return cmp * dir || compareText(a.path, b.path)
   })
 }
 
@@ -122,7 +122,7 @@ export function kpis(shown: Repository[], total: number): Kpis {
 
 /** Хосты для фильтра: уникальные, по алфавиту. */
 export function hostsOf(repos: Repository[]): string[] {
-  return [...new Set(repos.map(repoHost).filter(Boolean))].sort((a, b) => a.localeCompare(b))
+  return [...new Set(repos.map(repoHost).filter(Boolean))].sort(compareText)
 }
 
 export function integrationIssueCount(repos: Repository[]): number {
@@ -147,7 +147,7 @@ export function hostSources(repos: Repository[]): HostSource[] {
     s.issue ||= integrationIssue(r)
     byHost.set(host, s)
   }
-  return [...byHost.values()].sort((a, b) => a.host.localeCompare(b.host))
+  return [...byHost.values()].sort((a, b) => compareText(a.host, b.host))
 }
 
 /** Строка реестра: вложенные репозитории (D-025) идут сразу под родителем. */

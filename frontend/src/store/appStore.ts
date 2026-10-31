@@ -30,6 +30,9 @@ export const defaultFilters: Filters = { registry: 'all', host: '', sort: 'name'
 /** Срок свежести PR/CI в кэше Go (D-046): с этим шагом серверные данные перезапрашиваются в фоне. */
 export const remoteTTLms = 2 * 60 * 1000
 
+/** Как часто найденные во время сканирования репозитории и фоновые PR/CI попадают в список. */
+export const scanFlushMs = 150
+
 /** Уведомление внизу экрана: итог операции, ошибка, копирование. */
 export interface Notice {
   id: number
@@ -166,9 +169,47 @@ export function createAppStore(source: DataSource): AppStore {
     const { repos } = store.getState()
     if (repos[st.repoId]) store.setState({ repos: { ...repos, [st.repoId]: withRemote(repos[st.repoId], st) } })
   }
+  // Фоновые данные (после сканирования, опрос по TTL) приходят по одному на
+  // репозиторий — в store они попадают пачкой, как и события сканирования.
+  const remoteDirty = new Set<string>()
+  let remoteTimer: ReturnType<typeof setTimeout> | undefined
+  const flushRemote = () => {
+    remoteTimer = undefined
+    const { repos } = store.getState()
+    let next: Record<string, Repository> | undefined
+    for (const id of remoteDirty) {
+      if (repos[id]) (next ??= { ...repos })[id] = withRemote(repos[id], remote.get(id))
+    }
+    remoteDirty.clear()
+    if (next) store.setState({ repos: next })
+  }
+  const queueRemote = (st: RemoteStatus) => {
+    remote.set(st.repoId, st)
+    remoteDirty.add(st.repoId)
+    remoteTimer ??= setTimeout(flushRemote, scanFlushMs)
+  }
 
-  // Репозитории, найденные текущим сканированием.
+  // Репозитории, найденные текущим сканированием. События приходят пачкой
+  // (сотни за доли секунды) и попадают в store не чаще раза в scanFlushMs:
+  // перерисовка списка на каждое событие замораживала UI (11.1).
   const found = new Set<string>()
+  let pending: Repository[] = []
+  let flushTimer: ReturnType<typeof setTimeout> | undefined
+  const dropPending = () => {
+    clearTimeout(flushTimer)
+    flushTimer = undefined
+    pending = []
+  }
+  const flushPending = () => {
+    const batch = pending
+    dropPending()
+    const { scanning, repos } = store.getState()
+    if (!scanning || batch.length === 0) return
+    const next = { ...repos }
+    // В событии ещё нет parentId — берём из прежней записи; итог сканирования всё заменит.
+    for (const repo of batch) next[repo.id] = withKnown({ ...repo, parentId: repo.parentId ?? repos[repo.id]?.parentId })
+    store.setState({ repos: next, scanFound: found.size })
+  }
 
   const store = createStore<AppState>()((set, get) => {
     let noticeSeq = 0
@@ -230,10 +271,12 @@ export function createAppStore(source: DataSource): AppStore {
       async scan() {
         if (get().scanning) return
         found.clear()
+        dropPending()
         set({ scanning: true, scanFound: 0 })
         try {
           const res = await source.scanRoots()
-          set({ repos: known(res.repositories), issues: res.issues, stale: false, lastCheckAt: res.scannedAt })
+          dropPending()
+          set({ repos: known(res.repositories), issues: res.issues, stale: false, lastCheckAt: res.scannedAt, scanFound: res.repositories.length })
         } catch (err) {
           fail(err)
         } finally {
@@ -256,7 +299,7 @@ export function createAppStore(source: DataSource): AppStore {
         const ids = Object.values(repos)
           .filter((r) => r.remote && !running[r.id])
           .map((r) => r.id)
-        await Promise.all(ids.map((id) => source.getRemoteStatus(id).then(applyRemote, () => undefined)))
+        await Promise.all(ids.map((id) => source.getRemoteStatus(id).then(queueRemote, () => undefined)))
       },
 
       async addRoot(path) {
@@ -390,18 +433,16 @@ export function createAppStore(source: DataSource): AppStore {
     }
   })
 
-  // Найденные по ходу сканирования репозитории сразу видны в списке. В событии
-  // ещё нет parentId — берём из прежней записи; итог сканирования всё заменит.
+  // Найденные по ходу сканирования репозитории видны в списке с задержкой не больше scanFlushMs.
   source.onScanRepository((repo) => {
-    const { scanning, repos } = store.getState()
-    if (!scanning) return
-    const prev = repos[repo.id]
+    if (!store.getState().scanning) return
     found.add(repo.id)
-    store.setState({ scanFound: found.size, repos: { ...repos, [repo.id]: withKnown({ ...repo, parentId: repo.parentId ?? prev?.parentId }) } })
+    pending.push(repo)
+    flushTimer ??= setTimeout(flushPending, scanFlushMs)
   })
 
   // PR/MR и CI приходят в фоне после сканирования, смены ветки и обновления.
-  source.onRemoteStatus(applyRemote)
+  source.onRemoteStatus(queueRemote)
 
   return store
 }

@@ -22,7 +22,7 @@ import {
   Typography,
   useTheme,
 } from '@mui/material'
-import { useCallback, useMemo, useState, type MouseEvent } from 'react'
+import { memo, useCallback, useMemo, useState, type MouseEvent } from 'react'
 import { CIIndicator, ChangesIndicator, PRIndicator, SyncIndicator } from '../components/indicators'
 import { Sources, StatusTabs } from '../components/filters'
 import { BranchChip, RepoIcon } from '../components/status'
@@ -140,6 +140,49 @@ function RepoCell({ repo, depth, nested, collapsed, onToggle }: { repo: Reposito
   )
 }
 
+interface RowProps {
+  repo: Repository
+  depth: number
+  nested: number
+  collapsed: boolean
+  selected: boolean
+  onToggle(id: string): void
+}
+
+// Строка перерисовывается, только когда изменился её репозиторий: при сотнях
+// строк перерисовка всей таблицы на каждое событие замораживала UI (11.1).
+const RegistryRow = memo(function RegistryRow({ repo: r, depth, nested, collapsed, selected, onToggle }: RowProps) {
+  const openDetails = useApp((s) => s.openDetails)
+  // Выбранная в другом режиме строка прокручивается в видимую область.
+  const reveal = useCallback((el: HTMLTableRowElement | null) => el?.scrollIntoView({ block: 'center' }), [])
+  return (
+    <TableRow hover selected={selected} ref={selected ? reveal : undefined} onClick={() => openDetails(r.id)} sx={{ cursor: 'pointer' }}>
+      <TableCell sx={{ minWidth: 260 }}>
+        <RepoCell repo={r} depth={depth} nested={nested} collapsed={collapsed} onToggle={() => onToggle(r.id)} />
+      </TableCell>
+      <TableCell>
+        <BranchChip repo={r} />
+      </TableCell>
+      <TableCell>
+        <ChangesIndicator repo={r} />
+      </TableCell>
+      <TableCell>
+        <SyncIndicator repo={r} />
+      </TableCell>
+      <TableCell>
+        <PRIndicator repo={r} />
+      </TableCell>
+      <TableCell>
+        <CIIndicator repo={r} />
+      </TableCell>
+      <TableCell sx={{ fontSize: 12.5, color: 'text.secondary', whiteSpace: 'nowrap' }}>{repoHost(r) || '—'}</TableCell>
+      <TableCell align="right">
+        <RowActions repo={r} />
+      </TableCell>
+    </TableRow>
+  )
+})
+
 const columns: { key: SortKey | null; label: MessageKey; width?: number }[] = [
   { key: 'name', label: 'column.repo' },
   { key: 'branch', label: 'column.localBranch' },
@@ -153,16 +196,13 @@ const columns: { key: SortKey | null; label: MessageKey; width?: number }[] = [
 
 export function RegistryView() {
   const theme = useTheme()
-  const openDetails = useApp((s) => s.openDetails)
   const all = useRepos()
   const list = useRegistryRepos()
   const filters = useApp((s) => s.filters)
   const setFilters = useApp((s) => s.setFilters)
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set())
-  // Выбранный в другом режиме репозиторий (переход из радара или проводника) подсвечен,
-  // при открытии реестра строка прокручивается в видимую область.
+  // Выбранный в другом режиме репозиторий (переход из радара или проводника) подсвечен.
   const selectedId = useApp((s) => s.selectedId)
-  const reveal = useCallback((el: HTMLTableRowElement | null) => el?.scrollIntoView({ block: 'center' }), [])
   const metrics = useMemo(() => kpis(list, all.length), [list, all.length])
   const rows = useMemo(() => registryRows(list, collapsed), [list, collapsed])
 
@@ -172,11 +212,15 @@ export function RegistryView() {
     metrics.noStatus > 0 ? t('kpi.noStatus', { count: metrics.noStatus }) : t(key)
 
   const sortBy = (key: SortKey) => setFilters(filters.sort === key ? { asc: !filters.asc } : { sort: key, asc: true })
-  const toggle = (id: string) => {
-    const next = new Set(collapsed)
-    if (!next.delete(id)) next.add(id)
-    setCollapsed(next)
-  }
+  const toggle = useCallback(
+    (id: string) =>
+      setCollapsed((prev) => {
+        const next = new Set(prev)
+        if (!next.delete(id)) next.add(id)
+        return next
+      }),
+    [],
+  )
 
   return (
     <Box>
@@ -217,37 +261,7 @@ export function RegistryView() {
           </TableHead>
           <TableBody>
             {rows.map(({ repo: r, depth, children }) => (
-              <TableRow
-                key={r.id}
-                hover
-                selected={r.id === selectedId}
-                ref={r.id === selectedId ? reveal : undefined}
-                onClick={() => openDetails(r.id)}
-                sx={{ cursor: 'pointer' }}
-              >
-                <TableCell sx={{ minWidth: 260 }}>
-                  <RepoCell repo={r} depth={depth} nested={children} collapsed={collapsed.has(r.id)} onToggle={() => toggle(r.id)} />
-                </TableCell>
-                <TableCell>
-                  <BranchChip repo={r} />
-                </TableCell>
-                <TableCell>
-                  <ChangesIndicator repo={r} />
-                </TableCell>
-                <TableCell>
-                  <SyncIndicator repo={r} />
-                </TableCell>
-                <TableCell>
-                  <PRIndicator repo={r} />
-                </TableCell>
-                <TableCell>
-                  <CIIndicator repo={r} />
-                </TableCell>
-                <TableCell sx={{ fontSize: 12.5, color: 'text.secondary', whiteSpace: 'nowrap' }}>{repoHost(r) || '—'}</TableCell>
-                <TableCell align="right">
-                  <RowActions repo={r} />
-                </TableCell>
-              </TableRow>
+              <RegistryRow key={r.id} repo={r} depth={depth} nested={children} collapsed={collapsed.has(r.id)} selected={r.id === selectedId} onToggle={toggle} />
             ))}
           </TableBody>
         </Table>

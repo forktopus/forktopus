@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { createMockSource } from '../data/mockSource'
 import { Availability, ErrorCode, Operation, Provider, type RemoteStatus, type Repository } from '../data/model'
 import type { DataSource } from '../data/source'
-import { createAppStore, fromUI, toUI, withRemote } from './appStore'
+import { createAppStore, fromUI, scanFlushMs, toUI, withRemote } from './appStore'
 
 const hasLocal = (r: Repository) => Boolean(r.worktree && r.worktree.staged + r.worktree.unstaged + r.worktree.untracked + r.worktree.conflicts > 0)
 
@@ -154,10 +154,16 @@ describe('store', () => {
       ci: { availability: Availability.AvailabilityOK, active: 0, lastResult: 'failure' },
     }
 
+    // События копятся и попадают в store пачкой.
+    const flushed = () => new Promise((r) => setTimeout(r, scanFlushMs + 10))
     emit({ ...status, branch: 'other', pr: { ...status.pr, open: 7 } })
+    await flushed()
     expect(store.getState().repos[repo.id].pr).toEqual(repo.pr)
 
+    const before = store.getState().repos[repo.id]
     emit(status)
+    expect(store.getState().repos[repo.id]).toBe(before)
+    await flushed()
     const got = store.getState().repos[repo.id]
     expect(got.pr.open).toBe(1)
     expect(got.ci.lastResult).toBe('failure')
@@ -213,11 +219,49 @@ describe('store', () => {
     expect(store.getState().scanFound).toBe(total)
 
     const progress: number[] = []
-    const unsubscribe = store.subscribe((s) => s.scanning && progress.push(s.scanFound))
+    let renders = 0
+    const unsubscribe = store.subscribe((s, prev) => {
+      if (s.scanning) progress.push(s.scanFound)
+      if (s.repos !== prev.repos) renders++
+    })
     await store.getState().scan()
     unsubscribe()
     expect(progress[0]).toBe(0)
     expect(progress.at(-1)).toBe(total)
+    // Быстрые события копятся: список меняется не на каждое событие, а итогом (11.1).
+    expect(renders).toBe(1)
+  })
+
+  it('найденные во время долгого сканирования репозитории попадают в список пачками', async () => {
+    const source = createMockSource({ delayMs: 0 })
+    // Ответы мока идут через setTimeout — образец берём до подмены таймеров.
+    const a = { ...(await source.listRepositories()).repositories[0] }
+    vi.useFakeTimers()
+    try {
+      let emit: (r: Repository) => void = () => {}
+      let finish: () => void = () => {}
+      const store = createAppStore({
+        ...source,
+        onScanRepository: (cb) => ((emit = cb), () => {}),
+        scanRoots: () => new Promise((resolve) => (finish = () => resolve({ repositories: [], issues: [], scannedAt: new Date().toISOString() }))),
+      })
+      const scan = store.getState().scan()
+      emit({ ...a, id: 'x1' })
+      emit({ ...a, id: 'x2' })
+      expect(store.getState().repos.x1).toBeUndefined()
+      await vi.advanceTimersByTimeAsync(scanFlushMs)
+      expect(Object.keys(store.getState().repos)).toEqual(expect.arrayContaining(['x1', 'x2']))
+      expect(store.getState().scanFound).toBe(2)
+
+      emit({ ...a, id: 'x3' })
+      finish()
+      await scan
+      await vi.advanceTimersByTimeAsync(scanFlushMs)
+      // Итог сканирования не перезаписывается запоздавшей пачкой.
+      expect(store.getState().repos.x3).toBeUndefined()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('фоновый опрос PR/CI: репозитории с remote, без идущих операций и не во время сканирования', async () => {

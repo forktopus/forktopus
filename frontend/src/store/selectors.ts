@@ -1,12 +1,13 @@
 import { useMemo } from 'react'
 import type { Repository } from '../data/model'
 import { filterRepos, sortRepos } from '../logic/registry'
+import { compareText } from '../logic/repo'
 import { useApp } from './context'
 
 /** Все репозитории в стабильном порядке (по пути). */
 export function useRepos(): Repository[] {
   const repos = useApp((s) => s.repos)
-  return useMemo(() => Object.values(repos).sort((a, b) => a.path.localeCompare(b.path, 'ru')), [repos])
+  return useMemo(() => Object.values(repos).sort((a, b) => compareText(a.path, b.path)), [repos])
 }
 
 /** Репозитории с учётом глобального поиска — общая выборка всех режимов. */

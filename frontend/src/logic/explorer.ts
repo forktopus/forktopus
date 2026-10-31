@@ -6,7 +6,7 @@
 import { Provider, type Repository, type Root, type ScanIssue } from '../data/model'
 import type { Tone } from '../theme/theme'
 import { radarGroup } from './radar'
-import { repoHost, repoName, repoNamespace, repoProvider } from './repo'
+import { compareText, repoHost, repoName, repoNamespace, repoProvider } from './repo'
 import { integrationIssue } from './status'
 
 export interface RepoNode {
@@ -33,8 +33,7 @@ export interface RootNode {
   hosts: HostNode[]
 }
 
-const byText = (a: string, b: string) => a.localeCompare(b, 'ru')
-const byRepo = (a: Repository, b: Repository) => byText(repoName(a), repoName(b)) || byText(a.path, b.path)
+const byRepo = (a: Repository, b: Repository) => compareText(repoName(a), repoName(b)) || compareText(a.path, b.path)
 
 export function buildTree(roots: Root[], repos: Repository[]): RootNode[] {
   const shown = new Set(repos.map((r) => r.id))
@@ -59,7 +58,7 @@ export function buildTree(roots: Root[], repos: Repository[]): RootNode[] {
       root,
       hosts: [...hosts]
         // хост без remote — в конце
-        .sort(([a], [b]) => (!a ? 1 : !b ? -1 : byText(a, b)))
+        .sort(([a], [b]) => (!a ? 1 : !b ? -1 : compareText(a, b)))
         .map(([host, namespaces]) => {
           const all = [...namespaces.values()].flat()
           return {
@@ -67,7 +66,7 @@ export function buildTree(roots: Root[], repos: Repository[]): RootNode[] {
             provider: host ? repoProvider(all[0]) : Provider.$zero,
             issue: all.some(integrationIssue),
             namespaces: [...namespaces]
-              .sort(([a], [b]) => byText(a, b))
+              .sort(([a], [b]) => compareText(a, b))
               .map(([namespace, list]) => ({ namespace, repos: [...list].sort(byRepo).map(node) })),
           }
         }),

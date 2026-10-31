@@ -1,5 +1,12 @@
 import { Provider, type RemoteInfo, type Repository } from '../data/model'
 
+// Один коллатор на всё приложение: localeCompare с локалью создаёт его на
+// каждое сравнение, и сортировка сотен репозиториев заметно тормозит UI.
+const collator = new Intl.Collator('ru')
+
+/** Сравнение строк по-русски для сортировки. */
+export const compareText = (a: string, b: string): number => collator.compare(a, b)
+
 export function selectedRemote(r: Repository): RemoteInfo | undefined {
   return r.remotes?.find((x) => x.name === r.remote)
 }
