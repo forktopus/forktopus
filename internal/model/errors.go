@@ -23,6 +23,14 @@ const (
 	CodeTimeout        ErrorCode = "TIMEOUT"         // команда не уложилась в отведённое время
 	CodeInvalidInput   ErrorCode = "INVALID_INPUT"   // некорректный аргумент вызова
 	CodeOther          ErrorCode = "OTHER"           // прочее: см. сообщение и код завершения
+
+	// Коды безопасных операций (D-037).
+	CodeRepoBusy            ErrorCode = "REPO_BUSY"            // над репозиторием уже идёт операция
+	CodeStateChanged        ErrorCode = "STATE_CHANGED"        // состояние изменилось с момента показа в UI
+	CodeNoRemote            ErrorCode = "NO_REMOTE"            // нет remote или он не выбран
+	CodeDiverged            ErrorCode = "DIVERGED"             // история разошлась, fast-forward невозможен
+	CodeBranchInWorktree    ErrorCode = "BRANCH_IN_WORKTREE"   // ветка checked out в другой рабочей копии
+	CodeDetachedUnreachable ErrorCode = "DETACHED_UNREACHABLE" // коммит detached HEAD не входит ни в одну ветку
 )
 
 // Error — типизированная ошибка ядра. Сериализуется в JSON и в таком виде

@@ -151,4 +151,13 @@ export const ru = {
   'explorer.branchCurrent': 'текущая',
   'explorer.branchBusy': 'занята в {path}',
   'action.refreshRepo': 'Перечитать статус',
+  'action.fetch': 'Fetch',
+  'action.pull': 'Pull (fast-forward)',
+  'action.switch': 'Переключить',
+  'op.fetch': 'Fetch',
+  'op.pull': 'Pull',
+  'op.switch': 'Switch',
+  'op.running': '{op} выполняется…',
+  'op.done': '{op}: готово за {sec} с',
+  'op.failed': '{op} не выполнен',
 } satisfies Record<string, string | PluralForms>

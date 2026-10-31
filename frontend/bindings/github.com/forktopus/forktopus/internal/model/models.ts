@@ -199,6 +199,37 @@ export enum ErrorCode {
      * прочее: см. сообщение и код завершения
      */
     CodeOther = "OTHER",
+
+    /**
+     * Коды безопасных операций (D-037).
+     * над репозиторием уже идёт операция
+     */
+    CodeRepoBusy = "REPO_BUSY",
+
+    /**
+     * состояние изменилось с момента показа в UI
+     */
+    CodeStateChanged = "STATE_CHANGED",
+
+    /**
+     * нет remote или он не выбран
+     */
+    CodeNoRemote = "NO_REMOTE",
+
+    /**
+     * история разошлась, fast-forward невозможен
+     */
+    CodeDiverged = "DIVERGED",
+
+    /**
+     * ветка checked out в другой рабочей копии
+     */
+    CodeBranchInWorktree = "BRANCH_IN_WORKTREE",
+
+    /**
+     * коммит detached HEAD не входит ни в одну ветку
+     */
+    CodeDetachedUnreachable = "DETACHED_UNREACHABLE",
 };
 
 /**
@@ -219,6 +250,77 @@ export enum Nesting {
      * самостоятельный клон внутри чужой рабочей копии
      */
     NestingNested = "nested",
+};
+
+/**
+ * OpExpect — состояние, которое видел пользователь, запуская операцию (D-032).
+ * Если ветка или HEAD уже другие, операция отменяется с STATE_CHANGED.
+ */
+export interface OpExpect {
+    /**
+     * пусто — detached HEAD
+     */
+    "branch": string;
+    "headSha": string;
+}
+
+/**
+ * OpRecord — запись журнала операций (для диагностики).
+ */
+export interface OpRecord {
+    "repoId": string;
+    "op": Operation;
+
+    /**
+     * remote для fetch, ветка для switch
+     */
+    "target"?: string;
+    "at": string;
+    "durationMs": number;
+
+    /**
+     * Error — nil при успехе; иначе причина: блокировка по предусловиям или сбой Git.
+     */
+    "error"?: Error | null;
+}
+
+/**
+ * OpResult — итог операции и свежий статус репозитория.
+ */
+export interface OpResult {
+    "repoId": string;
+    "op": Operation;
+
+    /**
+     * remote для fetch, ветка для switch
+     */
+    "target"?: string;
+    "at": string;
+    "durationMs": number;
+
+    /**
+     * Error — nil при успехе; иначе причина: блокировка по предусловиям или сбой Git.
+     */
+    "error"?: Error | null;
+    "repo": Repository;
+}
+
+/**
+ * Operation — изменяющая операция над репозиторием.
+ */
+export enum Operation {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    OperationFetch = "fetch",
+
+    /**
+     * только fast-forward
+     */
+    OperationPull = "pull",
+    OperationSwitch = "switch",
 };
 
 /**

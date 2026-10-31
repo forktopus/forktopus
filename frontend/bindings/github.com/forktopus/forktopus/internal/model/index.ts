@@ -5,6 +5,7 @@ export {
     Availability,
     ErrorCode,
     Nesting,
+    Operation,
     Provider
 } from "./models.js";
 
@@ -13,6 +14,9 @@ export type {
     BranchStatus,
     CISummary,
     Error,
+    OpExpect,
+    OpRecord,
+    OpResult,
     PRSummary,
     RemoteInfo,
     Repository,

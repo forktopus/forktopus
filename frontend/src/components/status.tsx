@@ -5,12 +5,15 @@ import { repoProvider } from '../logic/repo'
 import { toneColor } from '../theme/theme'
 import { monoFontFamily } from '../theme/tokens'
 
-/** Точка и подпись в цвете тона статуса. */
-export function StatusText({ label }: { label: Label }) {
+/** Точка и подпись в цвете тона статуса. wrap — для длинных сообщений (причина блокировки операции). */
+export function StatusText({ label, wrap = false }: { label: Label; wrap?: boolean }) {
   const theme = useTheme()
   const color = toneColor(theme, label.tone)
   return (
-    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, fontSize: 12, whiteSpace: 'nowrap', color }}>
+    <Box
+      component="span"
+      sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, fontSize: 12, color, ...(wrap ? { minWidth: 0, overflowWrap: 'anywhere' } : { whiteSpace: 'nowrap' }) }}
+    >
       <Box component="i" sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: color, flexShrink: 0 }} />
       {label.text}
     </Box>

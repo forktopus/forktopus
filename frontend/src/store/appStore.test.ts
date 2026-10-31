@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { createMockSource } from '../data/mockSource'
+import { ErrorCode, Operation, type Repository } from '../data/model'
 import type { DataSource } from '../data/source'
 import { createAppStore, fromUI, toUI } from './appStore'
+
+const hasLocal = (r: Repository) => Boolean(r.worktree && r.worktree.staged + r.worktree.unstaged + r.worktree.untracked + r.worktree.conflicts > 0)
 
 function counted(source: DataSource) {
   const calls = { listRepositories: 0, scanRoots: 0, saveUI: 0 }
@@ -107,6 +110,27 @@ describe('store', () => {
     expect(branches?.filter((b) => b.current)).toHaveLength(1)
     expect(await store.getState().loadBranches('nope')).toBeNull()
     expect(store.getState().error).toMatch(/не найден/)
+  })
+
+  it('операции: итог и свежий статус, блокировка с причиной, одна операция за раз (D-031)', async () => {
+    const store = createAppStore(createMockSource({ delayMs: 0 }))
+    await store.getState().init()
+    const repos = Object.values(store.getState().repos)
+    const behind = repos.find((r) => (r.branch?.behind ?? 0) > 0 && (r.branch?.ahead ?? 0) === 0 && !hasLocal(r))!
+    const dirty = repos.find((r) => hasLocal(r) && r.branch?.upstream)!
+
+    const first = store.getState().runOp(behind.id, Operation.OperationPull)
+    expect(store.getState().running[behind.id]).toBe(Operation.OperationPull)
+    expect(await store.getState().runOp(behind.id, Operation.OperationFetch)).toBeNull()
+    const res = await first
+    expect(res?.error).toBeFalsy()
+    expect(store.getState().repos[behind.id].branch?.behind).toBe(0)
+    expect(store.getState().running[behind.id]).toBeUndefined()
+    expect(store.getState().lastOps[behind.id]).toEqual(res)
+
+    const blocked = await store.getState().runOp(dirty.id, Operation.OperationPull)
+    expect(blocked?.error?.code).toBe(ErrorCode.CodeDirtyWorktree)
+    expect(store.getState().lastOps[dirty.id]?.error?.message).toMatch(/локальные изменения/)
   })
 
   it('ошибка источника попадает в error, а не роняет store', async () => {

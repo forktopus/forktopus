@@ -1,13 +1,15 @@
-// Черновой проводник: дерево корень → хост → namespace → репозиторий и
-// краткие сведения о выбранном. Полноценный экран (ветки, Switch) — этап 12.
+// Черновой проводник: дерево корень → хост → namespace → репозиторий,
+// сведения о выбранном и безопасные операции (fetch, ff-pull, switch).
+// Полноценный экран — этап 10.
 
 import RefreshIcon from '@mui/icons-material/Refresh'
-import { Box, ButtonBase, CircularProgress, IconButton, Paper, Tooltip, Typography, useTheme } from '@mui/material'
+import { Box, Button, ButtonBase, CircularProgress, IconButton, Paper, Tooltip, Typography, useTheme } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
 import { BranchChip, RepoIcon, StatusText } from '../components/status'
-import type { BranchInfo, Repository } from '../data/model'
+import { Operation, type BranchInfo, type Repository } from '../data/model'
 import { formatRelative, t } from '../i18n'
 import { buildTree } from '../logic/explorer'
+import { opName, opResultLabel } from '../logic/ops'
 import { repoName } from '../logic/repo'
 import { changesLabel, ciLabel, prLabel, syncLabel } from '../logic/status'
 import { useApp } from '../store/context'
@@ -18,6 +20,8 @@ import { EmptyText } from './EmptyText'
 /** Локальные ветки выбранного репозитория; перечитываются при смене выбора и после обновления статуса. */
 function Branches({ repo }: { repo: Repository }) {
   const loadBranches = useApp((s) => s.loadBranches)
+  const runOp = useApp((s) => s.runOp)
+  const busy = useApp((s) => Boolean(s.running[repo.id]))
   const [branches, setBranches] = useState<BranchInfo[] | null>(null)
   useEffect(() => {
     let alive = true
@@ -31,7 +35,7 @@ function Branches({ repo }: { repo: Repository }) {
   if (branches === null) return <CircularProgress size={16} />
   if (branches.length === 0) return <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{t('explorer.noBranches')}</Typography>
   return (
-    <Box sx={{ display: 'grid', gridTemplateColumns: 'auto auto 1fr', columnGap: 2, rowGap: 1, alignItems: 'center' }}>
+    <Box sx={{ display: 'grid', gridTemplateColumns: 'auto auto 1fr auto', columnGap: 2, rowGap: 1, alignItems: 'center' }}>
       {branches.map((b) => (
         <Box key={b.name} sx={{ display: 'contents' }}>
           <Typography sx={{ font: `12px ${monoFontFamily}`, fontWeight: b.current ? 760 : 400, color: b.current ? 'primary.main' : 'text.primary' }}>
@@ -47,6 +51,14 @@ function Branches({ repo }: { repo: Repository }) {
               .filter(Boolean)
               .join(' · ')}
           </Typography>
+          <Box>
+            {!b.current && (
+              // Причину блокировки (dirty, ветка в другом worktree…) сообщает backend до вызова Git.
+              <Button size="small" variant="text" disabled={busy} onClick={() => void runOp(repo.id, Operation.OperationSwitch, b.name)}>
+                {t('action.switch')}
+              </Button>
+            )}
+          </Box>
         </Box>
       ))}
     </Box>
@@ -64,6 +76,9 @@ export function ExplorerView() {
   const tree = useMemo(() => buildTree(roots, repos), [roots, repos])
   const selected = repos.find((r) => r.id === selectedId) ?? null
   const refreshRepo = useApp((s) => s.refreshRepo)
+  const runOp = useApp((s) => s.runOp)
+  const running = useApp((s) => (selectedId ? s.running[selectedId] : undefined))
+  const lastOp = useApp((s) => (selectedId ? s.lastOps[selectedId] : undefined))
   const [refreshing, setRefreshing] = useState(false)
   const refresh = async (id: string) => {
     setRefreshing(true)
@@ -130,6 +145,22 @@ export function ExplorerView() {
             <Typography sx={{ font: `11px ${monoFontFamily}`, color: 'text.secondary', mt: 1, overflowWrap: 'anywhere' }}>
               {selected.path}
             </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mt: 2 }}>
+              <Button size="small" variant="outlined" disabled={Boolean(running)} onClick={() => void runOp(selected.id, Operation.OperationFetch)}>
+                {t('action.fetch')}
+              </Button>
+              <Button size="small" variant="outlined" disabled={Boolean(running)} onClick={() => void runOp(selected.id, Operation.OperationPull)}>
+                {t('action.pull')}
+              </Button>
+              {running ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CircularProgress size={14} />
+                  <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{t('op.running', { op: opName(running) })}</Typography>
+                </Box>
+              ) : (
+                lastOp && <StatusText wrap label={opResultLabel(lastOp)} />
+              )}
+            </Box>
             <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 1.5, mt: 3, alignItems: 'center' }}>
               <Typography sx={caption}>{t('column.branch')}</Typography>
               <Box>

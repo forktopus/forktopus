@@ -166,6 +166,39 @@ type RepositorySnapshot struct {
 	Stale        bool         `json:"stale"`
 }
 
+// Operation — изменяющая операция над репозиторием.
+type Operation string
+
+const (
+	OperationFetch  Operation = "fetch"
+	OperationPull   Operation = "pull" // только fast-forward
+	OperationSwitch Operation = "switch"
+)
+
+// OpExpect — состояние, которое видел пользователь, запуская операцию (D-032).
+// Если ветка или HEAD уже другие, операция отменяется с STATE_CHANGED.
+type OpExpect struct {
+	Branch  string `json:"branch"` // пусто — detached HEAD
+	HeadSHA string `json:"headSha"`
+}
+
+// OpRecord — запись журнала операций (для диагностики).
+type OpRecord struct {
+	RepoID     string    `json:"repoId"`
+	Op         Operation `json:"op"`
+	Target     string    `json:"target,omitempty"` // remote для fetch, ветка для switch
+	At         time.Time `json:"at"`
+	DurationMs int64     `json:"durationMs"`
+	// Error — nil при успехе; иначе причина: блокировка по предусловиям или сбой Git.
+	Error *Error `json:"error,omitempty"`
+}
+
+// OpResult — итог операции и свежий статус репозитория.
+type OpResult struct {
+	OpRecord
+	Repo Repository `json:"repo"`
+}
+
 // ToolDiagnostic — результат проверки внешней утилиты (git, gh, glab, tea).
 type ToolDiagnostic struct {
 	Name         string       `json:"name"`

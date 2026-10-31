@@ -14,6 +14,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"github.com/forktopus/forktopus/internal/gitlocal"
+	"github.com/forktopus/forktopus/internal/gitops"
 	"github.com/forktopus/forktopus/internal/model"
 	"github.com/forktopus/forktopus/internal/repocache"
 	"github.com/forktopus/forktopus/internal/runner"
@@ -41,6 +42,9 @@ type AppService struct {
 	snapshot model.RepositorySnapshot
 
 	scanMu sync.Mutex // одно сканирование за раз
+	// locks — одна изменяющая операция на репозиторий; чтение статуса её ждёт.
+	locks gitops.Locks
+	opLog []model.OpRecord // под mu
 }
 
 // NewAppService создаёт сервис, читает настройки и кэш прошлого сканирования.
@@ -173,6 +177,7 @@ func (s *AppService) ScanRoots(ctx context.Context) (model.ScanResult, error) {
 	roots := slices.Clone(s.cfg.Roots)
 	opts := s.scanOptionsLocked()
 	opts.OnRepository = func(r model.Repository) { emit(EventScanRepository, r) }
+	opts.Lock = s.locks.Lock
 	s.mu.Unlock()
 
 	res, err := scan.Run(ctx, s.runner, roots, opts)
@@ -234,8 +239,17 @@ func (s *AppService) GetBranches(ctx context.Context, id string) ([]model.Branch
 }
 
 // RefreshRepo перечитывает локальный статус одного репозитория и обновляет
-// его в списке и кэше.
+// его в списке и кэше. Если над репозиторием идёт операция, ждёт её конца.
 func (s *AppService) RefreshRepo(ctx context.Context, id string) (model.Repository, error) {
+	if _, err := s.GetRepo(id); err != nil {
+		return model.Repository{}, err
+	}
+	unlock, err := s.locks.Lock(ctx, id)
+	if err != nil {
+		return model.Repository{}, err
+	}
+	defer unlock()
+
 	s.mu.Lock()
 	i, err := s.findLocked(id)
 	if err != nil {
@@ -249,17 +263,7 @@ func (s *AppService) RefreshRepo(ctx context.Context, id string) (model.Reposito
 	if err := ctx.Err(); err != nil {
 		return model.Repository{}, model.Errorf(model.CodeOpCancelled, "обновление отменено")
 	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	// Пока читали, репозиторий мог исчезнуть из списка (удалён корень, пересканирование).
-	if i, err := s.findLocked(id); err == nil {
-		repos := slices.Clone(s.snapshot.Repositories)
-		repos[i] = repo
-		s.snapshot.Repositories = repos
-		s.saveCacheLocked()
-	}
-	return repo, nil
+	return s.storeRepo(repo), nil
 }
 
 // SelectRemote запоминает remote, по которому определяется сервер

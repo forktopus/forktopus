@@ -34,6 +34,21 @@ export function CheckTools(): $CancellablePromise<model$0.ToolDiagnostic[] | nul
 }
 
 /**
+ * FastForwardPull подтягивает upstream текущей ветки только fast-forward.
+ */
+export function FastForwardPull(id: string, expect: model$0.OpExpect): $CancellablePromise<model$0.OpResult> {
+    return $Call.ByID(3245670707, id, expect);
+}
+
+/**
+ * FetchRepo выполняет git fetch выбранного remote. expect — ветка и HEAD,
+ * которые видел пользователь (D-032).
+ */
+export function FetchRepo(id: string, expect: model$0.OpExpect): $CancellablePromise<model$0.OpResult> {
+    return $Call.ByID(801040187, id, expect);
+}
+
+/**
  * GetBranches читает локальные ветки репозитория: upstream, ahead/behind и
  * ветки, занятые другими рабочими копиями.
  */
@@ -53,6 +68,13 @@ export function GetRepo(id: string): $CancellablePromise<model$0.Repository> {
  */
 export function GetUI(): $CancellablePromise<settings$0.UI> {
     return $Call.ByID(1723516525);
+}
+
+/**
+ * ListOperations возвращает журнал последних операций, новые — первыми.
+ */
+export function ListOperations(): $CancellablePromise<model$0.OpRecord[] | null> {
+    return $Call.ByID(1653670451);
 }
 
 /**
@@ -80,7 +102,7 @@ export function PickFolder(): $CancellablePromise<string> {
 
 /**
  * RefreshRepo перечитывает локальный статус одного репозитория и обновляет
- * его в списке и кэше.
+ * его в списке и кэше. Если над репозиторием идёт операция, ждёт её конца.
  */
 export function RefreshRepo(id: string): $CancellablePromise<model$0.Repository> {
     return $Call.ByID(4225707712, id);
@@ -115,4 +137,12 @@ export function ScanRoots(): $CancellablePromise<model$0.ScanResult> {
  */
 export function SelectRemote(repoID: string, remote: string): $CancellablePromise<void> {
     return $Call.ByID(2837537355, repoID, remote);
+}
+
+/**
+ * SwitchBranch переключает рабочую копию на существующую локальную ветку.
+ * Ветка ищется среди прочитанных с диска, а не берётся из строки UI как есть.
+ */
+export function SwitchBranch(id: string, branch: string, expect: model$0.OpExpect): $CancellablePromise<model$0.OpResult> {
+    return $Call.ByID(3900963913, id, branch, expect);
 }

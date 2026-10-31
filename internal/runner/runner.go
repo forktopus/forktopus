@@ -76,6 +76,7 @@ func (Exec) Run(ctx context.Context, c Command) (Result, error) {
 	// Дочерние процессы (например, ssh от git) могут держать pipe после
 	// завершения основного; не ждём их бесконечно.
 	cmd.WaitDelay = 2 * time.Second
+	detach(cmd)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

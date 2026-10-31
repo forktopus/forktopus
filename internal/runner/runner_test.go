@@ -120,3 +120,20 @@ func TestRedactURLs(t *testing.T) {
 		}
 	}
 }
+
+func TestRunWithoutControllingTerminal(t *testing.T) {
+	if _, err := os.Stat("/proc/self/stat"); err != nil {
+		t.Skip("нет /proc")
+	}
+	// Поля /proc/self/stat: 1 — pid, 6 — session id. Совпадают у лидера новой сессии.
+	res, err := Exec{}.Run(context.Background(), Command{Name: "cat", Args: []string{"/proc/self/stat"}})
+	if err != nil || !res.OK() {
+		t.Fatalf("cat: res=%+v err=%v", res, err)
+	}
+	stat := string(res.Stdout)
+	fields := strings.Fields(stat[strings.LastIndex(stat, ")")+2:])
+	pid := strings.Fields(stat)[0]
+	if len(fields) < 4 || fields[3] != pid {
+		t.Fatalf("процесс не в своей сессии: pid=%s stat=%q", pid, stat)
+	}
+}

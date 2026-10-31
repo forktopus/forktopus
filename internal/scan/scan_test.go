@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sync"
 	"sync/atomic"
 	"testing"
 
@@ -250,5 +251,44 @@ func TestScanBrokenRepositoryDoesNotStopScan(t *testing.T) {
 	}
 	if ok := byPath(res, filepath.Join(root, "ok")); ok.Error != nil {
 		t.Errorf("исправный репозиторий с ошибкой: %+v", ok)
+	}
+}
+
+func TestScanTakesRepositoryLock(t *testing.T) {
+	root := tempRoot(t)
+	gittest.Init(t, mkdir(t, root, "free"))
+	gittest.Init(t, mkdir(t, root, "busy"))
+	var mu sync.Mutex
+	locked := map[string]int{}
+	opts := Options{Lock: func(_ context.Context, id string) (func(), error) {
+		mu.Lock()
+		defer mu.Unlock()
+		locked[id]++
+		return func() {}, nil
+	}}
+	res := run(t, []model.Root{{ID: "r", Path: root}}, opts)
+	if len(res.Repositories) != 2 || len(locked) != 2 {
+		t.Fatalf("блокировка берётся для каждого репозитория: %v, %+v", locked, res.Repositories)
+	}
+
+	// Не дождались блокировки — статус не читается, причина в Error.
+	busyID := ""
+	for _, r := range res.Repositories {
+		if filepath.Base(r.Path) == "busy" {
+			busyID = r.ID
+		}
+	}
+	opts.Lock = func(_ context.Context, id string) (func(), error) {
+		if id == busyID {
+			return nil, model.Errorf(model.CodeOpCancelled, "ожидание отменено")
+		}
+		return func() {}, nil
+	}
+	res = run(t, []model.Root{{ID: "r", Path: root}}, opts)
+	for _, r := range res.Repositories {
+		busy := r.ID == busyID
+		if busy != (r.Error != nil) || busy != (r.Branch == nil) {
+			t.Errorf("%s: error=%v branch=%v", r.Path, r.Error, r.Branch)
+		}
 	}
 }

@@ -3,7 +3,7 @@
 // фильтры сохраняются в настройках Go через DataSource.saveUI.
 
 import { createStore, type StoreApi } from 'zustand/vanilla'
-import type { BranchInfo, Repository, Root, ScanIssue, ToolDiagnostic, UI } from '../data/model'
+import { Operation, type BranchInfo, type OpResult, type Repository, type Root, type ScanIssue, type ToolDiagnostic, type UI } from '../data/model'
 import { errorOf, type DataSource, type Snapshot } from '../data/source'
 import { registryFilters, sortKeys, type RegistryFilter, type SortKey } from '../logic/registry'
 import type { ThemeMode } from '../theme/tokens'
@@ -43,6 +43,10 @@ export interface AppState {
   filters: Filters
   query: string
   selectedId: string | null
+  /** операция, которая сейчас идёт над репозиторием: кнопки операций заблокированы (D-031) */
+  running: Record<string, Operation>
+  /** итог последней операции над репозиторием */
+  lastOps: Record<string, OpResult>
   /** последняя ошибка для показа пользователю */
   error: string | null
 
@@ -59,6 +63,11 @@ export interface AppState {
   refreshRepo(id: string): Promise<void>
   /** локальные ветки репозитория; null — ошибка (она уже в error) */
   loadBranches(id: string): Promise<BranchInfo[] | null>
+  /**
+   * Fetch / ff-pull / switch. Отпечаток — ветка и HEAD из показанного статуса
+   * (D-032). Итог — в lastOps, свежий статус — в repos.
+   */
+  runOp(id: string, op: Operation, branch?: string): Promise<OpResult | null>
   setMode(mode: Mode): void
   setTheme(theme: ThemeMode): void
   setFilters(patch: Partial<Filters>): void
@@ -124,6 +133,8 @@ export function createAppStore(source: DataSource): AppStore {
       filters: defaultFilters,
       query: '',
       selectedId: null,
+      running: {},
+      lastOps: {},
       error: null,
 
       // Сначала — сохранённое (UI, корни, кэш), чтобы экран появился сразу;
@@ -221,6 +232,31 @@ export function createAppStore(source: DataSource): AppStore {
         } catch (err) {
           fail(err)
           return null
+        }
+      },
+
+      async runOp(id, op, branch = '') {
+        const repo = get().repos[id]
+        if (!repo || get().running[id]) return null
+        const expect = { branch: repo.branch?.name ?? '', headSha: repo.branch?.headSha ?? '' }
+        set({ running: { ...get().running, [id]: op } })
+        try {
+          const res =
+            op === Operation.OperationFetch
+              ? await source.fetchRepo(id, expect)
+              : op === Operation.OperationPull
+                ? await source.pullRepo(id, expect)
+                : await source.switchBranch(id, branch, expect)
+          const repos = get().repos
+          set({ lastOps: { ...get().lastOps, [id]: res }, repos: repos[id] ? { ...repos, [id]: res.repo } : repos })
+          return res
+        } catch (err) {
+          fail(err)
+          return null
+        } finally {
+          const running = { ...get().running }
+          delete running[id]
+          set({ running })
         }
       },
 

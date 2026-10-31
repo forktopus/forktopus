@@ -2,6 +2,9 @@ import {
   type BranchInfo,
   ErrorCode,
   type Error as ModelError,
+  type OpExpect,
+  type OpRecord,
+  type OpResult,
   type Repository,
   type RepositorySnapshot,
   type Root,
@@ -37,6 +40,16 @@ export interface DataSource {
   getBranches(repoId: string): Promise<BranchInfo[]>
   /** Перечитывает локальный статус одного репозитория. */
   refreshRepo(repoId: string): Promise<Repository>
+  /**
+   * Безопасные операции. expect — ветка и HEAD, которые видел пользователь (D-032).
+   * Блокировка по предусловиям и сбой Git приходят в result.error вместе со свежим статусом.
+   */
+  fetchRepo(repoId: string, expect: OpExpect): Promise<OpResult>
+  /** Pull только fast-forward. */
+  pullRepo(repoId: string, expect: OpExpect): Promise<OpResult>
+  switchBranch(repoId: string, branch: string, expect: OpExpect): Promise<OpResult>
+  /** Журнал последних операций, новые — первыми. */
+  listOperations(): Promise<OpRecord[]>
   checkTools(): Promise<ToolDiagnostic[]>
   getUI(): Promise<UI>
   saveUI(ui: UI): Promise<void>
@@ -52,6 +65,10 @@ export function errorOf(err: unknown): ModelError {
   }
   const message = err instanceof globalThis.Error ? err.message : String(err)
   return { code: ErrorCode.CodeOther, message }
+}
+
+export function normalizeOpResult(r: OpResult): OpResult {
+  return { ...r, repo: normalizeRepository(r.repo) }
 }
 
 /** Приводит null-массивы из Go к пустым. */

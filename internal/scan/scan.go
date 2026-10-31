@@ -29,6 +29,10 @@ type Options struct {
 	// нахождения (из одной горутины). ParentID и Nesting в нём ещё не заполнены:
 	// окончательный список — в результате Run.
 	OnRepository func(model.Repository)
+	// Lock не даёт читать статус репозитория посреди изменяющей операции
+	// (fetch/pull/switch); nil — без блокировки. Refresh её не берёт: блокировку
+	// держит вызывающий.
+	Lock func(ctx context.Context, id string) (unlock func(), err error)
 }
 
 type candidate struct {
@@ -158,6 +162,14 @@ func inspect(ctx context.Context, r runner.Runner, c candidate, opts Options) fo
 	}
 	repo.ID = model.PathID(repo.Path)
 	repo.GitDir = info.GitDir
+	if opts.Lock != nil {
+		unlock, err := opts.Lock(ctx, repo.ID)
+		if err != nil {
+			repo.Error = model.AsError(err)
+			return found{repo: repo, superproject: info.Superproject}
+		}
+		defer unlock()
+	}
 	readLocal(ctx, r, &repo, opts)
 	return found{repo: repo, superproject: info.Superproject}
 }

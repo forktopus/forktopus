@@ -7,6 +7,11 @@ import {
   Availability,
   ErrorCode,
   Nesting,
+  Operation,
+  type Error as ModelError,
+  type OpExpect,
+  type OpRecord,
+  type OpResult,
   Provider,
   type CISummary,
   type PRSummary,
@@ -188,6 +193,38 @@ function mockBranches(repo: Repository, index: number): BranchInfo[] {
   return list
 }
 
+const blocked = (code: ErrorCode, message: string): ModelError => ({ code, message })
+
+/** Упрощённая матрица предусловий Go (internal/gitops.Check) для демо. */
+function mockCheck(op: Operation, repo: Repository, target: BranchInfo | undefined): ModelError | null {
+  const b = repo.branch
+  const w = repo.worktree
+  if (!b || !w) return blocked(ErrorCode.CodeOther, 'статус репозитория не прочитан')
+  const busy = w.conflicts > 0 || Boolean(w.operation)
+  const dirty = w.staged + w.unstaged + w.untracked > 0
+  const conflict = blocked(ErrorCode.CodeGitConflict, w.operation ? `не завершена операция Git: ${w.operation}` : 'есть неразрешённые конфликты')
+  const dirtyErr = blocked(ErrorCode.CodeDirtyWorktree, 'есть локальные изменения: закоммитьте или отложите их в терминале')
+  switch (op) {
+    case Operation.OperationFetch:
+      return repo.remote ? null : blocked(ErrorCode.CodeNoRemote, 'нечего fetch: у репозитория нет remote')
+    case Operation.OperationPull:
+      if (busy) return conflict
+      if (dirty) return dirtyErr
+      if (b.detached) return blocked(ErrorCode.CodeNoUpstream, 'detached HEAD: pull выполняется только на ветке')
+      if (!b.upstream || b.upstreamGone) return blocked(ErrorCode.CodeNoUpstream, `у ветки ${b.name ?? ''} нет upstream`)
+      if ((b.ahead ?? 0) > 0 && (b.behind ?? 0) > 0) return blocked(ErrorCode.CodeDiverged, `история разошлась с ${b.upstream}: fast-forward невозможен`)
+      return null
+    case Operation.OperationSwitch:
+      if (!target) return blocked(ErrorCode.CodeInvalidInput, 'такой локальной ветки нет')
+      if (target.current) return blocked(ErrorCode.CodeInvalidInput, `ветка ${target.name} уже выбрана`)
+      if (target.worktreePath) return blocked(ErrorCode.CodeBranchInWorktree, `ветка ${target.name} открыта в другой рабочей копии: ${target.worktreePath}`)
+      if (busy) return conflict
+      if (dirty) return dirtyErr
+      return null
+  }
+  return blocked(ErrorCode.CodeInvalidInput, `неизвестная операция ${String(op)}`)
+}
+
 function invalidInput(message: string): Error {
   return Object.assign(new Error(message), { cause: { code: ErrorCode.CodeInvalidInput, message } })
 }
@@ -221,6 +258,8 @@ export function createMockSource({ delayMs = 250 }: MockOptions = {}): DataSourc
   // Как будто кэш прошлого запуска: два часа назад, не подтверждён сканированием.
   let snapshot: Snapshot = { repositories: repos, issues, scannedAt: minutesAgo(120), stale: true }
   let picked = 0
+  const opLog: OpRecord[] = []
+  const running = new Set<string>()
   const listeners = new Set<(repo: Repository) => void>()
   let ui: UI = {}
   try {
@@ -235,6 +274,41 @@ export function createMockSource({ delayMs = 250 }: MockOptions = {}): DataSourc
     return structuredClone(value)
   }
   const known = (rootId: string) => roots.some((r) => r.id === rootId)
+
+  // Как AppService.runOp: блокировка, сверка с показанным, предусловия, «Git», свежий статус.
+  async function runOp(repoId: string, op: Operation, branch: string, expect: OpExpect): Promise<OpResult> {
+    const index = repos.findIndex((r) => r.id === repoId)
+    if (index < 0) throw invalidInput(`репозиторий "${repoId}" не найден`)
+    const repo = repos[index]
+    const start = Date.now()
+    const record: OpRecord = { repoId, op, target: op === Operation.OperationFetch ? repo.remote : branch || undefined, at: new Date(start).toISOString(), durationMs: 0 }
+    const finish = (error: ModelError | null) => {
+      repo.updatedAt = new Date().toISOString()
+      const done = { ...record, durationMs: Date.now() - start, error }
+      opLog.push(done)
+      return reply<OpResult>({ ...done, repo })
+    }
+    if (running.has(repoId)) return finish(blocked(ErrorCode.CodeRepoBusy, 'над репозиторием уже выполняется операция, повторите после её завершения'))
+    running.add(repoId)
+    try {
+      await sleep(delayMs * 3)
+      const b = repo.branch
+      if (!b || (b.name ?? '') !== expect.branch || (b.headSha ?? '') !== expect.headSha) {
+        return finish(blocked(ErrorCode.CodeStateChanged, 'состояние репозитория изменилось, пока вы его смотрели: проверьте его и повторите'))
+      }
+      const target = op === Operation.OperationSwitch ? mockBranches(repo, index).find((x) => x.name === branch) : undefined
+      const error = mockCheck(op, repo, target)
+      if (error) return finish(error)
+      if (op === Operation.OperationFetch) b.lastFetchAt = new Date().toISOString()
+      if (op === Operation.OperationPull) b.behind = 0
+      if (op === Operation.OperationSwitch && target) {
+        Object.assign(b, { name: target.name, headSha: target.headSha, upstream: target.upstream, upstreamGone: target.upstreamGone, ahead: target.ahead, behind: target.behind })
+      }
+      return finish(null)
+    } finally {
+      running.delete(repoId)
+    }
+  }
 
   return {
     kind: 'mock',
@@ -288,6 +362,10 @@ export function createMockSource({ delayMs = 250 }: MockOptions = {}): DataSourc
       repo.updatedAt = new Date().toISOString()
       return reply(repo)
     },
+    fetchRepo: (repoId, expect) => runOp(repoId, Operation.OperationFetch, '', expect),
+    pullRepo: (repoId, expect) => runOp(repoId, Operation.OperationPull, '', expect),
+    switchBranch: (repoId, branch, expect) => runOp(repoId, Operation.OperationSwitch, branch, expect),
+    listOperations: () => reply([...opLog].reverse()),
     checkTools: () => reply(mockTools),
     getUI: () => reply(ui),
     async saveUI(next) {
