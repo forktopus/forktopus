@@ -66,10 +66,10 @@ func webURL(t Target, rest string) string {
 
 // Diagnose проверяет gh и логин на хосте цели. `auth status --json` без сети
 // честно отдаёт сетевую ошибку (текстовый вывод пишет «token invalid»).
-func (g GitHub) Diagnose(ctx context.Context, t Target) model.ToolDiagnostic {
+func (g GitHub) Diagnose(ctx context.Context, _ string, t Target) model.ToolDiagnostic {
 	d := model.ToolDiagnostic{Name: "gh"}
 	fail := func(e *model.Error) model.ToolDiagnostic {
-		d.Availability, d.Error = availabilityOf(e.Code), e
+		d.Availability, d.Error = AvailabilityOf(e.Code), e
 		return d
 	}
 	out, e := g.run(ctx, "", "--version")
@@ -200,36 +200,14 @@ func (g GitHub) CIRuns(ctx context.Context, q Query) model.CISummary {
 	return ciOK(active, ghLastResult(runs), link)
 }
 
-// ghOK — завершения, которые GitHub не считает провалом.
-var ghOK = []string{"success", "neutral", "skipped"}
-
-// ghLastResult — итог последнего коммита ветки: по каждому workflow (и событию)
-// берётся его последний запуск на этом коммите. Повторный успешный запуск
-// перекрывает упавший; незавершённый не даёт итога. Провал любого workflow,
-// в том числе cancelled и timed_out, — failure, как в сводке GitHub.
+// ghLastResult — итог последнего коммита ветки по правилам D-043 (lastRunResult).
 func ghLastResult(runs []ghRun) string {
-	if len(runs) == 0 {
-		return ""
-	}
 	runs = slices.Clone(runs)
 	// RFC 3339 в UTC сравнивается как строка; новые — первыми.
 	slices.SortStableFunc(runs, func(a, b ghRun) int { return cmp.Compare(b.CreatedAt, a.CreatedAt) })
-	head := runs[0].HeadSha
-	seen := map[string]bool{}
-	result := ""
-	for _, r := range runs {
-		key := r.WorkflowName + "\x00" + r.Event
-		if r.HeadSha != head || seen[key] {
-			continue
-		}
-		seen[key] = true
-		switch {
-		case r.Status != "completed":
-		case !slices.Contains(ghOK, r.Conclusion):
-			return "failure"
-		default:
-			result = "success"
-		}
+	states := make([]runState, len(runs))
+	for i, r := range runs {
+		states[i] = runState{key: r.WorkflowName + "\x00" + r.Event, sha: r.HeadSha, done: r.Status == "completed", conclusion: r.Conclusion}
 	}
-	return result
+	return lastRunResult(states)
 }

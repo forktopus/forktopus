@@ -1,0 +1,22 @@
+{
+ "workflow_runs": [
+  {
+   "id": 403,
+   "url": "https://git.example.org/api/v1/repos/OWNER/forktopus-pilot/actions/runs/403",
+   "html_url": "https://git.example.org/OWNER/forktopus-pilot/actions/runs/403",
+   "display_title": "test: ветка no-pr",
+   "path": "ok.yml@refs/heads/pilot/no-pr",
+   "event": "push",
+   "run_attempt": 0,
+   "run_number": 5,
+   "head_sha": "86ebdf3140dba124b82cb542c18ad92dcec453b5",
+   "head_branch": "pilot/no-pr",
+   "status": "completed",
+   "conclusion": "success",
+   "started_at": "2026-10-31T17:07:43+03:00",
+   "completed_at": "2026-10-31T17:07:45+03:00",
+   "repository_id": 0
+  }
+ ],
+ "total_count": 1
+}

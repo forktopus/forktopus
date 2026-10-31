@@ -1,0 +1,15 @@
+[
+ {
+  "id": 3011977302,
+  "iid": 5,
+  "project_id": 88339103,
+  "name": "",
+  "status": "success",
+  "source": "push",
+  "ref": "pilot/no-pr",
+  "sha": "ea4b50c6a0f9012e8972da8775204fa36d5b9de5",
+  "web_url": "https://gitlab.com/OWNER/forktopus-pilot/-/pipelines/3011977302",
+  "created_at": "2026-10-31T14:02:06.113Z",
+  "updated_at": "2026-10-31T14:02:32.235Z"
+ }
+]

@@ -46,6 +46,10 @@ func TestErrorJSONAndCode(t *testing.T) {
 	if CodeOf(nil) != "" {
 		t.Fatal("CodeOf(nil) не пуст")
 	}
+	var none *Error
+	if CodeOf(none) != "" {
+		t.Fatal("CodeOf((*Error)(nil)) не пуст")
+	}
 
 	var e error = AsError(err)
 	data, jsonErr := json.Marshal(&e) // так сериализует ошибки Wails

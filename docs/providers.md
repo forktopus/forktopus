@@ -93,6 +93,7 @@ glab auth status --hostname gitlab.com
 | Нет сети | 1 | `x gitlab.com: API call failed: Get "…/api/v4/user": dial tcp: lookup gitlab.com …: network is unreachable` |
 
 - В отличие от `gh`, без сети `auth status` честно показывает сетевую ошибку (`dial tcp`, `lookup`), а не «токен недействителен».
+- Машинный вариант — `glab auth status --hostname HOST --output json`: `{"hosts":[{"host","state","error","api_endpoint",…}]}`. Если логин не прошёл проверку (`state: error`), код выхода **1**, но JSON печатается; без сети в `error` — сетевая ошибка, при отозванном токене — `401 Unauthorized`. Хоста без логина — код 1 и `{"error":{"message":"x HOST has not been authenticated with glab; …"}}` в stdout. Адаптер берёт этот вариант.
 - Чистое «логина нет» без выхода из аккаунта воспроизвести не удалось: пустой `GLAB_CONFIG_DIR` всё равно берёт токен из keyring, но теряет признак OAuth, и сервер отвечает 401. Для адаптера это одно и то же — `AUTH_REQUIRED`.
 
 ### Открытые MR, где ветка — источник
@@ -129,6 +130,7 @@ glab ci list -R OWNER/REPO --ref BRANCH -F json
 | Нет сети | 1 | `dial tcp: lookup gitlab.com …: network is unreachable` | `NETWORK_ERROR` |
 | Нет проекта или доступа | 1 | `404 Not Found` | `REPO_UNRESOLVED` |
 
+- Текст ошибки в stderr glab печатает в рамке `ERROR` и **переносит по ширине ~120 символов** (посреди URL и слов, `COLUMNS` не влияет) — перед разбором склеивать строки.
 - `glab mr list -F json` при ошибке пишет JSON `{"error":{"message":"…"}}` **в stdout** (и текст в stderr); `glab ci list` — только в stderr. Разбирать stdout как список только при коде 0.
 - Сообщения содержат URL API с путём проекта, но без токена.
 - **Без сети ошибка приходит через ~12 с** (повторы DNS), а не мгновенно, — учесть в таймаутах и в UI (показывать «загрузка»).
@@ -144,6 +146,7 @@ glab ci list -R OWNER/REPO --ref BRANCH -F json
 - Логин по умолчанию может быть не задан (у пользователя оба логина `default: false`). Логин выбирать явно (`-l NAME`) по хосту remote: `tea logins list -o json` → `[{"name","url","default",…}]`; `default` — строка `"true"`/`"false"`.
 - Без `-l` внутри репозитория `tea` сам выбирает логин по хосту remote — сработало, но полагаться на это не стоит при нескольких логинах на один хост.
 - `tea whoami` не принимает `-l` — для проверки авторизации конкретного логина не годится.
+- `tea --version` → `Version: 0.16.0\tgolang: …` с ANSI-кодами вокруг номера даже при `NO_COLOR` — номер выделять регулярным выражением.
 - `tea repos create -o json` печатает не чистый JSON — не использовать как образец машинного вывода.
 
 ### Открытые PR ветки
@@ -172,6 +175,8 @@ tea api -l LOGIN -i "/repos/OWNER/REPO/actions/runs?branch=BRANCH&limit=20"
 - Наблюдались `status`: `in_progress`, `completed`. `conclusion`: `success`, `failure`; пока запуск не завершён, **поля нет**, а `completed_at` = `1970-01-01…` (нулевое время) — не показывать как дату. Фильтр `&status=` принимает `success`, `failure`, `pending`, `queued`, `in_progress`, `skipped`, `canceled` (по справке `tea`); отменённый запуск не воспроизводился: в API нет эндпоинта отмены (`POST …/runs/N/cancel` → 404), а `tea actions runs delete` (он же `cancel`) удаляет запуск — в пилоте не вызывался.
 - Как и на GitHub, на один коммит — по запуску на каждый workflow: итог считать по всем запускам последнего `head_sha`.
 - Время в ответе — с часовым поясом сервера (`+03:00`).
+- Если у репозитория выключены Actions (`has_actions: false`), эндпоинт всё равно отвечает 200 и отдаёт прежние запуски. Маршрута нет на сервере (старая Gitea) — `404` с телом `404 page not found` **текстом**, а нет репозитория — `404` с JSON `{"message":"not found"}`: так адаптер отличает «не поддерживается» (A18) от «нет проекта».
+- Ссылка на запуски ветки: фильтра по ветке в веб-интерфейсе Actions нет — адаптер ведёт на последний запуск (`html_url`).
 - Сводный статус коммита (все статусы, не только Actions) — `/repos/OWNER/REPO/commits/REF/status` → `state` (`pending` / `success` / `failure`).
 
 ### Ошибки

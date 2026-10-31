@@ -1,0 +1,54 @@
+{
+ "workflow_runs": [
+  {
+   "id": 411,
+   "url": "https://git.example.org/api/v1/repos/OWNER/forktopus-pilot/actions/runs/411",
+   "html_url": "https://git.example.org/OWNER/forktopus-pilot/actions/runs/411",
+   "display_title": "test: ветка slow",
+   "path": "slow.yml@refs/heads/pilot/slow",
+   "event": "workflow_dispatch",
+   "run_attempt": 0,
+   "run_number": 13,
+   "head_sha": "1fff88d50c0ff79e4738593af6a71d98e75297b3",
+   "head_branch": "pilot/slow",
+   "status": "in_progress",
+   "started_at": "2026-10-31T17:37:06+03:00",
+   "completed_at": "1970-01-01T03:00:00+03:00",
+   "repository_id": 0
+  },
+  {
+   "id": 407,
+   "url": "https://git.example.org/api/v1/repos/OWNER/forktopus-pilot/actions/runs/407",
+   "html_url": "https://git.example.org/OWNER/forktopus-pilot/actions/runs/407",
+   "display_title": "test: ветка slow",
+   "path": "slow.yml@refs/heads/pilot/slow",
+   "event": "push",
+   "run_attempt": 0,
+   "run_number": 9,
+   "head_sha": "1fff88d50c0ff79e4738593af6a71d98e75297b3",
+   "head_branch": "pilot/slow",
+   "status": "in_progress",
+   "started_at": "2026-10-31T17:07:51+03:00",
+   "completed_at": "1970-01-01T03:00:00+03:00",
+   "repository_id": 0
+  },
+  {
+   "id": 406,
+   "url": "https://git.example.org/api/v1/repos/OWNER/forktopus-pilot/actions/runs/406",
+   "html_url": "https://git.example.org/OWNER/forktopus-pilot/actions/runs/406",
+   "display_title": "test: ветка slow",
+   "path": "ok.yml@refs/heads/pilot/slow",
+   "event": "push",
+   "run_attempt": 0,
+   "run_number": 8,
+   "head_sha": "1fff88d50c0ff79e4738593af6a71d98e75297b3",
+   "head_branch": "pilot/slow",
+   "status": "completed",
+   "conclusion": "success",
+   "started_at": "2026-10-31T17:07:49+03:00",
+   "completed_at": "2026-10-31T17:07:51+03:00",
+   "repository_id": 0
+  }
+ ],
+ "total_count": 3
+}

@@ -37,10 +37,17 @@ type Query struct {
 // через Availability и Error в результате, ноль — только при успешном ответе CLI.
 type RemoteProvider interface {
 	Provider() model.Provider
-	// Diagnose проверяет CLI и авторизацию на сервере цели.
-	Diagnose(ctx context.Context, t Target) model.ToolDiagnostic
+	// Diagnose проверяет CLI и авторизацию на сервере цели. dir — рабочая копия:
+	// tea без git-репозитория в cwd не работает.
+	Diagnose(ctx context.Context, dir string, t Target) model.ToolDiagnostic
 	// PullRequests — открытые PR/MR, где ветка запроса — источник.
 	PullRequests(ctx context.Context, q Query) model.PRSummary
 	// CIRuns — CI-запуски ветки запроса.
 	CIRuns(ctx context.Context, q Query) model.CISummary
 }
+
+var (
+	_ RemoteProvider = GitHub{}
+	_ RemoteProvider = GitLab{}
+	_ RemoteProvider = Gitea{}
+)

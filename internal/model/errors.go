@@ -58,6 +58,9 @@ func CodeOf(err error) ErrorCode {
 	}
 	var e *Error
 	if errors.As(err, &e) {
+		if e == nil { // типизированный nil: (*Error)(nil), переданный как error
+			return ""
+		}
 		return e.Code
 	}
 	return CodeOther

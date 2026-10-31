@@ -47,6 +47,10 @@ func (s *scripted) Run(_ context.Context, c runner.Command) (runner.Result, erro
 
 func stdout(b []byte) reply { return reply{res: runner.Result{Stdout: b}} }
 
+func resultOf(code int, out, errOut string) runner.Result {
+	return runner.Result{ExitCode: code, Stdout: []byte(out), Stderr: []byte(errOut)}
+}
+
 func stderr(code int, msg string) reply {
 	return reply{res: runner.Result{ExitCode: code, Stderr: []byte(msg)}}
 }
@@ -220,7 +224,7 @@ func TestGitHubDiagnose(t *testing.T) {
 	}
 	for _, c := range cases {
 		g, s := ghWith(c.answers)
-		d := g.Diagnose(ctx, ghTarget)
+		d := g.Diagnose(ctx, "/repo", ghTarget)
 		if d.Name != "gh" || d.Availability != c.avail || (c.code == "") != (d.Error == nil) || (d.Error != nil && d.Error.Code != c.code) {
 			t.Errorf("%s: %+v %+v", c.name, d, d.Error)
 		}

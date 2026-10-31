@@ -1,0 +1,39 @@
+{
+ "workflow_runs": [
+  {
+   "id": 405,
+   "url": "https://git.example.org/api/v1/repos/OWNER/forktopus-pilot/actions/runs/405",
+   "html_url": "https://git.example.org/OWNER/forktopus-pilot/actions/runs/405",
+   "display_title": "test: ветка fail",
+   "path": "ok.yml@refs/heads/pilot/fail",
+   "event": "push",
+   "run_attempt": 0,
+   "run_number": 7,
+   "head_sha": "07b60c82ea4013031aaa1e32be3b886751f40ac9",
+   "head_branch": "pilot/fail",
+   "status": "completed",
+   "conclusion": "success",
+   "started_at": "2026-10-31T17:07:47+03:00",
+   "completed_at": "2026-10-31T17:07:49+03:00",
+   "repository_id": 0
+  },
+  {
+   "id": 404,
+   "url": "https://git.example.org/api/v1/repos/OWNER/forktopus-pilot/actions/runs/404",
+   "html_url": "https://git.example.org/OWNER/forktopus-pilot/actions/runs/404",
+   "display_title": "test: ветка fail",
+   "path": "fail.yml@refs/heads/pilot/fail",
+   "event": "push",
+   "run_attempt": 0,
+   "run_number": 6,
+   "head_sha": "07b60c82ea4013031aaa1e32be3b886751f40ac9",
+   "head_branch": "pilot/fail",
+   "status": "completed",
+   "conclusion": "failure",
+   "started_at": "2026-10-31T17:07:45+03:00",
+   "completed_at": "2026-10-31T17:07:47+03:00",
+   "repository_id": 0
+  }
+ ],
+ "total_count": 2
+}

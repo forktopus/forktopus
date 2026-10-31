@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"slices"
 	"strings"
 	"time"
 
@@ -14,9 +15,9 @@ const cliTimeout = 20 * time.Second
 // now подменяется в тестах.
 var now = time.Now
 
-// availabilityOf — как UI показывает ошибку: нет CLI или авторизации —
+// AvailabilityOf — как UI показывает ошибку: нет CLI или авторизации —
 // «недоступно», нет поддержки — «не поддерживается», прочее — ошибка источника.
-func availabilityOf(code model.ErrorCode) model.Availability {
+func AvailabilityOf(code model.ErrorCode) model.Availability {
 	switch code {
 	case model.CodeCLIMissing, model.CodeAuthRequired:
 		return model.AvailabilityUnavailable
@@ -29,12 +30,12 @@ func availabilityOf(code model.ErrorCode) model.Availability {
 // prFailed — сводка PR без чисел: проблема не превращается в ноль.
 func prFailed(e *model.Error) model.PRSummary {
 	at := now()
-	return model.PRSummary{Availability: availabilityOf(e.Code), Error: e, LastAttemptAt: &at}
+	return model.PRSummary{Availability: AvailabilityOf(e.Code), Error: e, LastAttemptAt: &at}
 }
 
 func ciFailed(e *model.Error) model.CISummary {
 	at := now()
-	return model.CISummary{Availability: availabilityOf(e.Code), Error: e, LastAttemptAt: &at}
+	return model.CISummary{Availability: AvailabilityOf(e.Code), Error: e, LastAttemptAt: &at}
 }
 
 func prOK(open, draft int, url string) model.PRSummary {
@@ -69,10 +70,10 @@ func classify(cli string, res runner.Result, err error, markers []marker) *model
 	lower := strings.ToLower(out)
 	for _, m := range markers {
 		if i := strings.Index(lower, strings.ToLower(m.text)); i >= 0 {
-			return &model.Error{Code: m.code, Message: cli + ": " + lineAt(out, i), ExitCode: res.ExitCode}
+			return &model.Error{Code: m.code, Message: cli + ": " + strings.TrimPrefix(lineAt(out, i), "Error: "), ExitCode: res.ExitCode}
 		}
 	}
-	msg := firstLine(out)
+	msg := strings.TrimPrefix(firstLine(out), "Error: ")
 	if msg == "" {
 		msg = "завершился с ошибкой"
 	}
@@ -101,4 +102,42 @@ func firstLine(s string) string {
 // badOutput — CLI ответил кодом 0, но вывод не разобрался.
 func badOutput(cli string, err error) *model.Error {
 	return model.Errorf(model.CodeOther, "%s: неожиданный формат ответа: %v", cli, err)
+}
+
+// runState — запуск workflow в формате Actions (GitHub, Gitea).
+type runState struct {
+	key        string // workflow + событие: одна проверка коммита
+	sha        string
+	done       bool
+	conclusion string
+}
+
+// runOK — завершения, которые GitHub не считает провалом.
+var runOK = []string{"success", "neutral", "skipped"}
+
+// lastRunResult — итог последнего коммита ветки (D-043); runs — новые первыми.
+// По каждой проверке (workflow + событие) берётся её последний запуск на этом
+// коммите: повторный успешный перекрывает упавший, незавершённый итога не даёт.
+// Провал любой проверки, в том числе cancelled и timed_out, — failure.
+func lastRunResult(runs []runState) string {
+	if len(runs) == 0 {
+		return ""
+	}
+	head := runs[0].sha
+	seen := map[string]bool{}
+	result := ""
+	for _, r := range runs {
+		if r.sha != head || seen[r.key] {
+			continue
+		}
+		seen[r.key] = true
+		switch {
+		case !r.done:
+		case !slices.Contains(runOK, r.conclusion):
+			return "failure"
+		default:
+			result = "success"
+		}
+	}
+	return result
 }

@@ -1,0 +1,22 @@
+[
+ {
+  "index": "2",
+  "state": "open",
+  "head": "pilot/pr-draft",
+  "base": "main",
+  "url": "https://git.example.org/OWNER/forktopus-pilot/pulls/2",
+  "title": "WIP: Пилот: черновик",
+  "updated": "2026-10-31T14:07:34Z",
+  "ci": "pending"
+ },
+ {
+  "index": "1",
+  "state": "open",
+  "head": "pilot/pr-open",
+  "base": "main",
+  "url": "https://git.example.org/OWNER/forktopus-pilot/pulls/1",
+  "title": "Пилот: открытый PR",
+  "updated": "2026-10-31T14:07:32Z",
+  "ci": "pending"
+ }
+]
