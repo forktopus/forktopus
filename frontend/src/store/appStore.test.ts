@@ -205,6 +205,40 @@ describe('store', () => {
     expect(store.getState().running[repo.id]).toBe(Operation.OperationFetch)
   })
 
+  it('прогресс сканирования — по событиям найденных репозиториев, с нуля при каждом скане', async () => {
+    const source = createMockSource({ delayMs: 0 })
+    const store = createAppStore(source)
+    await store.getState().init()
+    const total = Object.keys(store.getState().repos).length
+    expect(store.getState().scanFound).toBe(total)
+
+    const progress: number[] = []
+    const unsubscribe = store.subscribe((s) => s.scanning && progress.push(s.scanFound))
+    await store.getState().scan()
+    unsubscribe()
+    expect(progress[0]).toBe(0)
+    expect(progress.at(-1)).toBe(total)
+  })
+
+  it('фоновый опрос PR/CI: репозитории с remote, без идущих операций и не во время сканирования', async () => {
+    const source = createMockSource({ delayMs: 0 })
+    const asked: string[] = []
+    const store = createAppStore({ ...source, getRemoteStatus: (id) => (asked.push(id), source.getRemoteStatus(id)) })
+    await store.getState().init()
+    const repos = Object.values(store.getState().repos)
+    const busy = repos.find((r) => r.remote)!
+
+    store.setState({ running: { [busy.id]: Operation.OperationFetch } })
+    await store.getState().pollRemote()
+    expect(asked.sort()).toEqual(repos.filter((r) => r.remote && r.id !== busy.id).map((r) => r.id).sort())
+    expect(asked.length).toBeLessThan(repos.length)
+
+    asked.length = 0
+    store.setState({ scanning: true })
+    await store.getState().pollRemote()
+    expect(asked).toEqual([])
+  })
+
   it('удаление корня убирает его репозитории из списка', async () => {
     const store = createAppStore(createMockSource({ delayMs: 0 }))
     await store.getState().init()

@@ -26,6 +26,7 @@ export function TopBar({ onOpenTools, onOpenRoots }: Props) {
   const query = useApp((s) => s.query)
   const setQuery = useApp((s) => s.setQuery)
   const scanning = useApp((s) => s.scanning)
+  const scanFound = useApp((s) => s.scanFound)
   const refresh = useApp((s) => s.refresh)
   const lastCheckAt = useApp((s) => s.lastCheckAt)
   const demo = useApp((s) => s.sourceKind === 'mock')
@@ -48,7 +49,10 @@ export function TopBar({ onOpenTools, onOpenRoots }: Props) {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  const lastCheck = lastCheckAt ? t('lastCheck.at', { when: formatRelative(lastCheckAt, now) }) : t('lastCheck.never')
+  const lastCheck = scanning
+    ? t('lastCheck.scanning', { count: scanFound })
+    : lastCheckAt
+      ? t('lastCheck.at', { when: formatRelative(lastCheckAt, now) }) : t('lastCheck.never')
   const dark = theme.palette.mode === 'dark'
 
   return (

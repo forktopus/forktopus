@@ -36,6 +36,7 @@ export const ru = {
 
   'lastCheck.never': 'ещё не проверялось',
   'lastCheck.at': 'проверено {when}',
+  'lastCheck.scanning': 'идёт проверка · найдено репозиториев: {count}',
 
   'time.justNow': 'только что',
 

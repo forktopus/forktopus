@@ -27,6 +27,9 @@ export interface Filters {
 
 export const defaultFilters: Filters = { registry: 'all', host: '', sort: 'name', asc: true }
 
+/** Срок свежести PR/CI в кэше Go (D-046): с этим шагом серверные данные перезапрашиваются в фоне. */
+export const remoteTTLms = 2 * 60 * 1000
+
 /** Уведомление внизу экрана: итог операции, ошибка, копирование. */
 export interface Notice {
   id: number
@@ -46,6 +49,8 @@ export interface AppState {
   /** первые данные (корни и кэш репозиториев) загружены */
   ready: boolean
   scanning: boolean
+  /** сколько репозиториев найдено текущим сканированием (прогресс по событиям) */
+  scanFound: number
   roots: Root[]
   repos: Record<string, Repository>
   /** каталоги, которые не удалось просмотреть при последнем сканировании */
@@ -76,6 +81,11 @@ export interface AppState {
   refresh(): Promise<void>
   scan(): Promise<void>
   checkTools(): Promise<void>
+  /**
+   * Фоновое обновление PR/MR и CI по TTL: Go отдаёт свежее из кэша и
+   * перезапрашивает устаревшее. Ошибки не показываются — они в самих данных.
+   */
+  pollRemote(): Promise<void>
   addRoot(path: string): Promise<boolean>
   /** системный диалог выбора папки + addRoot; false — диалог закрыт или ошибка */
   pickAndAddRoot(): Promise<boolean>
@@ -157,6 +167,9 @@ export function createAppStore(source: DataSource): AppStore {
     if (repos[st.repoId]) store.setState({ repos: { ...repos, [st.repoId]: withRemote(repos[st.repoId], st) } })
   }
 
+  // Репозитории, найденные текущим сканированием.
+  const found = new Set<string>()
+
   const store = createStore<AppState>()((set, get) => {
     let noticeSeq = 0
     const notify = (tone: Tone, text: string) => set({ notices: [...get().notices, { id: ++noticeSeq, tone, text }] })
@@ -171,6 +184,7 @@ export function createAppStore(source: DataSource): AppStore {
       sourceKind: source.kind,
       ready: false,
       scanning: false,
+      scanFound: 0,
       roots: [],
       repos: {},
       issues: [],
@@ -215,7 +229,8 @@ export function createAppStore(source: DataSource): AppStore {
 
       async scan() {
         if (get().scanning) return
-        set({ scanning: true })
+        found.clear()
+        set({ scanning: true, scanFound: 0 })
         try {
           const res = await source.scanRoots()
           set({ repos: known(res.repositories), issues: res.issues, stale: false, lastCheckAt: res.scannedAt })
@@ -232,6 +247,16 @@ export function createAppStore(source: DataSource): AppStore {
         } catch (err) {
           fail(err)
         }
+      },
+
+      async pollRemote() {
+        const { scanning, repos, running } = get()
+        // После сканирования Go запрашивает всё сам; во время операции статус ещё изменится.
+        if (scanning) return
+        const ids = Object.values(repos)
+          .filter((r) => r.remote && !running[r.id])
+          .map((r) => r.id)
+        await Promise.all(ids.map((id) => source.getRemoteStatus(id).then(applyRemote, () => undefined)))
       },
 
       async addRoot(path) {
@@ -371,7 +396,8 @@ export function createAppStore(source: DataSource): AppStore {
     const { scanning, repos } = store.getState()
     if (!scanning) return
     const prev = repos[repo.id]
-    store.setState({ repos: { ...repos, [repo.id]: withKnown({ ...repo, parentId: repo.parentId ?? prev?.parentId }) } })
+    found.add(repo.id)
+    store.setState({ scanFound: found.size, repos: { ...repos, [repo.id]: withKnown({ ...repo, parentId: repo.parentId ?? prev?.parentId }) } })
   })
 
   // PR/MR и CI приходят в фоне после сканирования, смены ветки и обновления.
