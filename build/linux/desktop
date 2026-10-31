@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=Forktopus
+Comment=Обзор состояния множества Git-репозиториев
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/forktopus %u
+Terminal=false
+Type=Application
+Icon=forktopus
+Categories=Utility;
+StartupWMClass=forktopus
+
+ 
