@@ -4,11 +4,9 @@
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
-import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import {
   Box,
   Button,
-  ButtonBase,
   CircularProgress,
   IconButton,
   Menu,
@@ -20,33 +18,23 @@ import {
   TableHead,
   TableRow,
   TableSortLabel,
-  ToggleButton,
-  ToggleButtonGroup,
   Tooltip,
   Typography,
   useTheme,
 } from '@mui/material'
-import { useMemo, useState, type MouseEvent, type ReactNode } from 'react'
+import { useCallback, useMemo, useState, type MouseEvent } from 'react'
 import { CIIndicator, ChangesIndicator, PRIndicator, SyncIndicator } from '../components/indicators'
-import { BranchChip, RepoIcon, caption } from '../components/status'
+import { Sources, StatusTabs } from '../components/filters'
+import { BranchChip, RepoIcon } from '../components/status'
 import { Nesting, Operation, type Repository } from '../data/model'
 import { formatTime, t, type MessageKey } from '../i18n'
 import { opName, pullBlock } from '../logic/ops'
-import { hostSources, kpis, registryFilters, registryRows, type RegistryFilter, type SortKey } from '../logic/registry'
+import { kpis, registryRows, type SortKey } from '../logic/registry'
 import { repoHost, repoName, repoNamespace } from '../logic/repo'
 import { remoteCaption } from '../logic/status'
 import { useApp } from '../store/context'
-import { toneColor } from '../theme/theme'
-import { useRegistryRepos, useRepos, useSearchedRepos } from '../store/selectors'
+import { useRegistryRepos, useRepos } from '../store/selectors'
 import { EmptyText } from './EmptyText'
-
-const filterLabel: Record<RegistryFilter, MessageKey> = {
-  all: 'filter.all',
-  attention: 'filter.attention',
-  dirty: 'filter.dirty',
-  behind: 'filter.behind',
-  ci: 'filter.ci',
-}
 
 function Metric({ label, value, foot }: { label: string; value: string; foot: string }) {
   return (
@@ -59,61 +47,6 @@ function Metric({ label, value, foot }: { label: string; value: string; foot: st
         {foot}
       </Typography>
     </Paper>
-  )
-}
-
-function SourcePill({ active, onClick, children, warn = false }: { active: boolean; onClick(): void; children: ReactNode; warn?: boolean }) {
-  const theme = useTheme()
-  return (
-    <ButtonBase
-      onClick={onClick}
-      aria-pressed={active}
-      sx={{
-        gap: 0.75,
-        px: 1.5,
-        py: 0.9,
-        borderRadius: '10px',
-        fontSize: 12.5,
-        border: `1px solid ${warn ? toneColor(theme, 'warn') : active ? theme.palette.primary.main : theme.app.line}`,
-        bgcolor: active ? theme.app.tabActive : 'transparent',
-        color: active ? theme.app.tabActiveText : 'text.primary',
-      }}
-    >
-      {children}
-    </ButtonBase>
-  )
-}
-
-/** Фильтр источников: хосты со счётчиками и предупреждением о незавершённой настройке CLI. */
-function Sources() {
-  const theme = useTheme()
-  const searched = useSearchedRepos()
-  const host = useApp((s) => s.filters.host)
-  const setFilters = useApp((s) => s.setFilters)
-  const sources = useMemo(() => hostSources(searched), [searched])
-  const count = (n: number) => (
-    <Box component="span" sx={{ fontSize: 11, color: 'text.secondary' }}>
-      {n}
-    </Box>
-  )
-  return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 2.5 }}>
-      <Typography sx={{ ...caption, mr: 1 }}>{t('registry.sources')}</Typography>
-      <SourcePill active={host === ''} onClick={() => setFilters({ host: '' })}>
-        {t('filter.all')} {count(searched.length)}
-      </SourcePill>
-      {sources.map((s) => (
-        <Tooltip key={s.host} title={s.issue ? t('registry.sourceIssue') : ''}>
-          <span>
-            <SourcePill active={host === s.host} warn={s.issue} onClick={() => setFilters({ host: host === s.host ? '' : s.host })}>
-              {s.host}
-              {s.issue && <WarningAmberIcon sx={{ fontSize: 15, color: toneColor(theme, 'warn') }} />}
-              {count(s.count)}
-            </SourcePill>
-          </span>
-        </Tooltip>
-      ))}
-    </Box>
   )
 }
 
@@ -226,6 +159,10 @@ export function RegistryView() {
   const filters = useApp((s) => s.filters)
   const setFilters = useApp((s) => s.setFilters)
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set())
+  // Выбранный в другом режиме репозиторий (переход из радара или проводника) подсвечен,
+  // при открытии реестра строка прокручивается в видимую область.
+  const selectedId = useApp((s) => s.selectedId)
+  const reveal = useCallback((el: HTMLTableRowElement | null) => el?.scrollIntoView({ block: 'center' }), [])
   const metrics = useMemo(() => kpis(list, all.length), [list, all.length])
   const rows = useMemo(() => registryRows(list, collapsed), [list, collapsed])
 
@@ -255,19 +192,7 @@ export function RegistryView() {
         />
       </Box>
 
-      <ToggleButtonGroup
-        size="small"
-        exclusive
-        value={filters.registry}
-        onChange={(_, v: RegistryFilter | null) => v && setFilters({ registry: v })}
-        sx={{ mb: 1.5, flexWrap: 'wrap' }}
-      >
-        {registryFilters.map((f) => (
-          <ToggleButton key={f} value={f} sx={{ textTransform: 'none', px: 1.5 }}>
-            {t(filterLabel[f])}
-          </ToggleButton>
-        ))}
-      </ToggleButtonGroup>
+      <StatusTabs />
 
       <Paper sx={{ borderRadius: '15px', overflowX: 'auto' }}>
         <Table size="small" sx={{ minWidth: 1100, '& td, & th': { borderColor: theme.app.line, py: 1.5 } }}>
@@ -292,7 +217,14 @@ export function RegistryView() {
           </TableHead>
           <TableBody>
             {rows.map(({ repo: r, depth, children }) => (
-              <TableRow key={r.id} hover onClick={() => openDetails(r.id)} sx={{ cursor: 'pointer' }}>
+              <TableRow
+                key={r.id}
+                hover
+                selected={r.id === selectedId}
+                ref={r.id === selectedId ? reveal : undefined}
+                onClick={() => openDetails(r.id)}
+                sx={{ cursor: 'pointer' }}
+              >
                 <TableCell sx={{ minWidth: 260 }}>
                   <RepoCell repo={r} depth={depth} nested={children} collapsed={collapsed.has(r.id)} onToggle={() => toggle(r.id)} />
                 </TableCell>

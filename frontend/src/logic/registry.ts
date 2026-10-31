@@ -3,8 +3,9 @@ import { radarGroup } from './radar'
 import { repoHost, repoName, repoNamespace } from './repo'
 import { changeCount, ciFailed, hasChanges, hasStatus, integrationIssue, isBehind, remoteCount } from './status'
 
-export type RegistryFilter = 'all' | 'attention' | 'dirty' | 'behind' | 'ci'
-export const registryFilters: RegistryFilter[] = ['all', 'attention', 'dirty', 'behind', 'ci']
+/** integration — нет данных PR/CI из-за незавершённой настройки (05 §3: отдельный фильтр). */
+export type RegistryFilter = 'all' | 'attention' | 'dirty' | 'behind' | 'ci' | 'integration'
+export const registryFilters: RegistryFilter[] = ['all', 'attention', 'dirty', 'behind', 'ci', 'integration']
 
 export type SortKey = 'name' | 'branch' | 'changes' | 'sync' | 'pr' | 'ci' | 'host'
 export const sortKeys: SortKey[] = ['name', 'branch', 'changes', 'sync', 'pr', 'ci', 'host']
@@ -37,6 +38,8 @@ export function matchesFilter(r: Repository, filter: RegistryFilter): boolean {
       return isBehind(r)
     case 'ci':
       return ciFailed(r)
+    case 'integration':
+      return integrationIssue(r)
   }
 }
 

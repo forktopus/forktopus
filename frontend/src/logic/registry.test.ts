@@ -27,6 +27,8 @@ describe('фильтры реестра', () => {
     expect(ids(filterRepos(all, { ...base, filter: 'dirty' }))).toEqual(['beta', 'local'])
     expect(ids(filterRepos(all, { ...base, filter: 'behind' }))).toEqual(['alpha'])
     expect(ids(filterRepos(all, { ...base, filter: 'ci' }))).toEqual(['gamma'])
+    // незавершённая настройка интеграции — отдельный фильтр, а не «требуют внимания»
+    expect(ids(filterRepos(all, { ...base, filter: 'integration' }))).toEqual(['beta'])
   })
 
   it('по хосту', () => {

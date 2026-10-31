@@ -38,6 +38,8 @@ function Content({ onOpenRoots, onOpenTools }: { onOpenRoots(): void; onOpenTool
   const scanning = useApp((s) => s.scanning)
   const stale = useApp((s) => s.stale)
   const lastCheckAt = useApp((s) => s.lastCheckAt)
+  const filter = useApp((s) => s.filters.registry)
+  const setFilters = useApp((s) => s.setFilters)
   const repos = useRepos()
   const issues = useMemo(() => integrationIssueCount(repos), [repos])
 
@@ -63,9 +65,17 @@ function Content({ onOpenRoots, onOpenTools }: { onOpenRoots(): void; onOpenTool
           severity="info"
           sx={{ mb: 2.5 }}
           action={
-            <Button color="inherit" size="small" onClick={onOpenTools}>
-              {t('action.tools')}
-            </Button>
+            <>
+              {/* Отдельный фильтр незавершённой настройки (05 §3) — в реестре и радаре. */}
+              {mode !== 'explorer' && filter !== 'integration' && (
+                <Button color="inherit" size="small" onClick={() => setFilters({ registry: 'integration' })}>
+                  {t('integration.show')}
+                </Button>
+              )}
+              <Button color="inherit" size="small" onClick={onOpenTools}>
+                {t('action.tools')}
+              </Button>
+            </>
           }
         >
           {t('integration.banner', { count: issues })}
@@ -75,11 +85,6 @@ function Content({ onOpenRoots, onOpenTools }: { onOpenRoots(): void; onOpenTool
       {repos.length > 0 && mode === 'registry' && <RegistryView />}
       {repos.length > 0 && mode === 'explorer' && <ExplorerView onOpenTools={onOpenTools} />}
       {repos.length > 0 && mode === 'radar' && <RadarView />}
-      {repos.length > 0 && mode === 'radar' && (
-        <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mt: 3, textAlign: 'center' }}>
-          {t('screen.draft')}
-        </Typography>
-      )}
     </>
   )
 }

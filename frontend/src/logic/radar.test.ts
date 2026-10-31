@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Availability, ErrorCode } from '../data/model'
 import { repo, unavailable } from '../test/fixtures'
-import { groupRadar, radarGroup } from './radar'
+import { groupRadar, radarGroup, radarNote, radarTags } from './radar'
 
 describe('группировка радара', () => {
   it('требует внимания: конфликт, незавершённая операция, ошибка чтения', () => {
@@ -45,3 +45,34 @@ describe('группировка радара', () => {
     expect(groups.ok.map((r) => r.id)).toEqual(['a'])
   })
 })
+
+describe('метки и пояснение карточки', () => {
+  const texts = (r: Parameters<typeof radarTags>[0]) => radarTags(r).map((l) => l.text)
+  const now = new Date('2026-10-31T12:10:00Z')
+
+  it('чистый и синхронизированный — «всё в порядке»', () => {
+    expect(texts(repo())).toEqual(['✓ Всё в порядке'])
+    expect(radarNote({ ...repo(), branch: { ...repo().branch!, lastFetchAt: '2026-10-31T12:00:00Z' } }, now)).toMatch(/^Совпадает с upstream · по fetch 10\sмин/)
+  })
+
+  it('изменения, отставание и серверные факты', () => {
+    const r = repo({ worktree: { staged: 1, untracked: 2 }, branch: { behind: 3 }, pr: { open: 2 }, ci: { active: 1 } })
+    expect(texts(r)).toEqual(['◉ 3 локальных', '↓ 3 коммита', '◌ 1 CI работает', '↗ 2 PR/MR'])
+    expect(radarNote(r)).toBe('staged 1 · untracked 2')
+  })
+
+  it('разошлась, упавший CI и незавершённая настройка — метки, но не «всё в порядке»', () => {
+    expect(texts(repo({ branch: { ahead: 1, behind: 1 } }))).toEqual(['⇅ Ветка разошлась'])
+    expect(texts(repo({ ci: { lastResult: 'failure' } }))).toEqual(['✕ Ошибка CI'])
+    const noCli = repo({ pr: { ...unavailable, error: { code: ErrorCode.CodeCLIMissing, message: '' } }, ci: unavailable })
+    expect(texts(noCli)).toEqual(['⚠ CLI не установлен'])
+    expect(radarGroup(noCli)).toBe('ok')
+  })
+
+  it('конфликт и операция; без upstream — пояснение', () => {
+    expect(texts(repo({ worktree: { conflicts: 2, operation: 'merge' } }))).toEqual(['2 конфликта', 'Незавершённый merge'])
+    expect(radarNote(repo({ branch: { upstream: undefined, ahead: null, behind: null } }))).toBe('Upstream не настроен — синхронизацию сравнить не с чем')
+    expect(radarNote(repo({ branch: { behind: 1 } }))).toMatch(/^В upstream 1 новый коммит · /)
+  })
+})
+

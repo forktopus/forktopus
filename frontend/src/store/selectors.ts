@@ -16,13 +16,19 @@ export function useSearchedRepos(): Repository[] {
   return useMemo(() => filterRepos(repos, { filter: 'all', host: '', query }), [repos, query])
 }
 
-/** Выборка реестра: поиск, фильтр, хост, сортировка. */
-export function useRegistryRepos(): Repository[] {
+/** Поиск, вкладка статуса и хост — общая выборка реестра и радара. */
+export function useFilteredRepos(): Repository[] {
   const repos = useRepos()
   const query = useApp((s) => s.query)
-  const filters = useApp((s) => s.filters)
-  return useMemo(
-    () => sortRepos(filterRepos(repos, { filter: filters.registry, host: filters.host, query }), filters.sort, filters.asc),
-    [repos, query, filters],
-  )
+  const filter = useApp((s) => s.filters.registry)
+  const host = useApp((s) => s.filters.host)
+  return useMemo(() => filterRepos(repos, { filter, host, query }), [repos, query, filter, host])
+}
+
+/** Выборка реестра: поиск, фильтр, хост, сортировка. */
+export function useRegistryRepos(): Repository[] {
+  const list = useFilteredRepos()
+  const sort = useApp((s) => s.filters.sort)
+  const asc = useApp((s) => s.filters.asc)
+  return useMemo(() => sortRepos(list, sort, asc), [list, sort, asc])
 }
