@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Availability, ErrorCode } from '../data/model'
-import { toolHint } from './tools'
+import { gitProblem, toolHint } from './tools'
 
 describe('toolHint', () => {
   it('готовому CLI подсказка не нужна', () => {
@@ -21,3 +21,13 @@ describe('toolHint', () => {
     expect(h?.text).toMatch(/Нет связи с github\.com/)
   })
 })
+
+describe('git в PATH (A28)', () => {
+  it('проблема — только когда проверка была и git не готов', () => {
+    expect(gitProblem([])).toBeNull()
+    expect(gitProblem([{ name: 'git', availability: Availability.AvailabilityOK }])).toBeNull()
+    const missing = { name: 'git', availability: Availability.AvailabilityUnavailable, error: { code: ErrorCode.CodeCLIMissing, message: 'git не найден в PATH' } }
+    expect(gitProblem([{ name: 'gh', availability: Availability.AvailabilityOK }, missing])).toBe(missing)
+  })
+})
+

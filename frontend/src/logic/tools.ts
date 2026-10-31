@@ -55,3 +55,12 @@ export function toolHint(d: ToolDiagnostic): ToolHint | null {
 
 /** Команды для самостоятельной проверки установленных CLI. */
 export const selfCheckCommands = ['git --version', 'gh auth status', 'glab auth status', 'tea logins list'].join('\n')
+
+/**
+ * Git не готов (A28): без него не прочитать ни одного статуса. null — git в
+ * порядке или проверка ещё не выполнялась.
+ */
+export function gitProblem(tools: ToolDiagnostic[]): ToolDiagnostic | null {
+  const git = tools.find((d) => d.name === 'git')
+  return git && git.availability !== Availability.AvailabilityOK ? git : null
+}

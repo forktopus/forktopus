@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { ErrorCode } from '../data/model'
 import { repo, unavailable } from '../test/fixtures'
-import { buildTree, healthTone, treeRepos } from './explorer'
+import { buildTree, emptyRoots, healthTone, treeRepos } from './explorer'
 
 describe('дерево проводника', () => {
   it('корень → хост → namespace → репозиторий, без remote — в конце', () => {
@@ -62,3 +63,18 @@ describe('цвет состояния в дереве', () => {
     expect(healthTone({ ...repo(), branch: null })).toBe('muted')
   })
 })
+
+describe('пустые корни', () => {
+  it('корень без репозиториев', () => {
+    const roots = [
+      { id: 'a', path: '/srv/a' },
+      { id: 'b', path: '/srv/b' },
+    ]
+    expect(emptyRoots(roots, [repo({ rootId: 'a' })]).map((r) => r.id)).toEqual(['b'])
+    // несуществующий корень — ошибка скана, а не «пустой»; ошибка внутри корня его не отменяет
+    const gone = { rootId: 'b', path: '/srv/b', error: { code: ErrorCode.CodeOther, message: 'no such file or directory' } }
+    expect(emptyRoots(roots, [repo({ rootId: 'a' })], [gone])).toEqual([])
+    expect(emptyRoots(roots, [repo({ rootId: 'a' })], [{ ...gone, path: '/srv/b/private' }]).map((r) => r.id)).toEqual(['b'])
+  })
+})
+

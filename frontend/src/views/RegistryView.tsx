@@ -73,7 +73,7 @@ function RowActions({ repo }: { repo: Repository }) {
       ) : (
         <Tooltip title={reason ?? ''}>
           <span>
-            <Button size="small" variant="outlined" disabled={reason !== null} onClick={() => requestOp(repo.id, Operation.OperationPull)} sx={{ minWidth: 0, px: 1.25 }}>
+            <Button size="small" variant="outlined" disabled={reason !== null} onClick={() => requestOp(repo.id, Operation.OperationPull)} sx={{ minWidth: 0, px: 1.25, whiteSpace: 'nowrap' }}>
               {t('registry.pull')}
             </Button>
           </span>

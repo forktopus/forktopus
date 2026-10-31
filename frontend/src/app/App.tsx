@@ -1,11 +1,14 @@
 import AddIcon from '@mui/icons-material/Add'
-import { Alert, Box, Button, CircularProgress, CssBaseline, ThemeProvider, Typography, useMediaQuery } from '@mui/material'
+import { Alert, AlertTitle, Box, Button, CircularProgress, CssBaseline, ThemeProvider, Typography, useMediaQuery } from '@mui/material'
 import { useMemo, useState } from 'react'
 import { Notifications } from '../components/Notifications'
 import { OpConfirmDialog } from '../components/OpConfirmDialog'
 import { RepoDetails } from '../components/RepoDetails'
+import { ErrorCode } from '../data/model'
 import { formatDateTime, t } from '../i18n'
+import { emptyRoots } from '../logic/explorer'
 import { integrationIssueCount } from '../logic/registry'
+import { gitProblem } from '../logic/tools'
 import { useApp } from '../store/context'
 import { useRepos } from '../store/selectors'
 import { createAppTheme } from '../theme/theme'
@@ -41,7 +44,10 @@ function Content({ onOpenRoots, onOpenTools }: { onOpenRoots(): void; onOpenTool
   const filter = useApp((s) => s.filters.registry)
   const setFilters = useApp((s) => s.setFilters)
   const repos = useRepos()
-  const issues = useMemo(() => integrationIssueCount(repos), [repos])
+  const integrations = useMemo(() => integrationIssueCount(repos), [repos])
+  const issues = useApp((s) => s.issues)
+  const git = gitProblem(useApp((s) => s.tools))
+  const empty = useMemo(() => emptyRoots(roots, repos, issues), [roots, repos, issues])
 
   if (!ready) {
     return (
@@ -51,16 +57,64 @@ function Content({ onOpenRoots, onOpenTools }: { onOpenRoots(): void; onOpenTool
       </Box>
     )
   }
-  if (roots.length === 0) return <EmptyRoots onAdd={onOpenRoots} />
+  // A28: без git статусов не будет ни на одном экране, в том числе после добавления корня.
+  const gitBanner = git && (
+    <Alert
+      severity="error"
+      sx={{ mb: 2.5 }}
+      action={
+        <Button color="inherit" size="small" onClick={onOpenTools}>
+          {t('action.tools')}
+        </Button>
+      }
+    >
+      <AlertTitle>{t('git.missing.title')}</AlertTitle>
+      {t('git.missing.text')}
+      {/* Для «не найден» текст выше всё объясняет; прочие сбои (версия, запуск) — с деталью. */}
+      {git.error?.message && git.error.code !== ErrorCode.CodeCLIMissing && (
+        <Typography variant="caption" component="div" sx={{ mt: 0.5, opacity: 0.85 }}>
+          {git.error.message}
+        </Typography>
+      )}
+    </Alert>
+  )
+
+  if (roots.length === 0) {
+    return (
+      <>
+        {gitBanner}
+        <EmptyRoots onAdd={onOpenRoots} />
+      </>
+    )
+  }
+
+  // A04 и пустые корни: остальное просканировано, детали — в диалоге корней.
+  const showEmpty = !scanning && !stale && repos.length > 0 ? empty : []
+  const scanBanner = (issues.length > 0 || showEmpty.length > 0) && (
+    <Alert
+      severity="warning"
+      sx={{ mb: 2.5 }}
+      action={
+        <Button color="inherit" size="small" onClick={onOpenRoots}>
+          {t('roots.title')}
+        </Button>
+      }
+    >
+      {issues.length > 0 && <div>{t('scan.issues', { count: issues.length })}</div>}
+      {showEmpty.length > 0 && <div>{t('scan.emptyRoots', { paths: showEmpty.map((r) => r.path).join(', ') })}</div>}
+    </Alert>
+  )
 
   return (
     <>
+      {gitBanner}
       {stale && lastCheckAt && (
         <Alert severity="warning" sx={{ mb: 2.5 }} icon={scanning ? <CircularProgress size={18} color="inherit" /> : undefined}>
           {t(scanning ? 'scan.stale' : 'scan.staleIdle', { time: formatDateTime(lastCheckAt) })}
         </Alert>
       )}
-      {issues > 0 && (
+      {scanBanner}
+      {integrations > 0 && (
         <Alert
           severity="info"
           sx={{ mb: 2.5 }}
@@ -78,10 +132,23 @@ function Content({ onOpenRoots, onOpenTools }: { onOpenRoots(): void; onOpenTool
             </>
           }
         >
-          {t('integration.banner', { count: issues })}
+          {t('integration.banner', { count: integrations })}
         </Alert>
       )}
-      {repos.length === 0 && <Alert severity="info">{t(scanning ? 'empty.scanning' : 'empty.noRepos')}</Alert>}
+      {repos.length === 0 && (
+        <Alert
+          severity="info"
+          action={
+            !scanning && (
+              <Button color="inherit" size="small" onClick={onOpenRoots}>
+                {t('roots.title')}
+              </Button>
+            )
+          }
+        >
+          {scanning ? t('empty.scanning') : t('empty.noRepos', { paths: roots.map((r) => r.path).join(', ') })}
+        </Alert>
+      )}
       {repos.length > 0 && mode === 'registry' && <RegistryView />}
       {repos.length > 0 && mode === 'explorer' && <ExplorerView onOpenTools={onOpenTools} />}
       {repos.length > 0 && mode === 'radar' && <RadarView />}

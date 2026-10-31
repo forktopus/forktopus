@@ -1,4 +1,13 @@
+import type { MockScenario } from './mockSource'
 import type { DataSource } from './source'
+
+const demoScenarios: MockScenario[] = ['noroots', 'nogit', 'nocli']
+
+/** Особое демо-состояние из адреса: ?demo=noroots | nogit | nocli. */
+function demoScenario(): MockScenario {
+  const value = new URLSearchParams(window.location.search).get('demo') as MockScenario | null
+  return value && demoScenarios.includes(value) ? value : 'default'
+}
 
 // Признаки нативного окна Wails v3 (Windows WebView2, WebKit, прочие).
 // window._wails не годится: его создаёт сам runtime и в обычном браузере.
@@ -18,7 +27,7 @@ function hasNativeHost(): boolean {
 export async function pickSource(): Promise<DataSource> {
   if (import.meta.env.VITE_FORKTOPUS_DEMO === '1' || !hasNativeHost()) {
     const { createMockSource } = await import('./mockSource')
-    return createMockSource()
+    return createMockSource({ scenario: demoScenario() })
   }
   const { wailsSource } = await import('./wailsSource')
   return wailsSource

@@ -47,7 +47,7 @@ function Indicator({ label, detail, mode, action }: { label: Label; detail: stri
 
 /** Изменения рабочей копии с детализацией staged / unstaged / untracked. */
 export function ChangesIndicator({ repo, mode = 'tooltip' }: { repo: Repository; mode?: DetailMode }) {
-  if (repo.error) return <StatusText label={{ tone: 'bad', text: t('repo.readError') }} />
+  if (repo.error) return <StatusText wrap label={{ tone: 'bad', text: t('repo.readError') }} />
   return <Indicator label={changesLabel(repo)} detail={changesDetail(repo)} mode={mode} />
 }
 

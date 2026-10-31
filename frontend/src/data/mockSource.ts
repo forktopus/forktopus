@@ -253,15 +253,58 @@ const mockIssues: ScanIssue[] = [
 
 const uiKey = 'forktopus.demo.ui'
 
+/** Корень без репозиториев — пустое состояние «в папке ничего не найдено». */
+const emptyRoot: Root = { id: 'r-sandbox', path: '/srv/repos/sandbox' }
+
+/**
+ * Особые демо-состояния (параметр ?demo= в адресе): нет корней (A01), нет
+ * Git в PATH (A28), не установлен CLI GitHub (A16).
+ */
+export type MockScenario = 'default' | 'noroots' | 'nogit' | 'nocli'
+
+const missing = (name: string, message: string): ToolDiagnostic => ({
+  name,
+  host: name === 'git' ? undefined : 'github.com',
+  availability: Availability.AvailabilityUnavailable,
+  error: { code: ErrorCode.CodeCLIMissing, message },
+})
+const gitMissing = 'git не найден в PATH: установите Git и перезапустите Forktopus'
+const ghMissing = 'gh не найден в PATH: PR и CI этого провайдера недоступны'
+
+function withScenario(repo: Repository, scenario: MockScenario): Repository {
+  if (scenario === 'nogit') {
+    // Без git статус не прочитать: каждый репозиторий — с ошибкой чтения.
+    return { ...repo, branch: null, worktree: null, error: { code: ErrorCode.CodeCLIMissing, message: 'git не найден в PATH' } }
+  }
+  if (scenario === 'nocli' && repo.remotes?.[0]?.host === 'github.com') {
+    const error = { code: ErrorCode.CodeCLIMissing, message: ghMissing }
+    return {
+      ...repo,
+      pr: { availability: Availability.AvailabilityUnavailable, error, lastAttemptAt: repo.pr.lastAttemptAt },
+      ci: { availability: Availability.AvailabilityUnavailable, error, lastAttemptAt: repo.ci.lastAttemptAt },
+    }
+  }
+  return repo
+}
+
+function toolsFor(scenario: MockScenario): ToolDiagnostic[] {
+  if (scenario === 'nogit') return mockTools.map((d) => (d.name === 'git' ? missing('git', gitMissing) : d))
+  if (scenario === 'nocli') return mockTools.map((d) => (d.name === 'gh' ? missing('gh', ghMissing) : d))
+  return mockTools
+}
+
 export interface MockOptions {
   /** Искусственная задержка ответов, мс: видно состояние загрузки. */
   delayMs?: number
+  scenario?: MockScenario
 }
 
-export function createMockSource({ delayMs = 250 }: MockOptions = {}): DataSource {
-  let roots = mockRoots.map((m) => m.root)
-  let repos = linkParents(scenarios.map(buildRepository))
-  let issues = mockIssues
+export function createMockSource({ delayMs = 250, scenario = 'default' }: MockOptions = {}): DataSource {
+  const noRoots = scenario === 'noroots'
+  let roots = noRoots ? [] : [...mockRoots.map((m) => m.root), emptyRoot]
+  let repos = noRoots ? [] : linkParents(scenarios.map(buildRepository)).map((r) => withScenario(r, scenario))
+  const tools = toolsFor(scenario)
+  let issues = noRoots ? [] : mockIssues
   // Как будто кэш прошлого запуска: два часа назад, не подтверждён сканированием.
   let snapshot: Snapshot = { repositories: repos, issues, scannedAt: minutesAgo(120), stale: true }
   let picked = 0
@@ -393,7 +436,7 @@ export function createMockSource({ delayMs = 250 }: MockOptions = {}): DataSourc
     getRemoteStatus: (repoId) => remoteStatus(repoId, false),
     refreshRemote: (repoId) => remoteStatus(repoId, true),
     listOperations: () => reply([...opLog].reverse()),
-    checkTools: () => reply(mockTools),
+    checkTools: () => reply(tools),
     async openURL(url) {
       window.open(url, '_blank', 'noopener')
     },

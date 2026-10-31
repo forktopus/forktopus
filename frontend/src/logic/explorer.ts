@@ -3,7 +3,7 @@
 // любой глубины (group/subgroup/…, A03) — один узел. Вложенные репозитории
 // (D-025) — узлы под родителем, а не под своим хостом.
 
-import { Provider, type Repository, type Root } from '../data/model'
+import { Provider, type Repository, type Root, type ScanIssue } from '../data/model'
 import type { Tone } from '../theme/theme'
 import { radarGroup } from './radar'
 import { repoHost, repoName, repoNamespace, repoProvider } from './repo'
@@ -90,4 +90,14 @@ export function treeRepos(tree: RootNode[]): Repository[] {
 export function healthTone(r: Repository): Tone {
   const group = radarGroup(r)
   return group === 'attention' ? 'bad' : group === 'progress' ? 'warn' : group === 'ok' ? 'good' : 'muted'
+}
+
+/**
+ * Корни, в которых сканирование не нашло ни одного репозитория. Корень, который
+ * не удалось открыть (нет папки, нет прав), — не «пустой»: он среди ошибок скана.
+ */
+export function emptyRoots(roots: Root[], repos: Repository[], issues: ScanIssue[] = []): Root[] {
+  const used = new Set(repos.map((r) => r.rootId))
+  const broken = new Set(issues.filter((i) => roots.some((r) => r.id === i.rootId && r.path === i.path)).map((i) => i.rootId))
+  return roots.filter((r) => !used.has(r.id) && !broken.has(r.id))
 }

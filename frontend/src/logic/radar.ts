@@ -68,6 +68,9 @@ export function radarTags(r: Repository): Label[] {
     case 'detached':
       tags.push({ tone: 'warn', text: t('sync.detached') })
       break
+    case 'unborn':
+      tags.push({ tone: 'muted', text: t('sync.unborn') })
+      break
   }
   const active = remoteCount(r.ci, r.ci.active)
   if (active) tags.push({ tone: 'info', text: t('radar.tag.ciActive', { count: active }) })

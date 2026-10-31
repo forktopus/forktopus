@@ -63,6 +63,7 @@ describe('метки и пояснение карточки', () => {
 
   it('разошлась, упавший CI и незавершённая настройка — метки, но не «всё в порядке»', () => {
     expect(texts(repo({ branch: { ahead: 1, behind: 1 } }))).toEqual(['⇅ Ветка разошлась'])
+    expect(texts(repo({ branch: { unborn: true, upstream: undefined, ahead: null, behind: null } }))).toEqual(['нет коммитов'])
     expect(texts(repo({ ci: { lastResult: 'failure' } }))).toEqual(['✕ Ошибка CI'])
     const noCli = repo({ pr: { ...unavailable, error: { code: ErrorCode.CodeCLIMissing, message: '' } }, ci: unavailable })
     expect(texts(noCli)).toEqual(['⚠ CLI не установлен'])
