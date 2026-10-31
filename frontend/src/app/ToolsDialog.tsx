@@ -1,7 +1,8 @@
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Tooltip, Typography, useTheme } from '@mui/material'
-import { useState } from 'react'
-import { formatRelative, t } from '../i18n'
+import { useEffect, useState } from 'react'
+import type { Diagnostics } from '../data/model'
+import { formatRelative, formatTime, t } from '../i18n'
 import { availabilityTone, selfCheckCommands, toolHint } from '../logic/tools'
 import { useApp } from '../store/context'
 import { toneColor } from '../theme/theme'
@@ -25,17 +26,86 @@ function Command({ text }: { text: string }) {
   )
 }
 
+/** ОС, пути и последние ошибки из отчёта диагностики. */
+function SystemInfo({ diag }: { diag: Diagnostics }) {
+  const theme = useTheme()
+  const rows: [string, string][] = [
+    [t('tools.os'), diag.os],
+    [t('tools.config'), diag.configPath],
+  ]
+  if (diag.logPath) rows.push([t('tools.log'), diag.logPath])
+  const errors = diag.errors ?? []
+  return (
+    <Box sx={{ mt: 2.5 }}>
+      <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.75 }}>
+        {t('tools.system')}
+      </Typography>
+      {rows.map(([label, value]) => (
+        <Typography key={label} variant="caption" sx={{ display: 'block', overflowWrap: 'anywhere' }}>
+          <Box component="span" sx={{ color: 'text.secondary' }}>
+            {label}:
+          </Box>{' '}
+          <Box component="span" sx={{ fontFamily: monoFontFamily }}>
+            {value}
+          </Box>
+        </Typography>
+      ))}
+      <Typography variant="body2" sx={{ fontWeight: 700, mt: 2, mb: 0.75 }}>
+        {t('tools.errors')}
+      </Typography>
+      {errors.length === 0 && (
+        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+          {t('tools.noErrors')}
+        </Typography>
+      )}
+      {errors.slice(0, 5).map((e, i) => (
+        <Typography
+          key={i}
+          variant="caption"
+          sx={{ display: 'block', font: `11.5px ${monoFontFamily}`, overflowWrap: 'anywhere', py: 0.5, borderBottom: `1px solid ${theme.app.line}` }}
+        >
+          {formatTime(e.time)} {e.message}
+        </Typography>
+      ))}
+      <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mt: 1.5 }}>
+        {t('tools.reportHint')}
+      </Typography>
+    </Box>
+  )
+}
+
 export function ToolsDialog({ open, onClose }: { open: boolean; onClose(): void }) {
   const theme = useTheme()
   const tools = useApp((s) => s.tools)
   const checkedAt = useApp((s) => s.toolsCheckedAt)
   const checkTools = useApp((s) => s.checkTools)
+  const loadDiagnostics = useApp((s) => s.loadDiagnostics)
+  const copyText = useApp((s) => s.copyText)
   const [busy, setBusy] = useState(false)
+  const [diag, setDiag] = useState<Diagnostics | null>(null)
+
+  // Отчёт перечитывается при каждом открытии: в нём свежие ошибки и операции.
+  useEffect(() => {
+    if (!open) return
+    let alive = true
+    void loadDiagnostics().then((d) => alive && setDiag(d))
+    return () => {
+      alive = false
+    }
+  }, [open, loadDiagnostics])
 
   const recheck = async () => {
     setBusy(true)
     await checkTools()
+    setDiag(await loadDiagnostics())
     setBusy(false)
+  }
+
+  const copyReport = async () => {
+    const d = await loadDiagnostics()
+    if (!d) return
+    setDiag(d)
+    await copyText(d.report)
   }
 
   return (
@@ -89,8 +159,12 @@ export function ToolsDialog({ open, onClose }: { open: boolean; onClose(): void 
             {t('lastCheck.at', { when: formatRelative(checkedAt) })}
           </Typography>
         )}
+        {diag && <SystemInfo diag={diag} />}
       </DialogContent>
       <DialogActions>
+        <Button startIcon={<ContentCopyIcon />} onClick={() => void copyReport()} disabled={!diag} sx={{ mr: 'auto' }}>
+          {t('tools.copyReport')}
+        </Button>
         <Button onClick={() => void recheck()} disabled={busy}>
           {t('action.recheck')}
         </Button>

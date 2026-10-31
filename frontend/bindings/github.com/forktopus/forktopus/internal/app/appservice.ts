@@ -58,6 +58,16 @@ export function GetBranches(id: string): $CancellablePromise<model$0.BranchInfo[
 }
 
 /**
+ * GetDiagnostics собирает отчёт диагностики: ОС, пути настроек и лога,
+ * утилиты (из последней проверки, если её не было — проверяет сейчас),
+ * корни, последние ошибки лога и операции. Домашний каталог заменяется на
+ * «~», весь текст проходит маскировку секретов — отчёт можно отправить.
+ */
+export function GetDiagnostics(): $CancellablePromise<model$0.Diagnostics> {
+    return $Call.ByID(3705690509);
+}
+
+/**
  * GetRemoteStatus возвращает PR/MR и CI текущей ветки: из кэша, если данные
  * свежие (D-046), иначе от CLI провайдера. Итог также приходит событием
  * EventRemoteStatus и попадает в список репозиториев.

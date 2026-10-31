@@ -24,27 +24,27 @@ import (
 var assets embed.FS
 
 // setupLog направляет лог (и стандартный log) в файл в каталоге кэша;
-// если файл недоступен — в stderr.
-func setupLog() *slog.Logger {
-	var logger *slog.Logger
+// если файл недоступен — в stderr (path тогда пустой).
+func setupLog() (logger *slog.Logger, path string, recent *applog.Recent) {
 	path, err := applog.DefaultPath()
 	if err == nil {
 		var f *applog.File
 		if f, err = applog.Open(path, applog.MaxSize); err == nil {
-			logger, _ = applog.New(f)
+			logger, recent = applog.New(f)
 		}
 	}
 	if logger == nil {
-		logger, _ = applog.New(os.Stderr)
+		path = ""
+		logger, recent = applog.New(os.Stderr)
 		logger.Warn("лог в файл отключён", "error", err)
 	}
 	slog.SetDefault(logger)
 	logger.Info("запуск", "os", runtime.GOOS, "arch", runtime.GOARCH)
-	return logger
+	return logger, path, recent
 }
 
 func main() {
-	logger := setupLog()
+	logger, logPath, recent := setupLog()
 	configPath, err := settings.DefaultPath()
 	if err != nil {
 		log.Fatalf("не удалось определить каталог настроек: %v", err)
@@ -58,6 +58,7 @@ func main() {
 		// Приложение продолжает работу со значениями по умолчанию.
 		log.Printf("настройки: %v", err)
 	}
+	app.AttachLog(service, logPath, recent)
 
 	wailsApp := application.New(application.Options{
 		Name:        "forktopus",

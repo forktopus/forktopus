@@ -283,6 +283,19 @@ describe('store', () => {
     expect(asked).toEqual([])
   })
 
+  it('отчёт диагностики: из источника, ошибка — в уведомлениях', async () => {
+    const source = createMockSource({ delayMs: 0, scenario: 'nocli' })
+    const store = createAppStore(source)
+    await store.getState().init()
+    const d = await store.getState().loadDiagnostics()
+    expect(d?.report).toMatch(/Утилиты/)
+    expect(d?.errors?.some((e) => e.message.startsWith('gh'))).toBe(true)
+
+    const broken = createAppStore({ ...source, getDiagnostics: () => Promise.reject(new Error('нет связи')) })
+    expect(await broken.getState().loadDiagnostics()).toBeNull()
+    expect(broken.getState().notices.at(-1)?.text).toBe('нет связи')
+  })
+
   it('удаление корня убирает его репозитории из списка', async () => {
     const store = createAppStore(createMockSource({ delayMs: 0 }))
     await store.getState().init()

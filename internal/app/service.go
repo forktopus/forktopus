@@ -10,9 +10,11 @@ import (
 	"path/filepath"
 	"slices"
 	"sync"
+	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 
+	"github.com/forktopus/forktopus/internal/applog"
 	"github.com/forktopus/forktopus/internal/gitlocal"
 	"github.com/forktopus/forktopus/internal/gitops"
 	"github.com/forktopus/forktopus/internal/model"
@@ -50,6 +52,12 @@ type AppService struct {
 	// remoteByRepo — последнее серверное состояние по репозиторию (под mu);
 	// в список попадает, только пока ветка та же.
 	remoteByRepo map[string]model.RemoteStatus
+
+	// Для отчёта диагностики: технический лог и последняя проверка утилит (под mu).
+	logPath   string
+	recent    *applog.Recent
+	lastTools []model.ToolDiagnostic
+	toolsAt   time.Time
 
 	// life отменяется при завершении приложения (ServiceShutdown): с ним
 	// прерываются все команды — и вызванные из UI, и фоновые.

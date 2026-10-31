@@ -224,5 +224,9 @@ func (s *AppService) CheckTools(ctx context.Context) []model.ToolDiagnostic {
 		}
 		return strings.Compare(a.Host, b.Host)
 	})
-	return append([]model.ToolDiagnostic{tools.CheckGit(ctx, s.runner)}, diags...)
+	out := append([]model.ToolDiagnostic{tools.CheckGit(ctx, s.runner)}, diags...)
+	s.mu.Lock()
+	s.lastTools, s.toolsAt = slices.Clone(out), time.Now()
+	s.mu.Unlock()
+	return out
 }

@@ -437,6 +437,34 @@ export function createMockSource({ delayMs = 250, scenario = 'default' }: MockOp
     refreshRemote: (repoId) => remoteStatus(repoId, true),
     listOperations: () => reply([...opLog].reverse()),
     checkTools: () => reply(tools),
+    getDiagnostics() {
+      const errors = tools
+        .filter((d) => d.error)
+        .map((d) => ({ time: new Date().toISOString(), level: 'WARN', message: `${d.name}${d.host ? ` ${d.host}` : ''}: ${d.error!.message}` }))
+      const lines = [
+        'Forktopus — отчёт диагностики (демо-данные)',
+        'ОС: браузер, демо-режим',
+        'Настройки: ~/.config/forktopus/config.json',
+        'Лог: ~/.cache/forktopus/forktopus.log',
+        `Корневых папок: ${roots.length}, репозиториев: ${repos.length}`,
+        '',
+        'Утилиты:',
+        ...tools.map((d) => `- ${[d.name, d.host, d.version, d.availability, d.error?.message].filter(Boolean).join(' · ')}`),
+        '',
+        'Последние ошибки:',
+        ...(errors.length ? errors.map((e) => `- ${e.level} ${e.message}`) : ['- нет']),
+        '',
+        'Последние операции:',
+        ...(opLog.length ? [...opLog].reverse().slice(0, 10).map((o) => `- ${o.op} ${o.target ?? ''} — ${o.error ? o.error.code : 'готово'}`) : ['- нет']),
+      ]
+      return reply({
+        os: 'браузер, демо-режим',
+        configPath: '~/.config/forktopus/config.json',
+        logPath: '~/.cache/forktopus/forktopus.log',
+        errors,
+        report: lines.join('\n') + '\n',
+      })
+    },
     async openURL(url) {
       window.open(url, '_blank', 'noopener')
     },

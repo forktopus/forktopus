@@ -20,6 +20,10 @@ export const wailsSource: DataSource = {
   refreshRemote: (repoId) => AppService.RefreshRemote(repoId),
   listOperations: async () => (await AppService.ListOperations()) ?? [],
   checkTools: async () => (await AppService.CheckTools()) ?? [],
+  getDiagnostics: async () => {
+    const d = await AppService.GetDiagnostics()
+    return { ...d, errors: d.errors ?? [] }
+  },
   openURL: (url) => Browser.OpenURL(url),
   copyText: (text) => Clipboard.SetText(text),
   getUI: () => AppService.GetUI(),

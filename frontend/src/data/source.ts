@@ -1,5 +1,6 @@
 import {
   type BranchInfo,
+  type Diagnostics,
   ErrorCode,
   type Error as ModelError,
   type OpExpect,
@@ -56,6 +57,8 @@ export interface DataSource {
   /** Журнал последних операций, новые — первыми. */
   listOperations(): Promise<OpRecord[]>
   checkTools(): Promise<ToolDiagnostic[]>
+  /** Отчёт диагностики: ОС, пути, утилиты, последние ошибки и операции — без секретов. */
+  getDiagnostics(): Promise<Diagnostics>
   /** Открыть ссылку (PR, CI) в браузере системы. */
   openURL(url: string): Promise<void>
   copyText(text: string): Promise<void>

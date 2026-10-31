@@ -3,7 +3,7 @@
 // фильтры сохраняются в настройках Go через DataSource.saveUI.
 
 import { createStore, type StoreApi } from 'zustand/vanilla'
-import { Operation, type BranchInfo, type OpResult, type RemoteStatus, type Repository, type Root, type ScanIssue, type ToolDiagnostic, type UI } from '../data/model'
+import { Operation, type BranchInfo, type Diagnostics, type OpResult, type RemoteStatus, type Repository, type Root, type ScanIssue, type ToolDiagnostic, type UI } from '../data/model'
 import { errorOf, type DataSource, type Snapshot } from '../data/source'
 import { t } from '../i18n'
 import { registryFilters, sortKeys, type RegistryFilter, type SortKey } from '../logic/registry'
@@ -89,6 +89,8 @@ export interface AppState {
    * перезапрашивает устаревшее. Ошибки не показываются — они в самих данных.
    */
   pollRemote(): Promise<void>
+  /** отчёт диагностики; null — ошибка (она уже в уведомлениях) */
+  loadDiagnostics(): Promise<Diagnostics | null>
   addRoot(path: string): Promise<boolean>
   /** системный диалог выбора папки + addRoot; false — диалог закрыт или ошибка */
   pickAndAddRoot(): Promise<boolean>
@@ -300,6 +302,15 @@ export function createAppStore(source: DataSource): AppStore {
           .filter((r) => r.remote && !running[r.id])
           .map((r) => r.id)
         await Promise.all(ids.map((id) => source.getRemoteStatus(id).then(queueRemote, () => undefined)))
+      },
+
+      async loadDiagnostics() {
+        try {
+          return await source.getDiagnostics()
+        } catch (err) {
+          fail(err)
+          return null
+        }
       },
 
       async addRoot(path) {

@@ -222,6 +222,25 @@ type ToolDiagnostic struct {
 	Error        *Error       `json:"error,omitempty"`
 }
 
+// LogEntry — предупреждение или ошибка из технического лога (уже замаскированные).
+type LogEntry struct {
+	Time    time.Time `json:"time"`
+	Level   string    `json:"level"`
+	Message string    `json:"message"`
+}
+
+// Diagnostics — сведения для отчёта диагностики. Пути — с «~» вместо
+// домашнего каталога, тексты пропущены через маскировку секретов.
+type Diagnostics struct {
+	OS         string     `json:"os"`
+	ConfigPath string     `json:"configPath"`
+	LogPath    string     `json:"logPath,omitempty"`
+	Errors     []LogEntry `json:"errors"`
+	// Report — всё одним текстом для копирования: ОС, пути, утилиты, корни,
+	// последние ошибки и операции.
+	Report string `json:"report"`
+}
+
 // PathID — устойчивый идентификатор для пути файловой системы.
 func PathID(path string) string {
 	sum := sha256.Sum256([]byte(filepath.Clean(path)))

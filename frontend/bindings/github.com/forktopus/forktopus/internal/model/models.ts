@@ -115,6 +115,23 @@ export interface CISummary {
 }
 
 /**
+ * Diagnostics — сведения для отчёта диагностики. Пути — с «~» вместо
+ * домашнего каталога, тексты пропущены через маскировку секретов.
+ */
+export interface Diagnostics {
+    "os": string;
+    "configPath": string;
+    "logPath"?: string;
+    "errors": LogEntry[] | null;
+
+    /**
+     * Report — всё одним текстом для копирования: ОС, пути, утилиты, корни,
+     * последние ошибки и операции.
+     */
+    "report": string;
+}
+
+/**
  * Error — типизированная ошибка ядра. Сериализуется в JSON и в таком виде
  * приходит во фронтенд как cause отклонённого вызова Wails.
  * Message должен быть безопасным для показа: без токенов и userinfo в URL.
@@ -231,6 +248,15 @@ export enum ErrorCode {
      */
     CodeDetachedUnreachable = "DETACHED_UNREACHABLE",
 };
+
+/**
+ * LogEntry — предупреждение или ошибка из технического лога (уже замаскированные).
+ */
+export interface LogEntry {
+    "time": string;
+    "level": string;
+    "message": string;
+}
 
 /**
  * Nesting — почему репозиторий лежит внутри рабочей копии другого.
