@@ -264,28 +264,36 @@ describe('store', () => {
     }
   })
 
-  it('фоновый опрос PR/CI: репозитории с remote, без идущих операций и не во время сканирования', async () => {
+  it('фоновая проверка Go: статус заменяет запись пачкой, кроме сканирования и убранных репозиториев (18.1)', async () => {
     const source = createMockSource({ delayMs: 0 })
-    const asked: string[] = []
-    const store = createAppStore({ ...source, getRemoteStatus: (id) => (asked.push(id), source.getRemoteStatus(id)) })
+    let emitRepo: (r: Repository) => void = () => {}
+    let emitChecked: (at: string) => void = () => {}
+    const store = createAppStore({ ...source, onRepository: (cb) => ((emitRepo = cb), () => {}), onChecked: (cb) => ((emitChecked = cb), () => {}) })
     await store.getState().init()
-    const repos = Object.values(store.getState().repos)
-    const busy = repos.find((r) => r.remote)!
+    const [a, b] = Object.values(store.getState().repos)
+    vi.useFakeTimers()
+    try {
+      const changed = { ...a, parentId: undefined, worktree: { ...a.worktree!, untracked: 42 } }
+      emitRepo(changed)
+      emitRepo({ ...b, id: 'removed' })
+      expect(store.getState().repos[a.id].worktree?.untracked).not.toBe(42)
+      await vi.advanceTimersByTimeAsync(scanFlushMs)
+      expect(store.getState().repos[a.id].worktree?.untracked).toBe(42)
+      expect(store.getState().repos[a.id].parentId).toBe(a.parentId)
+      expect(store.getState().repos.removed).toBeUndefined()
 
-    store.setState({ running: { [busy.id]: Operation.OperationFetch } })
-    await store.getState().pollRemote()
-    expect(asked.sort()).toEqual(
-      repos
-        .filter((r) => r.remote && r.id !== busy.id)
-        .map((r) => r.id)
-        .sort(),
-    )
-    expect(asked.length).toBeLessThan(repos.length)
+      store.setState({ scanning: true })
+      emitRepo({ ...b, worktree: { ...b.worktree!, untracked: 7 } })
+      await vi.advanceTimersByTimeAsync(scanFlushMs)
+      expect(store.getState().repos[b.id].worktree?.untracked).not.toBe(7)
 
-    asked.length = 0
-    store.setState({ scanning: true })
-    await store.getState().pollRemote()
-    expect(asked).toEqual([])
+      store.setState({ stale: true })
+      emitChecked('2026-11-01T12:00:00Z')
+      expect(store.getState().lastCheckAt).toBe('2026-11-01T12:00:00Z')
+      expect(store.getState().stale).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('отчёт диагностики: из источника, ошибка — в уведомлениях', async () => {
@@ -388,7 +396,12 @@ describe('fromUI / toUI', () => {
       filters: { registry: 'all', host: '', sort: 'name', asc: true },
       fetchPrune: false,
       zoom: 1,
+      backgroundMinutes: 5,
+      autoFetch: false,
     })
+    // Интервал — только из списка; чужое значение — по умолчанию.
+    expect(fromUI({ backgroundMinutes: 7 }).backgroundMinutes).toBe(5)
+    expect(fromUI({ backgroundMinutes: 15 }).backgroundMinutes).toBe(15)
   })
 
   it('туда и обратно без потерь', () => {
@@ -398,6 +411,8 @@ describe('fromUI / toUI', () => {
       filters: { registry: 'ci' as const, host: 'gitlab.com', sort: 'pr' as const, asc: false },
       fetchPrune: true,
       zoom: 1.3,
+      backgroundMinutes: 30,
+      autoFetch: true,
     }
     expect(fromUI(toUI(state))).toEqual(state)
   })

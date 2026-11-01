@@ -1,6 +1,6 @@
 import AddIcon from '@mui/icons-material/Add'
 import { Alert, AlertTitle, Box, Button, CircularProgress, CssBaseline, ThemeProvider, Typography, useMediaQuery } from '@mui/material'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Notifications } from '../components/Notifications'
 import { OpConfirmDialog } from '../components/OpConfirmDialog'
 import { RepoDetails } from '../components/RepoDetails'
@@ -9,7 +9,6 @@ import { formatDateTime, t } from '../i18n'
 import { emptyRoots } from '../logic/explorer'
 import { integrationIssueCount } from '../logic/registry'
 import { gitProblem } from '../logic/tools'
-import { remoteTTLms } from '../store/appStore'
 import { useApp } from '../store/context'
 import { useRepos } from '../store/selectors'
 import { createAppTheme } from '../theme/theme'
@@ -164,14 +163,7 @@ export function App() {
   const mode = choice ?? (systemDark ? 'dark' : 'light')
   const theme = useMemo(() => createAppTheme(mode), [mode])
   const [dialog, setDialog] = useState<'tools' | 'roots' | null>(null)
-  const pollRemote = useApp((s) => s.pollRemote)
   useZoomKeys()
-
-  // PR/MR и CI устаревают по TTL кэша Go; в свёрнутом окне не опрашиваем.
-  useEffect(() => {
-    const timer = setInterval(() => document.hidden || void pollRemote(), remoteTTLms)
-    return () => clearInterval(timer)
-  }, [pollRemote])
 
   return (
     <ThemeProvider theme={theme}>

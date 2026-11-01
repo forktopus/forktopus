@@ -34,4 +34,6 @@ export const wailsSource: DataSource = {
   setZoom: (zoom) => Window.SetZoom(zoom),
   onScanRepository: (cb) => Events.On('scan:repository', (event) => cb(normalizeRepository(event.data))),
   onRemoteStatus: (cb) => Events.On('remote:status', (event) => cb(event.data)),
+  onRepository: (cb) => Events.On('repo:updated', (event) => cb(normalizeRepository(event.data))),
+  onChecked: (cb) => Events.On('background:checked', (event) => cb(event.data)),
 }

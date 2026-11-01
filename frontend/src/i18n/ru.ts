@@ -91,6 +91,13 @@ export const ru = {
   'roots.skipReset': 'Сбросить по умолчанию',
   'roots.skipApply': 'Применить и пересканировать',
   'roots.pruneTitle': 'Fetch удаляет ветки, исчезнувшие на сервере',
+  'roots.backgroundTitle': 'Фоновая проверка',
+  'roots.backgroundInterval': 'Проверять каждые',
+  'roots.backgroundMinutes': '{n} мин',
+  'roots.backgroundDescription': 'Git-статус и PR/CI перечитываются сами, даже когда окно скрыто.',
+  'roots.autoFetchTitle': 'Fetch перед проверкой',
+  'roots.autoFetchDescription':
+    'Без fetch не видно, что ветка отстала от сервера. Fetch обновляет только remote-tracking ветки; пароль SSH-ключа не спрашивается — нужен ssh-agent.',
   'roots.zoomTitle': 'Масштаб интерфейса',
   'roots.zoomDescription': 'Ctrl + = и Ctrl + − (или Ctrl + колесо мыши) — крупнее и мельче, Ctrl + 0 — 100 %.',
   'roots.zoomIn': 'Крупнее',

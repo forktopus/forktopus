@@ -661,5 +661,8 @@ export function createMockSource({ delayMs = 250, scenario = 'default' }: MockOp
       remoteListeners.add(cb)
       return () => remoteListeners.delete(cb)
     },
+    // Фоновой проверки в демо нет: статус меняется только сканированием.
+    onRepository: () => () => {},
+    onChecked: () => () => {},
   }
 }

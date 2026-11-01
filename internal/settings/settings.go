@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/forktopus/forktopus/internal/fsutil"
 	"github.com/forktopus/forktopus/internal/model"
@@ -42,6 +43,26 @@ type UI struct {
 	FetchPrune bool `json:"fetchPrune,omitempty"`
 	// Zoom — масштаб интерфейса, 1.0–2.0; 0 — 1.0 (D-061).
 	Zoom float64 `json:"zoom,omitempty"`
+	// BackgroundMinutes — как часто перечитывать статусы в фоне, минуты; 0 — 5 (D-063).
+	BackgroundMinutes int `json:"backgroundMinutes,omitempty"`
+	// AutoFetch — fetch перед фоновой проверкой; по умолчанию выключен (D-063).
+	AutoFetch bool `json:"autoFetch,omitempty"`
+}
+
+// Интервал фоновой проверки, минуты.
+const (
+	DefaultBackgroundMinutes = 5
+	MinBackgroundMinutes     = 1
+	MaxBackgroundMinutes     = 60
+)
+
+// BackgroundInterval — интервал фоновой проверки в допустимых пределах.
+func (u UI) BackgroundInterval() time.Duration {
+	m := u.BackgroundMinutes
+	if m == 0 {
+		m = DefaultBackgroundMinutes
+	}
+	return time.Duration(min(max(m, MinBackgroundMinutes), MaxBackgroundMinutes)) * time.Minute
 }
 
 // Масштаб интерфейса. Ниже 1.0 Wails на Linux не опускается (setZoom поднимает до 1).

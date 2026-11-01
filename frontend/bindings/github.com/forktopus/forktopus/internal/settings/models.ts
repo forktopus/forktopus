@@ -25,4 +25,14 @@ export interface UI {
      * Zoom — масштаб интерфейса, 1.0–2.0; 0 — 1.0 (D-061).
      */
     "zoom"?: number;
+
+    /**
+     * BackgroundMinutes — как часто перечитывать статусы в фоне, минуты; 0 — 5 (D-063).
+     */
+    "backgroundMinutes"?: number;
+
+    /**
+     * AutoFetch — fetch перед фоновой проверкой; по умолчанию выключен (D-063).
+     */
+    "autoFetch"?: boolean;
 }

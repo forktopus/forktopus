@@ -12,6 +12,8 @@ import {
   DialogTitle,
   FormControlLabel,
   IconButton,
+  MenuItem,
+  Select,
   Switch,
   TextField,
   Tooltip,
@@ -23,6 +25,7 @@ import type { ScanIssue } from '../data/model'
 import type { SkipList } from '../data/source'
 import { t } from '../i18n'
 import { maxZoom, minZoom, zoomStep } from '../logic/zoom'
+import { backgroundIntervals } from '../store/appStore'
 import { useApp } from '../store/context'
 import { useRepos } from '../store/selectors'
 import { monoFontFamily } from '../theme/tokens'
@@ -101,6 +104,7 @@ export function RootsDialog({ open, onClose }: { open: boolean; onClose(): void 
           </Button>
         </Box>
         <SkipDirsEditor />
+        <BackgroundSetting />
         <FetchPruneSetting />
         <ZoomSetting />
       </DialogContent>
@@ -111,6 +115,41 @@ export function RootsDialog({ open, onClose }: { open: boolean; onClose(): void 
         <Button onClick={onClose}>{t('action.close')}</Button>
       </DialogActions>
     </Dialog>
+  )
+}
+
+/** Фоновая проверка (D-063): интервал и fetch перед ней; применяются и сохраняются сразу. */
+function BackgroundSetting() {
+  const theme = useTheme()
+  const minutes = useApp((s) => s.backgroundMinutes)
+  const setMinutes = useApp((s) => s.setBackgroundMinutes)
+  const autoFetch = useApp((s) => s.autoFetch)
+  const setAutoFetch = useApp((s) => s.setAutoFetch)
+  return (
+    <Box sx={{ mt: 4, pt: 2, borderTop: `1px solid ${theme.app.line}` }}>
+      <Typography variant="subtitle2">{t('roots.backgroundTitle')}</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 1 }}>
+        <Typography variant="body2">{t('roots.backgroundInterval')}</Typography>
+        <Select size="small" value={minutes} onChange={(e) => setMinutes(Number(e.target.value))} inputProps={{ 'aria-label': t('roots.backgroundInterval') }}>
+          {backgroundIntervals.map((m) => (
+            <MenuItem key={m} value={m}>
+              {t('roots.backgroundMinutes', { n: m })}
+            </MenuItem>
+          ))}
+        </Select>
+      </Box>
+      <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+        {t('roots.backgroundDescription')}
+      </Typography>
+      <FormControlLabel
+        sx={{ mt: 1.5 }}
+        control={<Switch checked={autoFetch} onChange={(e) => setAutoFetch(e.target.checked)} />}
+        label={<Typography variant="subtitle2">{t('roots.autoFetchTitle')}</Typography>}
+      />
+      <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+        {t('roots.autoFetchDescription')}
+      </Typography>
+    </Box>
   )
 }
 

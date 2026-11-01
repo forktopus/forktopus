@@ -39,10 +39,7 @@ export interface Filters {
 
 export const defaultFilters: Filters = { registry: 'all', host: '', sort: 'name', asc: true }
 
-/** Срок свежести PR/CI в кэше Go (D-046): с этим шагом серверные данные перезапрашиваются в фоне. */
-export const remoteTTLms = 2 * 60 * 1000
-
-/** Как часто найденные во время сканирования репозитории и фоновые PR/CI попадают в список. */
+/** Как часто найденные во время сканирования репозитории и фоновые данные попадают в список. */
 export const scanFlushMs = 150
 
 /** Уведомление внизу экрана: итог операции, ошибка, копирование. */
@@ -83,6 +80,10 @@ export interface AppState {
   fetchPrune: boolean
   /** Масштаб интерфейса, 1–2 (D-061). */
   zoom: number
+  /** Интервал фоновой проверки, минуты (D-063). */
+  backgroundMinutes: number
+  /** Fetch перед фоновой проверкой (D-063). */
+  autoFetch: boolean
   query: string
   selectedId: string | null
   /** операция, которая сейчас идёт над репозиторием: кнопки операций заблокированы (D-031) */
@@ -100,11 +101,6 @@ export interface AppState {
   refresh(): Promise<void>
   scan(): Promise<void>
   checkTools(): Promise<void>
-  /**
-   * Фоновое обновление PR/MR и CI по TTL: Go отдаёт свежее из кэша и
-   * перезапрашивает устаревшее. Ошибки не показываются — они в самих данных.
-   */
-  pollRemote(): Promise<void>
   /** отчёт диагностики; null — ошибка (она уже в уведомлениях) */
   loadDiagnostics(): Promise<Diagnostics | null>
   addRoot(path: string): Promise<boolean>
@@ -137,6 +133,8 @@ export interface AppState {
   setTheme(theme: ThemeMode): void
   setFetchPrune(on: boolean): void
   setZoom(zoom: number): void
+  setBackgroundMinutes(minutes: number): void
+  setAutoFetch(on: boolean): void
   setFilters(patch: Partial<Filters>): void
   setQuery(query: string): void
   select(id: string | null): void
@@ -149,7 +147,11 @@ function oneOf<T extends string>(value: string | undefined, allowed: readonly T[
 }
 
 /** Состояние интерфейса из настроек; неизвестные значения — по умолчанию. */
-type SavedUI = Pick<AppState, 'mode' | 'theme' | 'filters' | 'fetchPrune' | 'zoom'>
+type SavedUI = Pick<AppState, 'mode' | 'theme' | 'filters' | 'fetchPrune' | 'zoom' | 'backgroundMinutes' | 'autoFetch'>
+
+/** Интервалы фоновой проверки на выбор, минуты; по умолчанию — 5 (как в Go). */
+export const backgroundIntervals = [1, 2, 5, 10, 15, 30, 60] as const
+export const defaultBackgroundMinutes = 5
 
 export function fromUI(ui: UI): SavedUI {
   const f = ui.filters ?? {}
@@ -164,6 +166,8 @@ export function fromUI(ui: UI): SavedUI {
     },
     fetchPrune: ui.fetchPrune === true,
     zoom: clampZoom(ui.zoom),
+    backgroundMinutes: backgroundIntervals.find((m) => m === ui.backgroundMinutes) ?? defaultBackgroundMinutes,
+    autoFetch: ui.autoFetch === true,
   }
 }
 
@@ -175,6 +179,8 @@ export function toUI(s: SavedUI): UI {
     filters: { registry: f.registry, host: f.host, sort: f.sort, dir: f.asc ? 'asc' : 'desc' },
     fetchPrune: s.fetchPrune,
     zoom: s.zoom,
+    backgroundMinutes: s.backgroundMinutes,
+    autoFetch: s.autoFetch,
   }
 }
 
@@ -199,19 +205,31 @@ export function createAppStore(source: DataSource): AppStore {
     const { repos } = store.getState()
     if (repos[st.repoId]) store.setState({ repos: { ...repos, [st.repoId]: withRemote(repos[st.repoId], st) } })
   }
-  // Фоновые данные (после сканирования, опрос по TTL) приходят по одному на
-  // репозиторий — в store они попадают пачкой, как и события сканирования.
+  // Фоновые данные (PR/CI, статус из фоновой проверки Go) приходят по одному
+  // на репозиторий — в store они попадают пачкой, как и события сканирования.
   const remoteDirty = new Set<string>()
+  const updated = new Map<string, Repository>()
   let remoteTimer: ReturnType<typeof setTimeout> | undefined
   const flushRemote = () => {
     remoteTimer = undefined
-    const { repos } = store.getState()
+    const { repos, scanning } = store.getState()
     let next: Record<string, Repository> | undefined
+    // Во время сканирования статус придёт с его итогом; убранные корни не возвращаются.
+    for (const [id, repo] of scanning ? [] : updated) {
+      if (repos[id]) (next ??= { ...repos })[id] = { ...repo, parentId: repo.parentId ?? repos[id].parentId }
+    }
+    updated.clear()
     for (const id of remoteDirty) {
-      if (repos[id]) (next ??= { ...repos })[id] = withRemote(repos[id], remote.get(id))
+      const cur = next?.[id] ?? repos[id]
+      if (cur) (next ??= { ...repos })[id] = withRemote(cur, remote.get(id))
     }
     remoteDirty.clear()
     if (next) store.setState({ repos: next })
+  }
+  const queueRepository = (repo: Repository) => {
+    updated.set(repo.id, repo)
+    remoteDirty.add(repo.id)
+    remoteTimer ??= setTimeout(flushRemote, scanFlushMs)
   }
   const queueRemote = (st: RemoteStatus) => {
     remote.set(st.repoId, st)
@@ -268,6 +286,8 @@ export function createAppStore(source: DataSource): AppStore {
       filters: defaultFilters,
       fetchPrune: false,
       zoom: minZoom,
+      backgroundMinutes: defaultBackgroundMinutes,
+      autoFetch: false,
       query: '',
       selectedId: null,
       running: {},
@@ -324,16 +344,6 @@ export function createAppStore(source: DataSource): AppStore {
         } catch (err) {
           fail(err)
         }
-      },
-
-      async pollRemote() {
-        const { scanning, repos, running } = get()
-        // После сканирования Go запрашивает всё сам; во время операции статус ещё изменится.
-        if (scanning) return
-        const ids = Object.values(repos)
-          .filter((r) => r.remote && !running[r.id])
-          .map((r) => r.id)
-        await Promise.all(ids.map((id) => source.getRemoteStatus(id).then(queueRemote, () => undefined)))
       },
 
       async loadDiagnostics() {
@@ -463,6 +473,16 @@ export function createAppStore(source: DataSource): AppStore {
         persist()
       },
 
+      setBackgroundMinutes(backgroundMinutes) {
+        set({ backgroundMinutes })
+        persist()
+      },
+
+      setAutoFetch(autoFetch) {
+        set({ autoFetch })
+        persist()
+      },
+
       setZoom(value) {
         const zoom = clampZoom(value)
         if (zoom === get().zoom) return
@@ -520,6 +540,10 @@ export function createAppStore(source: DataSource): AppStore {
 
   // PR/MR и CI приходят в фоне после сканирования, смены ветки и обновления.
   source.onRemoteStatus(queueRemote)
+
+  // Фоновая проверка Go (D-063): свежий статус по репозиториям и её время.
+  source.onRepository(queueRepository)
+  source.onChecked((lastCheckAt) => store.setState({ lastCheckAt, stale: false }))
 
   return store
 }

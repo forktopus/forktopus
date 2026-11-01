@@ -26,6 +26,14 @@ export function AddRoot(path: string): $CancellablePromise<model$0.Root> {
 }
 
 /**
+ * CheckNow — внеочередная фоновая проверка (меню трея). Если проверка уже
+ * идёт, следующая начнётся сразу после неё.
+ */
+export function CheckNow(): $CancellablePromise<void> {
+    return $Call.ByID(2765942353);
+}
+
+/**
  * CheckTools проверяет git и CLI провайдеров: для серверов, к которым относятся
  * репозитории, — версию и авторизацию (по одной проверке на CLI, сервер и
  * логин), для остальных CLI — только наличие и версию.

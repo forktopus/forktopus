@@ -9,9 +9,19 @@ import type {} from "../github.com/wailsapp/wails/v3/internal/eventdata.js";
 import "../github.com/wailsapp/wails/v3/internal/eventcreate.js";
 
 /**
+ * Name of the custom event "background:checked".
+ */
+export const BackgroundChecked = "background:checked";
+
+/**
  * Name of the custom event "remote:status".
  */
 export const RemoteStatus = "remote:status";
+
+/**
+ * Name of the custom event "repo:updated".
+ */
+export const RepoUpdated = "repo:updated";
 
 /**
  * Name of the custom event "scan:repository".

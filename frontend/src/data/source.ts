@@ -76,6 +76,10 @@ export interface DataSource {
   onScanRepository(cb: (repo: Repository) => void): () => void
   /** Подписка на серверные данные веток, полученные в фоне; возвращает отписку. */
   onRemoteStatus(cb: (status: RemoteStatus) => void): () => void
+  /** Подписка на статус репозитория, перечитанный фоновой проверкой Go (D-063). */
+  onRepository(cb: (repo: Repository) => void): () => void
+  /** Подписка на окончание фоновой проверки; at — её время (ISO). */
+  onChecked(cb: (at: string) => void): () => void
 }
 
 /** Ошибка вызова в виде model.Error: Wails кладёт её JSON в err.cause. */

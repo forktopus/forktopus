@@ -63,6 +63,9 @@ type AppService struct {
 	// прерываются все команды — и вызванные из UI, и фоновые.
 	life context.Context
 	stop context.CancelFunc
+
+	// wake — проверить сейчас, rearm — интервал изменился (background.go).
+	wake, rearm chan struct{}
 }
 
 // NewAppService создаёт сервис, читает настройки и кэш прошлого сканирования.
@@ -71,7 +74,8 @@ type AppService struct {
 func NewAppService(store *settings.Store, r runner.Runner, cachePath string) (*AppService, error) {
 	cfg, err := store.Load()
 	s := &AppService{store: store, runner: r, cachePath: cachePath, cfg: cfg,
-		remote: remote.New(r, remote.Options{}), remoteByRepo: map[string]model.RemoteStatus{}}
+		remote: remote.New(r, remote.Options{}), remoteByRepo: map[string]model.RemoteStatus{},
+		wake: make(chan struct{}, 1), rearm: make(chan struct{}, 1)}
 	s.life, s.stop = context.WithCancel(context.Background())
 	s.snapshot = model.RepositorySnapshot{Repositories: []model.Repository{}, Issues: []model.ScanIssue{}, Stale: true}
 	if cachePath != "" {
@@ -394,6 +398,9 @@ func (s *AppService) SaveUI(ui settings.UI) error {
 	next.UI = ui
 	if err := s.store.Save(next); err != nil {
 		return model.AsError(err)
+	}
+	if next.UI.BackgroundInterval() != s.cfg.UI.BackgroundInterval() {
+		s.rearmBackground()
 	}
 	s.cfg = next
 	return nil
