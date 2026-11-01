@@ -93,7 +93,7 @@ function TreeRepo({ node, depth, selectedId }: { node: RepoNode; depth: number; 
   )
 }
 
-function Toggle({ open, onClick, children }: { open: boolean; onClick(): void; children: ReactNode }) {
+function Toggle({ open, onClick, indent = 0, children }: { open: boolean; onClick(): void; indent?: number; children: ReactNode }) {
   const theme = useTheme()
   const Icon = open ? ExpandMoreIcon : ChevronRightIcon
   return (
@@ -106,7 +106,8 @@ function Toggle({ open, onClick, children }: { open: boolean; onClick(): void; c
         justifyContent: 'flex-start',
         alignItems: 'center',
         gap: 0.75,
-        px: 0.5,
+        pl: 0.5 + indent,
+        pr: 0.5,
         py: 0.9,
         borderRadius: '7px',
         textAlign: 'left',
@@ -151,18 +152,26 @@ function Tree({ tree, selectedId, rootsShown }: { tree: RootNode[]; selectedId: 
                 )}
               </Toggle>
               {open &&
-                h.namespaces.map((ns) => (
-                  <Box key={ns.namespace}>
-                    {ns.namespace && (
-                      <Typography sx={{ ...caption, fontWeight: 600, letterSpacing: '1px', pl: 3.5, pr: 1, pt: 0.75, pb: 0.25, overflowWrap: 'anywhere' }}>
-                        {ns.namespace}
-                      </Typography>
-                    )}
-                    {ns.repos.map((n) => (
-                      <TreeRepo key={n.repo.id} node={n} depth={0} selectedId={selectedId} />
-                    ))}
-                  </Box>
-                ))}
+                h.namespaces.map((ns) => {
+                  // Без namespace (локальный путь, remote без группы) сворачивать нечего — репозитории сразу под хостом.
+                  const nsKey = `${key}\n${ns.namespace}`
+                  const nsOpen = !ns.namespace || !collapsed.has(nsKey)
+                  return (
+                    <Box key={ns.namespace}>
+                      {ns.namespace && (
+                        <Toggle open={nsOpen} onClick={() => toggle(nsKey)} indent={1.75}>
+                          <Typography
+                            component="span"
+                            sx={{ ...caption, fontWeight: 600, letterSpacing: '1px', flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}
+                          >
+                            {ns.namespace}
+                          </Typography>
+                        </Toggle>
+                      )}
+                      {nsOpen && ns.repos.map((n) => <TreeRepo key={n.repo.id} node={n} depth={0} selectedId={selectedId} />)}
+                    </Box>
+                  )
+                })}
             </Box>
           )
         })
