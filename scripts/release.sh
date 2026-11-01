@@ -103,7 +103,10 @@ if want macos; then
   rm -f -- bin/forktopus
 fi
 
-(cd -- "$out" && rm -f SHA256SUMS && shasum -a 256 -- * > SHA256SUMS)
+# sha256sum есть в Linux и Git Bash на Windows, shasum — в macOS.
+sums=(sha256sum)
+command -v sha256sum > /dev/null || sums=(shasum -a 256)
+(cd -- "$out" && rm -f SHA256SUMS && "${sums[@]}" -- * > SHA256SUMS)
 
 echo
 echo "Готово: $out"
