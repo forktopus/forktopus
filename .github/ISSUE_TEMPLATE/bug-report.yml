@@ -1,0 +1,135 @@
+name: Сообщить об ошибке
+description: Ошибка в приложении, сканировании репозиториев, Git-операциях или данных PR/MR и CI.
+title: "[Ошибка] "
+body:
+  - type: dropdown
+    id: operating-system
+    attributes:
+      label: Операционная система
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Другая
+    validations:
+      required: true
+
+  - type: input
+    id: os-version
+    attributes:
+      label: Версия ОС
+      description: Для Linux укажите название и версию дистрибутива.
+      placeholder: "Например: Windows 11 24H2, macOS 15.4, Ubuntu 24.04"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: architecture
+    attributes:
+      label: Архитектура системы
+      options:
+        - x64 (Intel / AMD)
+        - arm64 (Apple Silicon / ARM)
+        - Другая
+        - Не знаю
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: Версия приложения
+      description: >-
+        Укажите версию из имени скачанного установщика или пакета.
+        Для запуска из исходников укажите commit или тег.
+      placeholder: "Например: 0.3.1 или commit исходников"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: launch-method
+    attributes:
+      label: Как запущено приложение
+      options:
+        - Готовый пакет из GitHub Releases (установщик / exe / deb / AppImage / ZIP)
+        - Собственная сборка из исходников
+        - Режим разработки (dev)
+        - Другое
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Шаги воспроизведения
+      description: Опишите действия по порядку, начиная с запуска приложения.
+      placeholder: |
+        1. Запускаю приложение и открываю…
+        2. Нажимаю…
+        3. Получаю ошибку…
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Ожидаемый результат
+      placeholder: Что должно было произойти?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Фактический результат
+      description: Если появилось сообщение об ошибке, приведите его точный текст.
+      placeholder: Что произошло вместо ожидаемого результата?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: Как часто повторяется ошибка
+      options:
+        - При каждом повторении этих действий
+        - Иногда
+        - Случилось один раз, повторить не удалось
+        - Пока не проверял повторно
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Дополнительные условия
+      description: Заполните только то, что относится к вашей ошибке.
+      placeholder: |
+        Режим интерфейса: Реестр, Проводник или Радар.
+        Сканирование: примерное число репозиториев, вложенные папки, исключения.
+        Git-операции: текущая ветка, есть ли upstream и локальные изменения, работает ли операция в терминале.
+        PR/MR или CI: GitHub / GitLab / Gitea, публичный или собственный сервер, версии git и нужного CLI (gh / glab / gt / tea).
+        Linux: рабочий стол и Wayland / X11, если известны.
+        Виртуальная машина, VPN или прокси: используются ли они.
+        Исходники или dev: команда запуска и версии Go, Wails, Node.js.
+        Другие настройки, влияющие на воспроизведение ошибки.
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Диагностика и логи
+      description: >-
+        Откройте «Диагностика CLI», нажмите «Проверить снова», затем
+        «Скопировать отчёт» и вставьте результат сюда. Можно добавить вывод CLI
+        или фрагмент журнала (его путь указан в диагностике).
+        Перед отправкой проверьте, что нет токенов, данных входа, личных путей
+        и адресов приватных репозиториев. Если приложение не запускается,
+        это поле можно оставить пустым.
+      placeholder: Результаты диагностики, код ошибки или фрагмент журнала.
+      render: text
+
+  - type: textarea
+    id: attachments
+    attributes:
+      label: Скриншоты и файлы
+      description: >-
+        Перетащите сюда скриншоты, короткую запись экрана или файл журнала,
+        если они помогают показать ошибку. Скройте данные аккаунта и личные пути.
