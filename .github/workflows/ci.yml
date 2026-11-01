@@ -19,6 +19,9 @@ on:
       - '!.vscode/**'
       - '!compose.dev.yaml'
       - '!docker/**'
+      # Шаблоны обращений и PR не участвуют в сборке и проверках приложения.
+      - '!.github/ISSUE_TEMPLATE/**'
+      - '!.github/pull_request_template.md'
       # Лендинг публикует отдельный workflow Pages.
       - '!www/**'
       - '!.github/workflows/pages.yml'
