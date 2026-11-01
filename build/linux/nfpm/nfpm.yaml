@@ -6,7 +6,7 @@
 name: "forktopus"
 arch: ${GOARCH}
 platform: "linux"
-version: "0.1.1"
+version: "0.2.0"
 section: "devel"
 priority: "extra"
 maintainer: "yarkovaleksei <yarkov_aleksei@mail.ru>"
