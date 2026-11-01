@@ -1,4 +1,4 @@
-package main
+package desktop
 
 import "github.com/godbus/dbus/v5"
 

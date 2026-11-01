@@ -15,6 +15,7 @@ import (
 
 	"github.com/forktopus/forktopus/internal/app"
 	"github.com/forktopus/forktopus/internal/applog"
+	"github.com/forktopus/forktopus/internal/desktop"
 	"github.com/forktopus/forktopus/internal/repocache"
 	"github.com/forktopus/forktopus/internal/runner"
 	"github.com/forktopus/forktopus/internal/settings"
@@ -111,7 +112,7 @@ func main() {
 	// после остановки сервера, и приложение завершается штатно — иначе git и
 	// ssh в своей сессии пережили бы его (11.4). Закрытие окна идёт через
 	// ServiceShutdown без этого.
-	quit := setupTray(wailsApp, window, service)
+	quit := desktop.SetupTray(wailsApp, window, service)
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)

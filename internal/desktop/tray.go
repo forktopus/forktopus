@@ -1,4 +1,6 @@
-package main
+// Package desktop — интеграция с рабочим столом (D-063): значок в трее,
+// системные уведомления, автозапуск. Окно и приложение Wails создаёт main.
+package desktop
 
 import (
 	_ "embed"
@@ -13,14 +15,14 @@ import (
 
 // Значок трея (64×64, scripts/make-icon.sh).
 //
-//go:embed build/trayicon.png
+//go:embed trayicon.png
 var trayIcon []byte
 
-// setupTray добавляет значок в трей: меню, сводка в подсказке, крестик окна
+// SetupTray добавляет значок в трей: меню, сводка в подсказке, крестик окна
 // прячет его в трей (D-063). Если трея в системе нет или в настройках выбран
 // выход, крестик закрывает приложение как обычно. Возвращает выход из
 // приложения, который не перехватывается крестиком.
-func setupTray(a *application.App, w *application.WebviewWindow, service *app.AppService) (quit func()) {
+func SetupTray(a *application.App, w *application.WebviewWindow, service *app.AppService) (quit func()) {
 	var quitting atomic.Bool
 	quit = func() {
 		quitting.Store(true)
