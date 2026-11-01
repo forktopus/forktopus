@@ -7,25 +7,23 @@
 #             нативно с ad-hoc подписью, на Linux — в Docker-образе wails-cross без
 #             подписи (один раз: wails3 task setup:docker). Не проверялось.
 #
-#   bash scripts/release.sh [--version X.Y.Z] [--os linux|windows|macos ...]
+#   bash scripts/release.sh [--os linux|windows|macos ...]
 #
-#   --version  сменить версию во всех файлах build/ и собрать её; без флага —
-#              текущая из build/config.yml
 #   --os       что собирать: можно повторять или через запятую (--os linux,windows);
 #              без флага — linux и windows
-# Без флагов: текущая версия, Linux и Windows.
 #
-# Версия хранится в build/config.yml и ещё в десяти файлах build/ (манифесты,
-# plist, nfpm) — скрипт меняет её везде. Ничего не коммитит, не ставит тег и
-# не публикует: что сделать дальше — в конце вывода. Файлы других ОС той же
-# версии в bin/release/<версия>/ остаются, SHA256SUMS считается по всем.
+# Версия — текущая из build/config.yml; меняет её go run ./scripts/release bump.
+# Файлы выпуска собирает CI на push в main, релиз — go run ./scripts/release
+# (D-072, docs/release.md); этот скрипт — та же сборка локально. Ничего не
+# коммитит и не публикует. Файлы других ОС той же версии в
+# bin/release/<версия>/ остаются, SHA256SUMS считается по всем.
 # AppImage при первой сборке скачивает linuxdeploy (кэш в build/linux/appimage/build).
 set -euo pipefail
 
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
 
 usage() {
-  sed -n '10,16p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '10,13p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
   exit "${1:-0}"
 }
 
@@ -34,12 +32,9 @@ die() {
   exit 1
 }
 
-new=""
 oses=()
 while (($#)); do
   case "$1" in
-    --version) (($# >= 2)) || die "--version: нужна версия"; new="$2"; shift 2 ;;
-    --version=*) new="${1#*=}"; shift ;;
     --os) (($# >= 2)) || die "--os: нужна ОС"; IFS=, read -ra list <<< "$2"; oses+=("${list[@]}"); shift 2 ;;
     --os=*) IFS=, read -ra list <<< "${1#*=}"; oses+=("${list[@]}"); shift ;;
     -h | --help) usage ;;
@@ -68,35 +63,8 @@ if want macos && [[ "$host" != Darwin ]]; then
     die "Для macOS на $host нужен Docker-образ wails-cross (один раз, ~4 ГБ на диске): wails3 task setup:docker"
 fi
 
-# Файлы с версией. В MSIX она четырёхзначная (0.2.0.0), в Info.dev.plist —
-# с суффиксом -dev: замена с границей слова покрывает оба случая. Замена —
-# perl, а не sed: у sed на macOS нет \b.
-FILES=(
-  build/config.yml
-  build/linux/nfpm/nfpm.yaml
-  build/windows/info.json
-  build/windows/wails.exe.manifest
-  build/windows/nsis/wails_tools.nsh
-  build/windows/msix/app_manifest.xml
-  build/windows/msix/template.xml
-  build/darwin/Info.plist
-  build/darwin/Info.dev.plist
-  build/ios/Info.plist
-  build/ios/Info.dev.plist
-)
-
-old="$(sed -n 's/^  version: "\([0-9.]*\)".*/\1/p' build/config.yml)"
-[[ -n "$old" ]] || die "Не нашёл версию в build/config.yml"
-new="${new:-$old}"
-[[ "$new" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "Версия — три числа через точку: 0.3.0"
-
-if [[ "$new" != "$old" ]]; then
-  for f in "${FILES[@]}"; do
-    grep -qwF -- "$old" "$f" || die "В $f нет версии $old — список FILES устарел"
-  done
-  OLD="$old" NEW="$new" perl -pi -e 's/\b\Q$ENV{OLD}\E\b/$ENV{NEW}/g' "${FILES[@]}"
-  echo "Версия $old → $new"
-fi
+new="$(sed -n 's/^  version: "\([0-9.]*\)".*/\1/p' build/config.yml)"
+[[ -n "$new" ]] || die "Не нашёл версию в build/config.yml"
 
 out="bin/release/$new"
 mkdir -p -- "$out"
@@ -141,12 +109,7 @@ echo
 echo "Готово: $out"
 ls -lh -- "$out"
 echo
-echo "Дальше (вручную):"
-[[ "$new" != "$old" ]] && echo "  git add build && git commit -m \"build: версия $new\""
-cat <<EOF
-  git tag -a v$new -m "Forktopus $new" && git push origin main v$new
-  gh release create v$new $out/* --title "Forktopus $new" --notes "…"
-EOF
+echo "Релиз — из файлов CI: go run ./scripts/release plan (docs/release.md)."
 if want macos && [[ "$host" != Darwin ]]; then
   cat <<'EOF'
 
