@@ -34,7 +34,8 @@ var glMarkers = []marker{
 	{model.CodeAuthRequired, "401 Unauthorized"},
 	{model.CodeAuthRequired, "has not been authenticated"},
 	{model.CodeAuthRequired, "glab auth login"},
-	{model.CodeAuthRequired, "403 Forbidden"},
+	{model.CodeAuthRequired, "insufficient_scope"}, // у токена нет нужных scope — войти заново
+	{model.CodeAccessDenied, "403 Forbidden"},
 	{model.CodeRepoUnresolved, "404 Not Found"},
 	{model.CodeRepoUnresolved, "404 Project Not Found"},
 	{model.CodeUnsupported, "unknown flag"},

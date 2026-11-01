@@ -118,6 +118,7 @@ func TestGitHubErrors(t *testing.T) { // A16, A24
 		{"нет сети", stderr(1, "error connecting to api.github.com\ncheck your internet connection or https://githubstatus.com\n"), model.CodeNetworkError, model.AvailabilityError},
 		{"нет репозитория", stderr(1, "GraphQL: Could not resolve to a Repository with the name 'OWNER/nope'. (repository)\n"), model.CodeRepoUnresolved, model.AvailabilityError},
 		{"нет репозитория (REST)", stderr(1, "failed to get runs: HTTP 404: Not Found (https://api.github.com/repos/OWNER/nope/actions/runs)\n"), model.CodeRepoUnresolved, model.AvailabilityError},
+		{"нет прав", stderr(1, "HTTP 403: Resource not accessible by personal access token (https://api.github.com/repos/OWNER/repo/actions/runs)\n"), model.CodeAccessDenied, model.AvailabilityNotSupported},
 		{"лимит", stderr(1, "HTTP 403: API rate limit exceeded for user ID 1. (https://api.github.com/graphql)\n"), model.CodeRateLimit, model.AvailabilityError},
 		{"старый gh", stderr(1, "Unknown JSON field: \"isDraft\"\n"), model.CodeUnsupported, model.AvailabilityNotSupported},
 		{"таймаут", reply{err: model.Errorf(model.CodeTimeout, "gh не ответил за 20s")}, model.CodeTimeout, model.AvailabilityError},

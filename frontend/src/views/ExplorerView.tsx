@@ -15,7 +15,7 @@ import { useNow } from '../app/useNow'
 import { CIIndicator, NoAutoCheckMark, PRIndicator } from '../components/indicators'
 import { CliStatus, GuardedButton, nestingName, providerName } from '../components/RepoDetails'
 import { ProviderIcon, RepoIcon, StatusText, caption } from '../components/status'
-import { Availability, Operation, type BranchInfo, type ChangedFile, type Repository } from '../data/model'
+import { Availability, ErrorCode, Operation, type BranchInfo, type ChangedFile, type Repository } from '../data/model'
 import { formatRelative, t } from '../i18n'
 import { buildTree, healthTone, treeRepos, type RepoNode, type RootNode } from '../logic/explorer'
 import { opName, opResultLabel, pullBlock, switchBlock } from '../logic/ops'
@@ -490,7 +490,10 @@ function Inspector({ repo, onOpenTools }: { repo: Repository; onOpenTools(): voi
   const branch = branchOf(repo)
   const issue = integrationIssue(repo)
   // Сервер не поддерживается или remote нет — PR/CI не будет, это не проблема настройки.
-  const noServer = repo.pr.availability === Availability.AvailabilityNotSupported && repo.ci.availability === Availability.AvailabilityNotSupported
+  // Нет прав (D-068) — сервер есть, причина видна у PR и CI.
+  const unsupported = (s: { availability?: Availability; error?: { code: ErrorCode } | null }) =>
+    s.availability === Availability.AvailabilityNotSupported && s.error?.code !== ErrorCode.CodeAccessDenied
+  const noServer = unsupported(repo.pr) && unsupported(repo.ci)
   const h3 = { ...sectionTitle, mt: 3, mb: 1.25 }
   return (
     <Box sx={{ p: 2.25, minWidth: 0 }}>

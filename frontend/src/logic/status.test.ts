@@ -82,6 +82,10 @@ describe('причина отсутствия данных PR/CI', () => {
     expect(prLabel(repo({ pr: err(Availability.AvailabilityUnavailable, ErrorCode.CodeCLIMissing) }))).toEqual({ tone: 'warn', text: 'CLI не установлен' })
     expect(ciLabel(repo({ ci: err(Availability.AvailabilityUnavailable, ErrorCode.CodeAuthRequired) })).text).toBe('нужна авторизация')
     expect(ciLabel(repo({ ci: err(Availability.AvailabilityNotSupported, ErrorCode.CodeUnsupported) })).text).toBe('не поддерживается')
+    // Вход есть, прав на раздел нет (HTTP 403, D-068): не проблема настройки CLI.
+    const denied = repo({ ci: err(Availability.AvailabilityNotSupported, ErrorCode.CodeAccessDenied) })
+    expect(ciLabel(denied)).toEqual({ tone: 'muted', text: 'нет прав' })
+    expect(integrationIssue(denied)).toBe(false)
     expect(prLabel(repo({ pr: err(Availability.AvailabilityNotSupported, ErrorCode.CodeNoRemote) })).text).toBe('нет remote')
     expect(prLabel(repo({ pr: err(Availability.AvailabilityError, ErrorCode.CodeNetworkError) }))).toEqual({ tone: 'bad', text: 'нет связи с сервером' })
     expect(prLabel(repo({ pr: err(Availability.AvailabilityError, ErrorCode.CodeOther) })).text).toBe('ошибка источника')

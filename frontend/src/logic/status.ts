@@ -69,6 +69,7 @@ export function integrationIssue(r: Repository): boolean {
 const reasonKeys: Partial<Record<ErrorCode, MessageKey>> = {
   [ErrorCode.CodeCLIMissing]: 'remote.cliMissing',
   [ErrorCode.CodeAuthRequired]: 'remote.authRequired',
+  [ErrorCode.CodeAccessDenied]: 'remote.accessDenied',
   [ErrorCode.CodeNetworkError]: 'remote.offline',
   [ErrorCode.CodeTimeout]: 'remote.offline',
   [ErrorCode.CodeRateLimit]: 'remote.rateLimit',

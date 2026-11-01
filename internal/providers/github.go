@@ -32,7 +32,7 @@ var ghMarkers = []marker{
 	{model.CodeAuthRequired, "HTTP 401"},
 	{model.CodeAuthRequired, "Bad credentials"},
 	{model.CodeAuthRequired, "gh auth login"},
-	{model.CodeAuthRequired, "HTTP 403"},
+	{model.CodeAccessDenied, "HTTP 403"}, // после лимита: превышение — тоже 403
 	{model.CodeRepoUnresolved, "Could not resolve to a Repository"},
 	{model.CodeRepoUnresolved, "HTTP 404"},
 	{model.CodeUnsupported, "Unknown JSON field"},

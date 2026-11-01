@@ -229,6 +229,7 @@ export const ru = {
   'remote.notSupported': 'не поддерживается',
   'remote.cliMissing': 'CLI не установлен',
   'remote.authRequired': 'нужна авторизация',
+  'remote.accessDenied': 'нет прав',
   'remote.offline': 'нет связи с сервером',
   'remote.rateLimit': 'лимит запросов',
   'remote.notFound': 'проект не найден',

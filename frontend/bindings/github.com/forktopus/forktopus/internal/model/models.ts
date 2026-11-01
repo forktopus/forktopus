@@ -184,6 +184,11 @@ export enum ErrorCode {
     CodeAuthRequired = "AUTH_REQUIRED",
 
     /**
+     * вход есть, но прав на этот раздел репозитория нет (HTTP 403, D-068)
+     */
+    CodeAccessDenied = "ACCESS_DENIED",
+
+    /**
      * команды/формата нет в этой версии CLI
      */
     CodeUnsupported = "UNSUPPORTED",

@@ -78,6 +78,8 @@ func TestGitLabErrors(t *testing.T) { // A17, A24
 		{"нет сети", stderr(1, "          \n   ERROR  \n          \n  Get \"https://gitlab.com/api/v4/projects/OWNER%2Fforktopus-   \n  pilot/pipelines?ref=main\": dial\n  tcp: lookup gitlab.com on 127.0.0.53:53: network is unreachable.   \n\n"), model.CodeNetworkError, model.AvailabilityError},
 		{"нет проекта", stderr(1, "ERROR: GET https://gitlab.com/api/v4/projects/OWNER%2Fnope: 404 {message: 404 Project Not Found}\n"), model.CodeRepoUnresolved, model.AvailabilityError},
 		{"ошибка JSON-ом в stdout", reply{res: resultOf(1, `{"error":{"message":"GET https://gitlab.com/api/v4/projects/OWNER%2Fnope: 404 Not Found"}}`, "")}, model.CodeRepoUnresolved, model.AvailabilityError},
+		{"нет прав", stderr(1, "ERROR: GET https://gitlab.com/api/v4/projects/1/pipelines: 403 {message: 403 Forbidden}\n"), model.CodeAccessDenied, model.AvailabilityNotSupported},
+		{"токен без scope", stderr(1, "ERROR: GET https://gitlab.com/api/v4/projects/1/pipelines: 403 {error: insufficient_scope}\n"), model.CodeAuthRequired, model.AvailabilityUnavailable},
 		{"лимит", stderr(1, "ERROR: GET https://gitlab.com/api/v4/projects/1/pipelines: 429 Too Many Requests\n"), model.CodeRateLimit, model.AvailabilityError},
 		{"старый glab", stderr(1, "ERROR: unknown flag: --per-page\n"), model.CodeUnsupported, model.AvailabilityNotSupported},
 		{"мусор вместо JSON", stdout([]byte("<html>")), model.CodeOther, model.AvailabilityError},

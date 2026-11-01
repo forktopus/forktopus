@@ -163,7 +163,8 @@ func TestGiteaErrors(t *testing.T) { // A18, A24
 	}
 
 	for status, code := range map[string]model.ErrorCode{
-		"HTTP/2.0 403 Forbidden":             model.CodeAuthRequired,
+		"HTTP/2.0 401 Unauthorized":          model.CodeAuthRequired,
+		"HTTP/2.0 403 Forbidden":             model.CodeAccessDenied,
 		"HTTP/2.0 429 Too Many Requests":     model.CodeRateLimit,
 		"HTTP/2.0 500 Internal Server Error": model.CodeOther,
 		"":                                   model.CodeOther,

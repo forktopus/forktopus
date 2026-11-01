@@ -16,12 +16,13 @@ const cliTimeout = 20 * time.Second
 var now = time.Now
 
 // AvailabilityOf — как UI показывает ошибку: нет CLI или авторизации —
-// «недоступно», нет поддержки — «не поддерживается», прочее — ошибка источника.
+// «недоступно», нет поддержки или прав (D-068) — «не поддерживается»: это не
+// проблема настройки CLI; прочее — ошибка источника.
 func AvailabilityOf(code model.ErrorCode) model.Availability {
 	switch code {
 	case model.CodeCLIMissing, model.CodeAuthRequired:
 		return model.AvailabilityUnavailable
-	case model.CodeUnsupported:
+	case model.CodeUnsupported, model.CodeAccessDenied:
 		return model.AvailabilityNotSupported
 	}
 	return model.AvailabilityError

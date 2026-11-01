@@ -79,8 +79,12 @@ func (g Gitea) api(ctx context.Context, dir string, t Target, path string) ([]by
 	switch {
 	case code == 0:
 		e.Message = "tea: нет строки статуса HTTP в ответе"
-	case code == http.StatusUnauthorized || code == http.StatusForbidden:
+	case code == http.StatusUnauthorized:
 		e.Code = model.CodeAuthRequired
+	case code == http.StatusForbidden:
+		// Вход есть, но роли не хватает прав на раздел (например, Actions при
+		// доступе к коду и PR) — не проблема настройки tea (D-068).
+		e.Code = model.CodeAccessDenied
 	case code == http.StatusTooManyRequests:
 		e.Code = model.CodeRateLimit
 	case code == http.StatusNotFound && isJSON:
