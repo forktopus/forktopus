@@ -18,14 +18,20 @@ const (
 	LocalTimeout = 30 * time.Second
 )
 
-// Fetch обновляет remote-tracking refs выбранного remote. Без prune (D-033):
-// явный --no-prune не зависит от fetch.prune в конфиге пользователя.
-func Fetch(ctx context.Context, r runner.Runner, dir, remote string) error {
+// Fetch обновляет remote-tracking refs выбранного remote. prune — удалить
+// remote-tracking refs веток, которых на сервере больше нет (настройка
+// пользователя, D-057); флаг явный в обе стороны, fetch.prune из конфига Git
+// не влияет (D-033). Локальные ветки не трогаются.
+func Fetch(ctx context.Context, r runner.Runner, dir, remote string, prune bool) error {
 	if remote == "" || strings.HasPrefix(remote, "-") {
 		return model.Errorf(model.CodeInvalidInput, "некорректное имя remote %q", remote)
 	}
 	head, before := fetchHead(ctx, r, dir)
-	err := run(ctx, r, dir, NetworkTimeout, "fetch", "--no-prune", "--", remote)
+	pruneFlag := "--no-prune"
+	if prune {
+		pruneFlag = "--prune"
+	}
+	err := run(ctx, r, dir, NetworkTimeout, "fetch", pruneFlag, "--", remote)
 	if err != nil && head != "" {
 		restoreFetchHead(head, before)
 	}

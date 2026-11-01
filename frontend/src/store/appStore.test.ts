@@ -345,11 +345,12 @@ describe('fromUI / toUI', () => {
       mode: 'registry',
       theme: null,
       filters: { registry: 'all', host: '', sort: 'name', asc: true },
+      fetchPrune: false,
     })
   })
 
   it('туда и обратно без потерь', () => {
-    const state = { mode: 'radar' as const, theme: 'dark' as const, filters: { registry: 'ci' as const, host: 'gitlab.com', sort: 'pr' as const, asc: false } }
+    const state = { mode: 'radar' as const, theme: 'dark' as const, filters: { registry: 'ci' as const, host: 'gitlab.com', sort: 'pr' as const, asc: false }, fetchPrune: true }
     expect(fromUI(toUI(state))).toEqual(state)
   })
 })

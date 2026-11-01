@@ -86,6 +86,8 @@ export const ru = {
   'roots.skipEmpty': 'Список пуст — после применения вернутся значения по умолчанию.',
   'roots.skipReset': 'Сбросить по умолчанию',
   'roots.skipApply': 'Применить и пересканировать',
+  'roots.pruneTitle': 'Fetch удаляет ветки, исчезнувшие на сервере',
+  'roots.pruneDescription': 'git fetch --prune: убирает origin/… для веток, удалённых на сервере. Ваши локальные ветки и файлы не трогаются.',
   'roots.repoCount': { one: '{count} репозиторий', few: '{count} репозитория', many: '{count} репозиториев' },
 
   'empty.noRoots.title': 'Добавьте первую корневую папку',

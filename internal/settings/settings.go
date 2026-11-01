@@ -38,6 +38,8 @@ type UI struct {
 	Theme   string            `json:"theme,omitempty"` // light | dark; пусто — как в системе
 	Mode    string            `json:"mode,omitempty"`  // registry | explorer | radar
 	Filters map[string]string `json:"filters,omitempty"`
+	// FetchPrune — Fetch с --prune: удалять remote-tracking ветки, которых нет на сервере (D-057).
+	FetchPrune bool `json:"fetchPrune,omitempty"`
 }
 
 // Default возвращает настройки первого запуска.

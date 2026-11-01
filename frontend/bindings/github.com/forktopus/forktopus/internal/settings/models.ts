@@ -15,4 +15,9 @@ export interface UI {
      */
     "mode"?: string;
     "filters"?: { [_ in string]?: string } | null;
+
+    /**
+     * FetchPrune — Fetch с --prune: удалять remote-tracking ветки, которых нет на сервере (D-057).
+     */
+    "fetchPrune"?: boolean;
 }

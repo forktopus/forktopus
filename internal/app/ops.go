@@ -55,6 +55,7 @@ func (s *AppService) runOp(ctx context.Context, id string, op model.Operation, t
 	}
 	s.mu.Lock()
 	opts := s.scanOptionsLocked()
+	prune := s.cfg.UI.FetchPrune
 	s.mu.Unlock()
 
 	rec := model.OpRecord{RepoID: id, Op: op, Target: target, At: start}
@@ -111,7 +112,7 @@ func (s *AppService) runOp(ctx context.Context, id string, op model.Operation, t
 
 	switch op {
 	case model.OperationFetch:
-		err = gitops.Fetch(ctx, s.runner, fresh.Path, fresh.Remote)
+		err = gitops.Fetch(ctx, s.runner, fresh.Path, fresh.Remote, prune)
 	case model.OperationPull:
 		err = gitops.Pull(ctx, s.runner, fresh.Path)
 	case model.OperationSwitch:

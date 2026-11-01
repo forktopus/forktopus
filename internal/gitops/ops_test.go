@@ -28,7 +28,7 @@ func TestFetchUpdatesTrackingRefsOnly(t *testing.T) { // A11
 	gittest.PushFromOtherClone(t, bare, "remote.txt", "remote\n", "remote commit")
 	remoteHead := gittest.Git(t, bare, "rev-parse", "main")
 
-	if err := Fetch(context.Background(), r, repo, "origin"); err != nil {
+	if err := Fetch(context.Background(), r, repo, "origin", false); err != nil {
 		t.Fatalf("fetch: %v", err)
 	}
 	if got := gittest.Git(t, repo, "rev-parse", "origin/main"); got != remoteHead {
@@ -48,7 +48,7 @@ func TestFailedFetchKeepsLastFetchTime(t *testing.T) {
 		t.Fatal(err)
 	}
 	gittest.Git(t, repo, "remote", "add", "offline", "http://127.0.0.1:1/repo.git")
-	if err := Fetch(context.Background(), r, repo, "offline"); err == nil {
+	if err := Fetch(context.Background(), r, repo, "offline", false); err == nil {
 		t.Fatal("ожидалась ошибка")
 	}
 	if fi, err := os.Stat(head); err != nil || !fi.ModTime().Equal(old) {
@@ -63,7 +63,7 @@ func TestFetchKeepsStaleTrackingRefs(t *testing.T) { // D-033
 	gittest.Git(t, bare, "branch", "-D", "gone")
 	gittest.Git(t, repo, "config", "fetch.prune", "true")
 
-	if err := Fetch(context.Background(), r, repo, "origin"); err != nil {
+	if err := Fetch(context.Background(), r, repo, "origin", false); err != nil {
 		t.Fatalf("fetch: %v", err)
 	}
 	if _, err := gittest.TryGit(repo, "rev-parse", "--verify", "-q", "refs/remotes/origin/gone"); err != nil {
@@ -71,10 +71,27 @@ func TestFetchKeepsStaleTrackingRefs(t *testing.T) { // D-033
 	}
 }
 
+func TestFetchPrune(t *testing.T) { // D-057
+	repo, bare := gittest.Upstream(t)
+	gittest.Git(t, repo, "push", "-q", "origin", "main:gone")
+	gittest.Git(t, repo, "branch", "-q", "gone", "origin/gone")
+	gittest.Git(t, bare, "branch", "-D", "gone")
+
+	if err := Fetch(context.Background(), r, repo, "origin", true); err != nil {
+		t.Fatalf("fetch: %v", err)
+	}
+	if _, err := gittest.TryGit(repo, "rev-parse", "--verify", "-q", "refs/remotes/origin/gone"); err == nil {
+		t.Error("origin/gone остался после fetch --prune")
+	}
+	if _, err := gittest.TryGit(repo, "rev-parse", "--verify", "-q", "refs/heads/gone"); err != nil {
+		t.Error("prune удалил локальную ветку gone")
+	}
+}
+
 func TestFetchErrors(t *testing.T) {
 	repo := gittest.Clean(t)
 	gittest.Git(t, repo, "remote", "add", "missing", filepath.Join(t.TempDir(), "no-such.git"))
-	err := Fetch(context.Background(), r, repo, "missing")
+	err := Fetch(context.Background(), r, repo, "missing", false)
 	if code := model.CodeOf(err); code != model.CodeOther {
 		t.Errorf("отсутствующий репозиторий: %v", err)
 	}
@@ -84,7 +101,7 @@ func TestFetchErrors(t *testing.T) {
 
 	// Порт 1 на localhost закрыт: соединение отклоняется сразу.
 	gittest.Git(t, repo, "remote", "add", "offline", "http://127.0.0.1:1/repo.git")
-	if code := model.CodeOf(Fetch(context.Background(), r, repo, "offline")); code != model.CodeNetworkError {
+	if code := model.CodeOf(Fetch(context.Background(), r, repo, "offline", false)); code != model.CodeNetworkError {
 		t.Errorf("сервер недоступен: ожидался NETWORK_ERROR, получено %s", code)
 	}
 
@@ -93,7 +110,7 @@ func TestFetchErrors(t *testing.T) {
 		t.Errorf("после неудачного fetch остался FETCH_HEAD: %v", err)
 	}
 
-	if code := model.CodeOf(Fetch(context.Background(), r, repo, "--upload-pack=touch")); code != model.CodeInvalidInput {
+	if code := model.CodeOf(Fetch(context.Background(), r, repo, "--upload-pack=touch", false)); code != model.CodeInvalidInput {
 		t.Errorf("имя remote как опция: ожидался INVALID_INPUT, получено %s", code)
 	}
 }
@@ -292,7 +309,7 @@ func TestOpsInPathWithSpacesAndCyrillic(t *testing.T) {
 	gittest.PushFromOtherClone(t, bare, "новый файл.txt", "x\n", "коммит")
 	remoteHead := gittest.Git(t, bare, "rev-parse", "main")
 
-	if err := Fetch(ctx, r, repo, "origin"); err != nil {
+	if err := Fetch(ctx, r, repo, "origin", false); err != nil {
 		t.Fatalf("fetch: %v", err)
 	}
 	if err := Pull(ctx, r, repo); err != nil {

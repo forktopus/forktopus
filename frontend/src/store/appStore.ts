@@ -67,6 +67,8 @@ export interface AppState {
   mode: Mode
   theme: ThemeChoice
   filters: Filters
+  /** Fetch с --prune (D-057). */
+  fetchPrune: boolean
   query: string
   selectedId: string | null
   /** операция, которая сейчас идёт над репозиторием: кнопки операций заблокированы (D-031) */
@@ -119,6 +121,7 @@ export interface AppState {
   openURL(url: string): void
   setMode(mode: Mode): void
   setTheme(theme: ThemeMode): void
+  setFetchPrune(on: boolean): void
   setFilters(patch: Partial<Filters>): void
   setQuery(query: string): void
   select(id: string | null): void
@@ -131,7 +134,7 @@ function oneOf<T extends string>(value: string | undefined, allowed: readonly T[
 }
 
 /** Состояние интерфейса из настроек; неизвестные значения — по умолчанию. */
-export function fromUI(ui: UI): Pick<AppState, 'mode' | 'theme' | 'filters'> {
+export function fromUI(ui: UI): Pick<AppState, 'mode' | 'theme' | 'filters' | 'fetchPrune'> {
   const f = ui.filters ?? {}
   return {
     mode: oneOf(ui.mode, modes, 'registry'),
@@ -142,15 +145,17 @@ export function fromUI(ui: UI): Pick<AppState, 'mode' | 'theme' | 'filters'> {
       sort: oneOf(f.sort, sortKeys, defaultFilters.sort),
       asc: f.dir !== 'desc',
     },
+    fetchPrune: ui.fetchPrune === true,
   }
 }
 
-export function toUI(s: Pick<AppState, 'mode' | 'theme' | 'filters'>): UI {
+export function toUI(s: Pick<AppState, 'mode' | 'theme' | 'filters' | 'fetchPrune'>): UI {
   const f = s.filters
   return {
     mode: s.mode,
     theme: s.theme ?? '',
     filters: { registry: f.registry, host: f.host, sort: f.sort, dir: f.asc ? 'asc' : 'desc' },
+    fetchPrune: s.fetchPrune,
   }
 }
 
@@ -242,6 +247,7 @@ export function createAppStore(source: DataSource): AppStore {
       mode: 'registry',
       theme: null,
       filters: defaultFilters,
+      fetchPrune: false,
       query: '',
       selectedId: null,
       running: {},
@@ -427,6 +433,11 @@ export function createAppStore(source: DataSource): AppStore {
 
       setTheme(theme) {
         set({ theme })
+        persist()
+      },
+
+      setFetchPrune(fetchPrune) {
+        set({ fetchPrune })
         persist()
       },
 

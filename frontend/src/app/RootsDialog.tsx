@@ -1,6 +1,6 @@
 import CloseIcon from '@mui/icons-material/Close'
 import FolderOpenIcon from '@mui/icons-material/FolderOpen'
-import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, TextField, Tooltip, Typography, useTheme } from '@mui/material'
+import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, Switch, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { useEffect, useState, type FormEvent } from 'react'
 import type { ScanIssue } from '../data/model'
 import type { SkipList } from '../data/source'
@@ -83,6 +83,7 @@ export function RootsDialog({ open, onClose }: { open: boolean; onClose(): void 
           </Button>
         </Box>
         <SkipDirsEditor />
+        <FetchPruneSetting />
       </DialogContent>
       <DialogActions>
         <Button onClick={() => void scan()} disabled={scanning || roots.length === 0}>
@@ -91,6 +92,24 @@ export function RootsDialog({ open, onClose }: { open: boolean; onClose(): void 
         <Button onClick={onClose}>{t('action.close')}</Button>
       </DialogActions>
     </Dialog>
+  )
+}
+
+/** Fetch с --prune (D-057): применяется к следующим Fetch, сохраняется сразу. */
+function FetchPruneSetting() {
+  const theme = useTheme()
+  const fetchPrune = useApp((s) => s.fetchPrune)
+  const setFetchPrune = useApp((s) => s.setFetchPrune)
+  return (
+    <Box sx={{ mt: 4, pt: 2, borderTop: `1px solid ${theme.app.line}` }}>
+      <FormControlLabel
+        control={<Switch checked={fetchPrune} onChange={(e) => setFetchPrune(e.target.checked)} />}
+        label={<Typography variant="subtitle2">{t('roots.pruneTitle')}</Typography>}
+      />
+      <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+        {t('roots.pruneDescription')}
+      </Typography>
+    </Box>
   )
 }
 
