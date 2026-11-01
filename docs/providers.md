@@ -1,6 +1,6 @@
 # Провайдеры: результаты пилота CLI
 
-Что фактически отдают `gh`, `glab` и `tea` для PR/MR и CI по ветке. По этим находкам пишутся адаптеры (этап 08); при обновлении CLI — перепроверить.
+Что фактически отдают `gh`, `glab`, `tea` и `gt` для PR/MR и CI по ветке. По этим находкам пишутся адаптеры (этап 08); при обновлении CLI — перепроверить.
 
 Ответы записаны на пилотных репозиториях `OWNER/forktopus-pilot` на каждом сервере (после проверок удалены; чтобы перепроверить CLI, их нужно создать заново с тем же набором): workflow `ok` (успех), `fail` (падает, только ветка `pilot/fail`), `slow` (долгий, только `pilot/slow`); ветки `pilot/pr-open` (открытый PR), `pilot/pr-draft` (черновик), `pilot/closed-pr` (закрытый PR), `pilot/no-pr`.
 
@@ -209,6 +209,51 @@ tea api -l LOGIN -i "/repos/OWNER/REPO/actions/runs?branch=BRANCH&limit=20"
 | Вне git-репозитория | 1 | `Error: git rev-parse --show-toplevel: …` | ошибка вызова (не должно случаться) |
 
 - **`tea api` возвращает код 0 и на 401/404** — тело `{"message":"invalid username, password or token"}` / `{"message":"not found",…}`. Статус HTTP виден только с `-i`: первая строка stderr (`HTTP/2.0 200 OK` / `HTTP/2.0 404 Not Found`), JSON — в stdout. Успех определять по статусу, а не по коду завершения.
+
+## Gitea — `gt` (на смену `tea`)
+
+Репозиторий `gitea/tea` архивирован 2026-10-29; официальный CLI Gitea теперь `gt` (`gitea.com/gitea/cli`). Адаптер пока работает через `tea` (раздел выше); здесь — что `gt` отдаёт на те же вопросы.
+
+Проверено: `gt` 0.2.0, Gitea 1.26.2, 2026-11-01, только чтение. Устроен по образцу `gh`: `--json ПОЛЯ`, `--jq`, `-R OWNER/REPO`, `--host URL`.
+
+### Общее
+
+- **Работает вне git-репозитория** (в отличие от `tea`): инстанс — `--host https://HOST`, репозиторий — `-R OWNER/REPO`.
+- Аккаунты: `gt auth status --json host,user,active,credential_available,error` → `[{"host":"https://HOST","user":…,"active":true,…}]`, токены не печатаются. С `--json` код всегда 0 — смотреть `credential_available` и `error`; `--verify` проверяет учётку на сервере (`verified: true`). Несколько аккаунтов на хосте — выбирать `--user`.
+- Коды выхода документированы (`gt help exit-codes`): 0 — успех (и пустой список), 1 — ошибка, 2 — неверный вызов, 4 — нет аккаунта или учётка отклонена.
+  - Нет аккаунта для хоста: код 4, `Error: no account for https://HOST; run gt auth login --host …`.
+  - Нет репозитория: код 1, `Error: repository OWNER/REPO not found`.
+  - `gt api` на ответ вне 2xx — код 1, тело в stdout, `Error: not found (HTTP 404 GET /api/v1/…)` в stderr (у `tea api` — код 0).
+- `gt --version` → `gt version 0.2.0 (2026-10-26)` без ANSI-кодов.
+- Подсказка `more results available; use --page 2` — в stderr, JSON в stdout чистый.
+- В бинарнике есть проверка `gitea server at … is older than …`: часть команд требует новой Gitea, на версии старше 1.26 не проверялось.
+
+### Открытые PR ветки
+
+```sh
+gt pr list --host https://HOST -R OWNER/REPO --state open --head BRANCH -L 50 \
+  --json number,title,state,draft,head,head_sha,head_repo,base,url,updated_at
+```
+
+- `--head BRANCH` фильтрует на стороне `gt` (`OWNER:BRANCH` — для форка); `--state` принимает `open|closed|merged|all`.
+- **Черновик — поле `draft`** (PR с заголовком `WIP: …` → `draft: true`).
+- **`head_repo` — `OWNER/REPO` источника**: PR из форка отличим (у `tea pulls list` — нет).
+- Числа — числа, время — с часовым поясом сервера.
+- Для «последнего закрытого или влитого» (D-058): `--state all --sort recentupdate` даёт `state`, `merged`, `merged_at`, но **нет `closed_at`** — время закрытия брать через `gt api 'repos/OWNER/REPO/pulls?state=closed&sort=recentupdate&limit=50'` (поле `closed_at` там есть).
+
+### CI ветки
+
+```sh
+gt run list --host https://HOST -R OWNER/REPO --branch BRANCH -L 20 \
+  --json id,status,conclusion,workflow,workflow_path,branch,commit,event,attempt,run_number,started_at,completed_at,url
+```
+
+- Есть `conclusion` (`success` …), `commit` (полный SHA), `url` — в отличие от `tea actions runs list` (D-041) REST не нужен.
+- `--commit SHA` — фильтр по коммиту (для detached HEAD, D-059).
+- У запусков по событию `pull_request` поле `branch` пустое; `--branch` находит запуски `push`.
+- `attempt` — `0` у первой попытки.
+- Незавершённый запуск (`conclusion` без значения) не воспроизводился.
+- Сводный статус проверок PR — `gt pr checks N --json name,state,…` (по справке: код 8, пока проверки идут; не проверялось).
 
 ## Detached HEAD — поиск по коммиту (D-059)
 
