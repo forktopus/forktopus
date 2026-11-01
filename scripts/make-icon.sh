@@ -3,8 +3,9 @@
 # и логотип интерфейса frontend/public/forktopus-icon.png (256×256) из него же.
 # Исходник assets/branding/forktopus-mascot.png не меняется (D-052).
 #   bash scripts/make-icon.sh && wails3 task common:generate:icons
-# Фон — области, близкие к белому и связанные с углами, плюс три замкнутых
-# «кармана» фона между щупальцами (точки-затравки в координатах 1024×1024).
+# Фон — области, близкие к белому и связанные с углами, плюс замкнутые
+# «карманы» фона между щупальцами и узлами и полоса тени под нижним узлом
+# (точки-затравки в координатах 1024×1024).
 # Там прозрачность считается от белого (мягкая тень остаётся полупрозрачной),
 # внутри фигуры пиксели не меняются — белки глаз и узлы остаются белыми.
 set -euo pipefail
@@ -22,6 +23,7 @@ convert "$SRC" -filter Lanczos -resize 1024x1024 -alpha off "$T/src.png"
 convert "$T/src.png" -fuzz "$FUZZ" -fill '#ff00ff' \
   -draw 'color 0,0 floodfill' -draw 'color 1023,0 floodfill' -draw 'color 0,1023 floodfill' -draw 'color 1023,1023 floodfill' \
   -draw 'color 149,500 floodfill' -draw 'color 715,629 floodfill' -draw 'color 516,668 floodfill' \
+  -draw 'color 265,538 floodfill' -draw 'color 410,628 floodfill' -draw 'color 371,702 floodfill' -draw 'color 594,830 floodfill' \
   -fuzz 0 -fill black +opaque '#ff00ff' -fill white -opaque '#ff00ff' "$T/bg.png"
 # Фигура без полосы сглаживания в 2 px — её цвет тоже пересчитывается от белого.
 convert "$T/bg.png" -morphology Dilate Disk:2 -negate "$T/inner.png"
