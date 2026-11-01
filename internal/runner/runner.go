@@ -58,6 +58,7 @@ var nonInteractiveEnv = []string{
 // Run выполняет команду. Ошибка возвращается, только если процесс не удалось
 // запустить или он был прерван: CLI_MISSING, TIMEOUT, OP_CANCELLED.
 func (Exec) Run(ctx context.Context, c Command) (Result, error) {
+	refreshPath()
 	path, err := exec.LookPath(c.Name)
 	if err != nil {
 		return Result{}, model.Errorf(model.CodeCLIMissing, "%s не найден в PATH", c.Name)
