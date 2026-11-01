@@ -40,6 +40,19 @@ type UI struct {
 	Filters map[string]string `json:"filters,omitempty"`
 	// FetchPrune — Fetch с --prune: удалять remote-tracking ветки, которых нет на сервере (D-057).
 	FetchPrune bool `json:"fetchPrune,omitempty"`
+	// Zoom — масштаб интерфейса, 1.0–2.0; 0 — 1.0 (D-061).
+	Zoom float64 `json:"zoom,omitempty"`
+}
+
+// Масштаб интерфейса. Ниже 1.0 Wails на Linux не опускается (setZoom поднимает до 1).
+const (
+	MinZoom = 1.0
+	MaxZoom = 2.0
+)
+
+// ZoomLevel — масштаб для окна: в допустимых пределах, по умолчанию 1.0.
+func (u UI) ZoomLevel() float64 {
+	return min(max(u.Zoom, MinZoom), MaxZoom)
 }
 
 // Default возвращает настройки первого запуска.

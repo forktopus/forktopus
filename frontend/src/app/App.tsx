@@ -18,6 +18,7 @@ import { RadarView } from '../views/RadarView'
 import { RegistryView } from '../views/RegistryView'
 import { RootsDialog } from './RootsDialog'
 import { ToolsDialog } from './ToolsDialog'
+import { useZoomKeys } from './useZoomKeys'
 import { TopBar } from './TopBar'
 
 function EmptyRoots({ onAdd }: { onAdd(): void }) {
@@ -164,6 +165,7 @@ export function App() {
   const theme = useMemo(() => createAppTheme(mode), [mode])
   const [dialog, setDialog] = useState<'tools' | 'roots' | null>(null)
   const pollRemote = useApp((s) => s.pollRemote)
+  useZoomKeys()
 
   // PR/MR и CI устаревают по TTL кэша Go; в свёрнутом окне не опрашиваем.
   useEffect(() => {

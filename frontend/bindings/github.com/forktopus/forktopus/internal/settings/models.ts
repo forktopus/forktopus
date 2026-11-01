@@ -20,4 +20,9 @@ export interface UI {
      * FetchPrune — Fetch с --prune: удалять remote-tracking ветки, которых нет на сервере (D-057).
      */
     "fetchPrune"?: boolean;
+
+    /**
+     * Zoom — масштаб интерфейса, 1.0–2.0; 0 — 1.0 (D-061).
+     */
+    "zoom"?: number;
 }

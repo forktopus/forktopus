@@ -9,6 +9,7 @@ import { t } from '../i18n'
 import { registryFilters, sortKeys, type RegistryFilter, type SortKey } from '../logic/registry'
 import { opResultLabel } from '../logic/ops'
 import { remoteRef, repoName } from '../logic/repo'
+import { clampZoom, minZoom } from '../logic/zoom'
 import type { Tone } from '../theme/theme'
 import type { ThemeMode } from '../theme/tokens'
 
@@ -69,6 +70,8 @@ export interface AppState {
   filters: Filters
   /** Fetch с --prune (D-057). */
   fetchPrune: boolean
+  /** Масштаб интерфейса, 1–2 (D-061). */
+  zoom: number
   query: string
   selectedId: string | null
   /** операция, которая сейчас идёт над репозиторием: кнопки операций заблокированы (D-031) */
@@ -122,6 +125,7 @@ export interface AppState {
   setMode(mode: Mode): void
   setTheme(theme: ThemeMode): void
   setFetchPrune(on: boolean): void
+  setZoom(zoom: number): void
   setFilters(patch: Partial<Filters>): void
   setQuery(query: string): void
   select(id: string | null): void
@@ -134,7 +138,9 @@ function oneOf<T extends string>(value: string | undefined, allowed: readonly T[
 }
 
 /** Состояние интерфейса из настроек; неизвестные значения — по умолчанию. */
-export function fromUI(ui: UI): Pick<AppState, 'mode' | 'theme' | 'filters' | 'fetchPrune'> {
+type SavedUI = Pick<AppState, 'mode' | 'theme' | 'filters' | 'fetchPrune' | 'zoom'>
+
+export function fromUI(ui: UI): SavedUI {
   const f = ui.filters ?? {}
   return {
     mode: oneOf(ui.mode, modes, 'registry'),
@@ -146,16 +152,18 @@ export function fromUI(ui: UI): Pick<AppState, 'mode' | 'theme' | 'filters' | 'f
       asc: f.dir !== 'desc',
     },
     fetchPrune: ui.fetchPrune === true,
+    zoom: clampZoom(ui.zoom),
   }
 }
 
-export function toUI(s: Pick<AppState, 'mode' | 'theme' | 'filters' | 'fetchPrune'>): UI {
+export function toUI(s: SavedUI): UI {
   const f = s.filters
   return {
     mode: s.mode,
     theme: s.theme ?? '',
     filters: { registry: f.registry, host: f.host, sort: f.sort, dir: f.asc ? 'asc' : 'desc' },
     fetchPrune: s.fetchPrune,
+    zoom: s.zoom,
   }
 }
 
@@ -248,6 +256,7 @@ export function createAppStore(source: DataSource): AppStore {
       theme: null,
       filters: defaultFilters,
       fetchPrune: false,
+      zoom: minZoom,
       query: '',
       selectedId: null,
       running: {},
@@ -261,6 +270,8 @@ export function createAppStore(source: DataSource): AppStore {
       async init() {
         try {
           set(fromUI(await source.getUI()))
+          // Окно Wails уже открыто с сохранённым масштабом; в превью его ставит CSS.
+          source.setZoom(get().zoom).catch(fail)
           const [roots, snap] = await Promise.all([source.listRoots(), source.listRepositories()])
           set({ roots })
           applySnapshot(snap)
@@ -438,6 +449,14 @@ export function createAppStore(source: DataSource): AppStore {
 
       setFetchPrune(fetchPrune) {
         set({ fetchPrune })
+        persist()
+      },
+
+      setZoom(value) {
+        const zoom = clampZoom(value)
+        if (zoom === get().zoom) return
+        set({ zoom })
+        source.setZoom(zoom).catch(fail)
         persist()
       },
 

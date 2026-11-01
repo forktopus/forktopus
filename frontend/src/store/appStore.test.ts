@@ -342,6 +342,28 @@ describe('withRemote', () => {
   })
 })
 
+describe('масштаб', () => {
+  it('применяется к окну, сохраняется, не выходит за пределы (D-061)', async () => {
+    const source = createMockSource({ delayMs: 0 })
+    const applied: number[] = []
+    const store = createAppStore({ ...source, setZoom: async (z) => void applied.push(z) })
+    await store.getState().init()
+    expect(applied).toEqual([1])
+
+    store.getState().setZoom(1.2)
+    store.getState().setZoom(1.2) // то же значение — ни окна, ни сохранения
+    store.getState().setZoom(5)
+    store.getState().setZoom(0.5)
+    expect(applied).toEqual([1, 1.2, 2, 1])
+    store.getState().setZoom(1.5)
+    await new Promise((r) => setTimeout(r, 0))
+
+    const restarted = createAppStore(source)
+    await restarted.getState().init()
+    expect(restarted.getState().zoom).toBe(1.5)
+  })
+})
+
 describe('fromUI / toUI', () => {
   it('неизвестные значения заменяются значениями по умолчанию', () => {
     expect(fromUI({ mode: 'kanban', theme: 'sepia', filters: { registry: '???', sort: 'x' } })).toEqual({
@@ -349,11 +371,12 @@ describe('fromUI / toUI', () => {
       theme: null,
       filters: { registry: 'all', host: '', sort: 'name', asc: true },
       fetchPrune: false,
+      zoom: 1,
     })
   })
 
   it('туда и обратно без потерь', () => {
-    const state = { mode: 'radar' as const, theme: 'dark' as const, filters: { registry: 'ci' as const, host: 'gitlab.com', sort: 'pr' as const, asc: false }, fetchPrune: true }
+    const state = { mode: 'radar' as const, theme: 'dark' as const, filters: { registry: 'ci' as const, host: 'gitlab.com', sort: 'pr' as const, asc: false }, fetchPrune: true, zoom: 1.3 }
     expect(fromUI(toUI(state))).toEqual(state)
   })
 })

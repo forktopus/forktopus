@@ -94,3 +94,11 @@ func assertPerm(t *testing.T, path string, want os.FileMode) {
 		t.Errorf("%s: права %o, ожидалось %o", path, got, want)
 	}
 }
+
+func TestZoomLevel(t *testing.T) { // D-061
+	for _, c := range []struct{ zoom, want float64 }{{0, 1}, {0.5, 1}, {1.3, 1.3}, {2, 2}, {5, 2}} {
+		if got := (UI{Zoom: c.zoom}).ZoomLevel(); got != c.want {
+			t.Errorf("Zoom %v: %v, ожидалось %v", c.zoom, got, c.want)
+		}
+	}
+}

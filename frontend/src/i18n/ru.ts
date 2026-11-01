@@ -87,6 +87,11 @@ export const ru = {
   'roots.skipReset': 'Сбросить по умолчанию',
   'roots.skipApply': 'Применить и пересканировать',
   'roots.pruneTitle': 'Fetch удаляет ветки, исчезнувшие на сервере',
+  'roots.zoomTitle': 'Масштаб интерфейса',
+  'roots.zoomDescription': 'Ctrl + = и Ctrl + − (или Ctrl + колесо мыши) — крупнее и мельче, Ctrl + 0 — 100 %.',
+  'roots.zoomIn': 'Крупнее',
+  'roots.zoomOut': 'Мельче',
+  'roots.zoomReset': 'Сбросить',
   'roots.pruneDescription': 'git fetch --prune: убирает origin/… для веток, удалённых на сервере. Ваши локальные ветки и файлы не трогаются.',
   'roots.repoCount': { one: '{count} репозиторий', few: '{count} репозитория', many: '{count} репозиториев' },
 

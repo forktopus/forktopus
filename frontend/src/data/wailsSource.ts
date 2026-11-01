@@ -1,4 +1,4 @@
-import { Browser, Clipboard, Events } from '@wailsio/runtime'
+import { Browser, Clipboard, Events, Window } from '@wailsio/runtime'
 import { AppService } from '../../bindings/github.com/forktopus/forktopus/internal/app'
 import { normalizeOpResult, normalizeRepository, normalizeSkipDirs, normalizeSnapshot, type DataSource } from './source'
 
@@ -30,6 +30,8 @@ export const wailsSource: DataSource = {
   copyText: (text) => Clipboard.SetText(text),
   getUI: () => AppService.GetUI(),
   saveUI: (ui) => AppService.SaveUI(ui),
+  // Нативный зум WebView: масштабируется всё, включая размеры в px.
+  setZoom: (zoom) => Window.SetZoom(zoom),
   onScanRepository: (cb) => Events.On('scan:repository', (event) => cb(normalizeRepository(event.data))),
   onRemoteStatus: (cb) => Events.On('remote:status', (event) => cb(event.data)),
 }

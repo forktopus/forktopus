@@ -1,10 +1,13 @@
+import AddIcon from '@mui/icons-material/Add'
 import CloseIcon from '@mui/icons-material/Close'
 import FolderOpenIcon from '@mui/icons-material/FolderOpen'
+import RemoveIcon from '@mui/icons-material/Remove'
 import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, Switch, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { useEffect, useState, type FormEvent } from 'react'
 import type { ScanIssue } from '../data/model'
 import type { SkipList } from '../data/source'
 import { t } from '../i18n'
+import { maxZoom, minZoom, zoomStep } from '../logic/zoom'
 import { useApp } from '../store/context'
 import { useRepos } from '../store/selectors'
 import { monoFontFamily } from '../theme/tokens'
@@ -84,6 +87,7 @@ export function RootsDialog({ open, onClose }: { open: boolean; onClose(): void 
         </Box>
         <SkipDirsEditor />
         <FetchPruneSetting />
+        <ZoomSetting />
       </DialogContent>
       <DialogActions>
         <Button onClick={() => void scan()} disabled={scanning || roots.length === 0}>
@@ -108,6 +112,41 @@ function FetchPruneSetting() {
       />
       <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
         {t('roots.pruneDescription')}
+      </Typography>
+    </Box>
+  )
+}
+
+/** Масштаб интерфейса (D-061): применяется и сохраняется сразу. */
+function ZoomSetting() {
+  const theme = useTheme()
+  const zoom = useApp((s) => s.zoom)
+  const setZoom = useApp((s) => s.setZoom)
+  return (
+    <Box sx={{ mt: 4, pt: 2, borderTop: `1px solid ${theme.app.line}` }}>
+      <Typography variant="subtitle2">{t('roots.zoomTitle')}</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+        <Tooltip title={t('roots.zoomOut')}>
+          <span>
+            <IconButton aria-label={t('roots.zoomOut')} disabled={zoom <= minZoom} onClick={() => setZoom(zoom - zoomStep)}>
+              <RemoveIcon fontSize="small" />
+            </IconButton>
+          </span>
+        </Tooltip>
+        <Typography sx={{ minWidth: 56, textAlign: 'center', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{Math.round(zoom * 100)} %</Typography>
+        <Tooltip title={t('roots.zoomIn')}>
+          <span>
+            <IconButton aria-label={t('roots.zoomIn')} disabled={zoom >= maxZoom} onClick={() => setZoom(zoom + zoomStep)}>
+              <AddIcon fontSize="small" />
+            </IconButton>
+          </span>
+        </Tooltip>
+        <Button size="small" disabled={zoom === minZoom} onClick={() => setZoom(minZoom)}>
+          {t('roots.zoomReset')}
+        </Button>
+      </Box>
+      <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+        {t('roots.zoomDescription')}
       </Typography>
     </Box>
   )

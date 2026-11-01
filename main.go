@@ -89,6 +89,8 @@ func main() {
 		},
 		BackgroundColour: application.NewRGB(6, 7, 15),
 		URL:              "/",
+		// Сохранённый масштаб — сразу, без мигания при старте; дальше его меняет фронтенд.
+		Zoom: service.GetUI().ZoomLevel(),
 	})
 
 	// SIGINT/SIGTERM (выход из сессии, kill): команды отменяются сразу, а не

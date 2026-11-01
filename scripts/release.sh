@@ -130,6 +130,9 @@ if want macos; then
     # zip сохраняет права на запуск и симлинки внутри .app.
     (cd bin && zip -qry "../$zip_name" forktopus.app)
   fi
+  # Сборка оставляет в bin/forktopus universal-бинарник для Mac (он уже внутри
+  # .app). Go не перезаписывает такой файл, и следующий wails3 build падает.
+  rm -f -- bin/forktopus
 fi
 
 (cd -- "$out" && rm -f SHA256SUMS && shasum -a 256 -- * > SHA256SUMS)
