@@ -80,7 +80,7 @@ export function TopBar({ onOpenTools, onOpenRoots }: Props) {
           sx={{ width: 34, height: 34, filter: 'drop-shadow(0 4px 10px #685ee860)' }}
         />
         <Box>
-          <Typography component="strong" sx={{ display: 'block', fontSize: 15, fontWeight: 760, letterSpacing: '-0.5px' }}>
+          <Typography component="strong" sx={{ display: 'block', fontSize: 16, fontWeight: 760, letterSpacing: '-0.5px' }}>
             {t('app.name')}
           </Typography>
           {demo && (
@@ -89,7 +89,7 @@ export function TopBar({ onOpenTools, onOpenRoots }: Props) {
                 component="span"
                 sx={{
                   display: 'inline-block',
-                  fontSize: 10,
+                  fontSize: 12,
                   fontWeight: 800,
                   letterSpacing: '1px',
                   textTransform: 'uppercase',
@@ -123,7 +123,7 @@ export function TopBar({ onOpenTools, onOpenRoots }: Props) {
                 borderRadius: '9px',
                 px: compact ? 1.25 : 1.75,
                 py: 1.1,
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: 720,
                 whiteSpace: 'nowrap',
                 color: active ? app.tabActiveText : app.muted,
@@ -132,7 +132,7 @@ export function TopBar({ onOpenTools, onOpenRoots }: Props) {
                 '&.Mui-focusVisible': { outline: `2px solid ${app.accent}` },
               }}
             >
-              <Box component="span" sx={{ fontSize: 10, opacity: 0.6, mr: 1 }}>
+              <Box component="span" sx={{ fontSize: 12, opacity: 0.6, mr: 1 }}>
                 {String(i + 1).padStart(2, '0')}
               </Box>
               {t(modeLabel[m])}

@@ -6,7 +6,7 @@ import { toneColor } from '../theme/theme'
 import { monoFontFamily } from '../theme/tokens'
 
 /** Подпись поля: мелкие заглавные. */
-export const caption = { fontSize: 10, fontWeight: 800, letterSpacing: '1.3px', textTransform: 'uppercase', color: 'text.secondary' } as const
+export const caption = { fontSize: 12, fontWeight: 800, letterSpacing: '1.3px', textTransform: 'uppercase', color: 'text.secondary' } as const
 
 /**
  * Точка и подпись в цвете тона статуса. wrap — для длинных сообщений (причина
@@ -18,7 +18,7 @@ export function StatusText({ label, wrap = false }: { label: Label; wrap?: boole
   return (
     <Box
       component="span"
-      sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, fontSize: 12, color, ...(wrap === true ? { minWidth: 0, overflowWrap: 'anywhere' } : wrap ? {} : { whiteSpace: 'nowrap' }) }}
+      sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, fontSize: 13, color, ...(wrap === true ? { minWidth: 0, overflowWrap: 'anywhere' } : wrap ? {} : { whiteSpace: 'nowrap' }) }}
     >
       <Box component="i" sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: color, flexShrink: 0 }} />
       {label.text}
@@ -74,7 +74,7 @@ export function BranchChip({ repo }: { repo: Repository }) {
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
         verticalAlign: 'middle',
-        font: `11px ${monoFontFamily}`,
+        font: `12px ${monoFontFamily}`,
         border: `1px solid ${theme.app.chipLine}`,
         bgcolor: theme.app.chip,
         borderRadius: '7px',

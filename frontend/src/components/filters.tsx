@@ -31,7 +31,7 @@ function SourcePill({ active, onClick, children, warn = false }: { active: boole
         px: 1.5,
         py: 0.9,
         borderRadius: '10px',
-        fontSize: 12.5,
+        fontSize: 13.5,
         border: `1px solid ${warn ? toneColor(theme, 'warn') : active ? theme.palette.primary.main : theme.app.line}`,
         bgcolor: active ? theme.app.tabActive : 'transparent',
         color: active ? theme.app.tabActiveText : 'text.primary',
@@ -50,7 +50,7 @@ export function Sources() {
   const setFilters = useApp((s) => s.setFilters)
   const sources = useMemo(() => hostSources(searched), [searched])
   const count = (n: number) => (
-    <Box component="span" sx={{ fontSize: 11, color: 'text.secondary' }}>
+    <Box component="span" sx={{ fontSize: 12, color: 'text.secondary' }}>
       {n}
     </Box>
   )
@@ -65,7 +65,7 @@ export function Sources() {
           <span>
             <SourcePill active={host === s.host} warn={s.issue} onClick={() => setFilters({ host: host === s.host ? '' : s.host })}>
               {s.host}
-              {s.issue && <WarningAmberIcon sx={{ fontSize: 15, color: toneColor(theme, 'warn') }} />}
+              {s.issue && <WarningAmberIcon sx={{ fontSize: 16, color: toneColor(theme, 'warn') }} />}
               {count(s.count)}
             </SourcePill>
           </span>

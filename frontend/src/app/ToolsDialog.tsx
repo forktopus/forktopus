@@ -14,12 +14,12 @@ function Command({ text }: { text: string }) {
   const copyText = useApp((s) => s.copyText)
   return (
     <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5, bgcolor: theme.app.chip, border: `1px solid ${theme.app.chipLine}`, borderRadius: '8px', px: 1.25, py: 0.75, mt: 0.75 }}>
-      <Box component="pre" sx={{ flex: 1, m: 0, font: `12px ${monoFontFamily}`, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+      <Box component="pre" sx={{ flex: 1, m: 0, font: `13px ${monoFontFamily}`, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
         {text}
       </Box>
       <Tooltip title={t('action.copy')}>
         <IconButton size="small" aria-label={t('action.copy')} onClick={() => void copyText(text)} sx={{ p: 0.25 }}>
-          <ContentCopyIcon sx={{ fontSize: 14 }} />
+          <ContentCopyIcon sx={{ fontSize: 15 }} />
         </IconButton>
       </Tooltip>
     </Box>
@@ -62,7 +62,7 @@ function SystemInfo({ diag }: { diag: Diagnostics }) {
         <Typography
           key={i}
           variant="caption"
-          sx={{ display: 'block', font: `11.5px ${monoFontFamily}`, overflowWrap: 'anywhere', py: 0.5, borderBottom: `1px solid ${theme.app.line}` }}
+          sx={{ display: 'block', font: `12.5px ${monoFontFamily}`, overflowWrap: 'anywhere', py: 0.5, borderBottom: `1px solid ${theme.app.line}` }}
         >
           {formatTime(e.time)} {e.message}
         </Typography>
@@ -124,7 +124,7 @@ export function ToolsDialog({ open, onClose }: { open: boolean; onClose(): void 
             <Box key={`${tool.name}|${tool.host ?? ''}`} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, py: 1.5, borderBottom: `1px solid ${theme.app.line}` }}>
               <Box
                 component="code"
-                sx={{ font: `12px ${monoFontFamily}`, bgcolor: theme.app.chip, border: `1px solid ${theme.app.chipLine}`, borderRadius: '7px', px: 1, py: 0.5 }}
+                sx={{ font: `13px ${monoFontFamily}`, bgcolor: theme.app.chip, border: `1px solid ${theme.app.chipLine}`, borderRadius: '7px', px: 1, py: 0.5 }}
               >
                 {tool.name}
               </Box>
@@ -144,7 +144,7 @@ export function ToolsDialog({ open, onClose }: { open: boolean; onClose(): void 
                 )}
                 {hint?.command && <Command text={hint.command} />}
               </Box>
-              <Box component="span" sx={{ fontSize: 11, fontWeight: 700, color, border: `1px solid ${color}`, borderRadius: '7px', px: 1, py: 0.5 }}>
+              <Box component="span" sx={{ fontSize: 12, fontWeight: 700, color, border: `1px solid ${color}`, borderRadius: '7px', px: 1, py: 0.5 }}>
                 {t(`availability.${tool.availability || 'unavailable'}`)}
               </Box>
             </Box>

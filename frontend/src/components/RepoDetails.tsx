@@ -105,18 +105,18 @@ function SwitchControl({ repo, busy }: { repo: Repository; busy: boolean }) {
 
   if (branches === null) return <CircularProgress size={16} />
   const others = branches.filter((b) => !b.current)
-  if (others.length === 0) return <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{t('details.noOtherBranches')}</Typography>
+  if (others.length === 0) return <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>{t('details.noOtherBranches')}</Typography>
   const chosen = others.find((b) => b.name === target)
   // A15: ветку другого worktree переключить нельзя — предупреждаем заранее.
   const reason = switchBlock(repo) ?? (chosen?.worktreePath ? t('explorer.branchBusy', { path: chosen.worktreePath }) : null)
   return (
     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-      <Select size="small" value={target} displayEmpty onChange={(e) => setTarget(e.target.value)} sx={{ flex: 1, minWidth: 0, font: `12px ${monoFontFamily}` }}>
+      <Select size="small" value={target} displayEmpty onChange={(e) => setTarget(e.target.value)} sx={{ flex: 1, minWidth: 0, font: `13px ${monoFontFamily}` }}>
         <MenuItem value="" disabled>
           {t('details.pickBranch')}
         </MenuItem>
         {others.map((b) => (
-          <MenuItem key={b.name} value={b.name} sx={{ font: `12px ${monoFontFamily}` }}>
+          <MenuItem key={b.name} value={b.name} sx={{ font: `13px ${monoFontFamily}` }}>
             {b.name}
             {b.worktreePath ? ` — ${t('explorer.branchBusy', { path: b.worktreePath })}` : ''}
           </MenuItem>
@@ -163,7 +163,7 @@ function LocalSection({ repo }: { repo: Repository }) {
           <SyncIndicator repo={repo} mode="inline" />
         </Row>
         <Row name={t('explorer.status')}>
-          <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{t('explorer.statusAt', { time: formatRelative(repo.updatedAt, now) })}</Typography>
+          <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>{t('explorer.statusAt', { time: formatRelative(repo.updatedAt, now) })}</Typography>
         </Row>
       </Box>
       {repo.error && (
@@ -192,7 +192,7 @@ function LocalSection({ repo }: { repo: Repository }) {
         {running ? (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <CircularProgress size={14} />
-            <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{t('op.running', { op: opName(running) })}</Typography>
+            <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>{t('op.running', { op: opName(running) })}</Typography>
           </Box>
         ) : (
           lastOp && <StatusText wrap label={opResultLabel(lastOp)} />
@@ -215,7 +215,7 @@ export function CliStatus({ repo }: { repo: Repository }) {
         <Typography variant="caption" component="div" sx={{ color: 'text.secondary', mt: 0.5 }}>
           {hint.text}
           {hint.command && (
-            <Box component="code" sx={{ display: 'block', font: `11px ${monoFontFamily}`, bgcolor: theme.app.chip, borderRadius: '6px', px: 1, py: 0.5, mt: 0.5 }}>
+            <Box component="code" sx={{ display: 'block', font: `12px ${monoFontFamily}`, bgcolor: theme.app.chip, borderRadius: '6px', px: 1, py: 0.5, mt: 0.5 }}>
               {hint.command}
             </Box>
           )}
@@ -235,7 +235,7 @@ function RemoteSection({ repo, onOpenTools }: { repo: Repository; onOpenTools():
     <Section title={t('details.remote')}>
       <Box sx={{ display: 'grid', gridTemplateColumns: '120px minmax(0, 1fr)', gap: 1.25, alignItems: 'start' }}>
         <Row name={t('details.server')}>
-          <Typography sx={{ fontSize: 13, fontWeight: 700 }}>{host ? `${t(providerName[provider])} · ${host}` : t('repo.noRemote')}</Typography>
+          <Typography sx={{ fontSize: 14, fontWeight: 700 }}>{host ? `${t(providerName[provider])} · ${host}` : t('repo.noRemote')}</Typography>
         </Row>
         {tool && (
           <Row name="CLI">
@@ -276,7 +276,7 @@ export function RepoDetails({ onOpenTools }: { onOpenTools(): void }) {
         <Box sx={{ p: 3 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <RepoIcon repo={repo} />
-            <Typography sx={{ flex: 1, fontSize: 11, color: 'text.secondary' }}>
+            <Typography sx={{ flex: 1, fontSize: 12, color: 'text.secondary' }}>
               {[repoHost(repo) || t('repo.noRemote'), repoNamespace(repo)].filter(Boolean).join(' / ')}
             </Typography>
             <IconButton aria-label={t('action.close')} onClick={close}>
@@ -287,14 +287,14 @@ export function RepoDetails({ onOpenTools }: { onOpenTools(): void }) {
             {repoName(repo)}
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5, mt: 0.5 }}>
-            <Typography sx={{ flex: 1, font: `11px ${monoFontFamily}`, color: 'text.secondary', overflowWrap: 'anywhere', pt: 0.5 }}>{repo.path}</Typography>
+            <Typography sx={{ flex: 1, font: `12px ${monoFontFamily}`, color: 'text.secondary', overflowWrap: 'anywhere', pt: 0.5 }}>{repo.path}</Typography>
             <Tooltip title={t('action.copyPath')}>
               <IconButton size="small" aria-label={t('action.copyPath')} onClick={() => void copyText(repo.path)}>
-                <ContentCopyIcon sx={{ fontSize: 15 }} />
+                <ContentCopyIcon sx={{ fontSize: 16 }} />
               </IconButton>
             </Tooltip>
           </Box>
-          {nesting && <Typography sx={{ fontSize: 12, color: 'text.secondary', mt: 0.5 }}>{t(nesting)}</Typography>}
+          {nesting && <Typography sx={{ fontSize: 13, color: 'text.secondary', mt: 0.5 }}>{t(nesting)}</Typography>}
           <LocalSection repo={repo} />
           <RemoteSection repo={repo} onOpenTools={onOpenTools} />
           <Divider sx={{ my: 2 }} />

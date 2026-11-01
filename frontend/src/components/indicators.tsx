@@ -68,7 +68,7 @@ function RemoteLink({ summary }: { summary: PRSummary | CISummary }) {
           e.stopPropagation() // строка таблицы открывает детали
           openURL(url)
         }} sx={{ p: 0.25 }}>
-        <OpenInNewIcon sx={{ fontSize: 14 }} />
+        <OpenInNewIcon sx={{ fontSize: 15 }} />
       </IconButton>
     </Tooltip>
   )

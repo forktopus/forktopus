@@ -52,7 +52,7 @@ export function RootsDialog({ open, onClose }: { open: boolean; onClose(): void 
         {roots.map((root) => (
           <Box key={root.id} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1.25, borderBottom: `1px solid ${theme.app.line}` }}>
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography sx={{ font: `13px ${monoFontFamily}`, overflowWrap: 'anywhere' }}>{root.path}</Typography>
+              <Typography sx={{ font: `14px ${monoFontFamily}`, overflowWrap: 'anywhere' }}>{root.path}</Typography>
               <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                 {t('roots.repoCount', { count: repos.filter((r) => r.rootId === root.id).length })}
               </Typography>
@@ -204,7 +204,7 @@ function SkipDirsEditor() {
       </Typography>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1.5 }}>
         {draft.map((d) => (
-          <Chip key={d} size="small" label={d} onDelete={() => setDraft(draft.filter((x) => x !== d))} sx={{ font: `12px ${monoFontFamily}` }} />
+          <Chip key={d} size="small" label={d} onDelete={() => setDraft(draft.filter((x) => x !== d))} sx={{ font: `13px ${monoFontFamily}` }} />
         ))}
         {draft.length === 0 && (
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
@@ -257,7 +257,7 @@ function RootIssues({ issues }: { issues: ScanIssue[] }) {
         {t('roots.issues', { count: issues.length })}
       </Typography>
       {(all ? issues : issues.slice(0, 3)).map((i) => (
-        <Typography key={i.path} variant="caption" sx={{ display: 'block', color: 'text.secondary', font: `11px ${monoFontFamily}`, overflowWrap: 'anywhere' }}>
+        <Typography key={i.path} variant="caption" sx={{ display: 'block', color: 'text.secondary', font: `12px ${monoFontFamily}`, overflowWrap: 'anywhere' }}>
           {i.error?.message ?? i.path}
         </Typography>
       ))}

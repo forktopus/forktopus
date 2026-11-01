@@ -31,7 +31,7 @@ function Tag({ label }: { label: Label }) {
   const theme = useTheme()
   const color = toneColor(theme, label.tone)
   return (
-    <Box component="span" sx={{ fontSize: 11, lineHeight: 1.2, px: 0.875, py: 0.5, borderRadius: '6px', color, bgcolor: alpha(color, 0.13), whiteSpace: 'nowrap' }}>
+    <Box component="span" sx={{ fontSize: 12, lineHeight: 1.2, px: 0.875, py: 0.5, borderRadius: '6px', color, bgcolor: alpha(color, 0.13), whiteSpace: 'nowrap' }}>
       {label.text}
     </Box>
   )
@@ -52,7 +52,7 @@ function CardActions({ repo }: { repo: Repository }) {
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, ml: 'auto' }} onClick={stop}>
-      <Button size="small" variant="text" onClick={toRegistry} sx={{ fontSize: 11, px: 1, minWidth: 0 }}>
+      <Button size="small" variant="text" onClick={toRegistry} sx={{ fontSize: 12, px: 1, minWidth: 0 }}>
         {t('radar.toRegistry')}
       </Button>
       {running ? (
@@ -60,11 +60,11 @@ function CardActions({ repo }: { repo: Repository }) {
           <CircularProgress size={18} sx={{ mx: 1.5 }} />
         </Tooltip>
       ) : canPull ? (
-        <Button size="small" variant="contained" onClick={() => requestOp(repo.id, Operation.OperationPull)} sx={{ fontSize: 11 }}>
+        <Button size="small" variant="contained" onClick={() => requestOp(repo.id, Operation.OperationPull)} sx={{ fontSize: 12 }}>
           {t('registry.pull')}
         </Button>
       ) : (
-        <Button size="small" variant="outlined" onClick={() => openDetails(repo.id)} sx={{ fontSize: 11 }}>
+        <Button size="small" variant="outlined" onClick={() => openDetails(repo.id)} sx={{ fontSize: 12 }}>
           {t('action.details')} ↗
         </Button>
       )}
@@ -103,18 +103,18 @@ function RadarCard({ repo, group }: { repo: Repository; group: RadarGroup }) {
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
         <RepoIcon repo={repo} size={35} />
         <Box sx={{ minWidth: 0, flex: 1 }}>
-          <Typography noWrap sx={{ fontSize: 13, fontWeight: 700 }}>
+          <Typography noWrap sx={{ fontSize: 14, fontWeight: 700 }}>
             {repoName(repo)}
           </Typography>
-          <Typography noWrap sx={{ fontSize: 10.5, color: 'text.secondary' }}>
+          <Typography noWrap sx={{ fontSize: 12, color: 'text.secondary' }}>
             {[repoHost(repo) || remoteCaption(repo), repoNamespace(repo)].filter(Boolean).join(' / ')}
           </Typography>
         </Box>
-        <Box component="span" sx={{ width: 22, height: 22, display: 'grid', placeItems: 'center', borderRadius: '6px', fontSize: 11, fontWeight: 800, color: tone, bgcolor: alpha(tone, 0.13), flexShrink: 0 }}>
+        <Box component="span" sx={{ width: 22, height: 22, display: 'grid', placeItems: 'center', borderRadius: '6px', fontSize: 12, fontWeight: 800, color: tone, bgcolor: alpha(tone, 0.13), flexShrink: 0 }}>
           {groupMark[group]}
         </Box>
       </Box>
-      <Typography noWrap sx={{ font: `12px ${monoFontFamily}`, bgcolor: theme.app.chip, borderRadius: '8px', px: 1.25, py: 0.9, mt: 1.75 }}>
+      <Typography noWrap sx={{ font: `13px ${monoFontFamily}`, bgcolor: theme.app.chip, borderRadius: '8px', px: 1.25, py: 0.9, mt: 1.75 }}>
         ⑂ {branch}
       </Typography>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 1.5 }}>
@@ -123,7 +123,7 @@ function RadarCard({ repo, group }: { repo: Repository; group: RadarGroup }) {
         ))}
       </Box>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 1, mt: 1.75, pt: 1.5, borderTop: `1px solid ${theme.app.line}` }}>
-        <Typography sx={{ flex: '1 1 160px', fontSize: 11, color: 'text.secondary', minWidth: 0, overflowWrap: 'anywhere' }}>{radarNote(repo, now)}</Typography>
+        <Typography sx={{ flex: '1 1 160px', fontSize: 12, color: 'text.secondary', minWidth: 0, overflowWrap: 'anywhere' }}>{radarNote(repo, now)}</Typography>
         <CardActions repo={repo} />
       </Box>
     </Paper>
@@ -143,17 +143,17 @@ export function RadarView() {
       <Sources />
       <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap', mb: 1 }}>
         <StatusTabs />
-        <Typography sx={{ fontSize: 12, color: 'text.secondary', pt: 1 }}>{t('radar.summary', { count: notOk, total: searched.length })}</Typography>
+        <Typography sx={{ fontSize: 13, color: 'text.secondary', pt: 1 }}>{t('radar.summary', { count: notOk, total: searched.length })}</Typography>
       </Box>
       {groups.unknown.length > 0 && (
-        <Typography sx={{ fontSize: 12, color: 'text.secondary', mb: 2 }}>{t('scan.unknownStatus', { count: groups.unknown.length })}</Typography>
+        <Typography sx={{ fontSize: 13, color: 'text.secondary', mb: 2 }}>{t('scan.unknownStatus', { count: groups.unknown.length })}</Typography>
       )}
       <Box sx={{ borderTop: `1px solid ${theme.app.line}`, pt: 2.5, display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 2, alignItems: 'start' }}>
         {radarGroups.map((g) => (
           <Box key={g} sx={{ minWidth: 0 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5, px: 0.5 }}>
-              <Typography sx={{ fontSize: 13, fontWeight: 700, color: toneColor(theme, groupTone[g]) }}>● {t(groupTitle[g])}</Typography>
-              <Box component="span" sx={{ fontSize: 11, bgcolor: theme.app.chip, borderRadius: '7px', px: 1, py: 0.25 }}>
+              <Typography sx={{ fontSize: 14, fontWeight: 700, color: toneColor(theme, groupTone[g]) }}>● {t(groupTitle[g])}</Typography>
+              <Box component="span" sx={{ fontSize: 12, bgcolor: theme.app.chip, borderRadius: '7px', px: 1, py: 0.25 }}>
                 {groups[g].length}
               </Box>
             </Box>
@@ -173,7 +173,7 @@ export function RadarView() {
       </Box>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 3, rowGap: 0.5, mt: 3 }}>
         {radarGroups.map((g) => (
-          <Typography key={g} sx={{ ...caption, textTransform: 'none', letterSpacing: 0, fontWeight: 400, fontSize: 11 }}>
+          <Typography key={g} sx={{ ...caption, textTransform: 'none', letterSpacing: 0, fontWeight: 400, fontSize: 12 }}>
             <Box component="span" sx={{ color: toneColor(theme, groupTone[g]) }}>
               ●
             </Box>{' '}

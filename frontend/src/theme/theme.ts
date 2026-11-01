@@ -36,11 +36,11 @@ export function createAppTheme(mode: ThemeMode): Theme {
     shape: { borderRadius: 10 },
     typography: {
       fontFamily,
-      fontSize: 13,
+      fontSize: 14,
       button: { textTransform: 'none', fontWeight: 700 },
-      h1: { fontSize: 30, fontWeight: 760, letterSpacing: '-1px' },
-      h2: { fontSize: 19, fontWeight: 700 },
-      overline: { fontSize: 11, fontWeight: 800, letterSpacing: '1.4px' },
+      h1: { fontSize: 32, fontWeight: 760, letterSpacing: '-1px' },
+      h2: { fontSize: 21, fontWeight: 700 },
+      overline: { fontSize: 12, fontWeight: 800, letterSpacing: '1.4px' },
     },
     components: {
       MuiCssBaseline: {

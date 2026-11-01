@@ -40,11 +40,11 @@ import { EmptyText } from './EmptyText'
 function Metric({ label, value, foot }: { label: string; value: string; foot: string }) {
   return (
     <Paper sx={{ p: 2.5, borderRadius: '14px', minHeight: 104 }}>
-      <Typography sx={{ fontSize: 12, color: 'text.secondary', mb: 1 }}>{label}</Typography>
-      <Typography component="strong" sx={{ fontSize: 29, fontWeight: 750, letterSpacing: '-1px' }}>
+      <Typography sx={{ fontSize: 13, color: 'text.secondary', mb: 1 }}>{label}</Typography>
+      <Typography component="strong" sx={{ fontSize: 31, fontWeight: 750, letterSpacing: '-1px' }}>
         {value}
       </Typography>
-      <Typography component="span" sx={{ fontSize: 11, color: 'text.secondary', ml: 1 }}>
+      <Typography component="span" sx={{ fontSize: 12, color: 'text.secondary', ml: 1 }}>
         {foot}
       </Typography>
     </Paper>
@@ -126,15 +126,15 @@ function RepoCell({ repo, depth, nested, collapsed, onToggle }: { repo: Reposito
       </Box>
       <RepoIcon repo={repo} />
       <Box sx={{ minWidth: 0 }}>
-        <Typography sx={{ fontSize: 13, fontWeight: 700, overflowWrap: 'anywhere' }}>{repoName(repo)}</Typography>
-        <Typography sx={{ fontSize: 11, color: 'text.secondary', overflowWrap: 'anywhere' }}>
+        <Typography sx={{ fontSize: 14, fontWeight: 700, overflowWrap: 'anywhere' }}>{repoName(repo)}</Typography>
+        <Typography sx={{ fontSize: 12, color: 'text.secondary', overflowWrap: 'anywhere' }}>
           {[nesting && t(nesting), repoNamespace(repo) || remoteCaption(repo), collapsed && t('registry.hidden', { count: nested })]
             .filter(Boolean)
             .join(' · ')}
         </Typography>
         {/* D-027: до пересканирования строка — из кэша прошлого запуска. */}
         {stale && lastCheckAt && (
-          <Typography sx={{ fontSize: 10.5, color: 'warning.main' }}>{t('registry.cachedAt', { time: formatTime(lastCheckAt) })}</Typography>
+          <Typography sx={{ fontSize: 12, color: 'warning.main' }}>{t('registry.cachedAt', { time: formatTime(lastCheckAt) })}</Typography>
         )}
       </Box>
     </Box>
@@ -172,7 +172,7 @@ const RowCells = memo(function RowCells({ repo: r, depth, nested, collapsed, onT
       <TableCell>
         <CIIndicator repo={r} />
       </TableCell>
-      <TableCell title={repoHost(r)} sx={{ fontSize: 12.5, color: 'text.secondary', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      <TableCell title={repoHost(r)} sx={{ fontSize: 13.5, color: 'text.secondary', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
         {repoHost(r) || '—'}
       </TableCell>
       <TableCell align="right">
@@ -300,7 +300,7 @@ export function RegistryView() {
                 <TableCell
                   key={c.label}
                   align={c.key ? 'left' : 'right'}
-                  sx={{ width: c.width, fontSize: 10, fontWeight: 800, letterSpacing: '1.1px', textTransform: 'uppercase', color: 'text.secondary', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                  sx={{ width: c.width, fontSize: 12, fontWeight: 800, letterSpacing: '1.1px', textTransform: 'uppercase', color: 'text.secondary', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
                 >
                   {c.key ? (
                     <TableSortLabel active={filters.sort === c.key} direction={filters.asc ? 'asc' : 'desc'} onClick={() => sortBy(c.key!)}>

@@ -53,14 +53,14 @@ export function OpConfirmDialog() {
               <Typography sx={caption}>{t('column.repo')}</Typography>
               <Typography sx={{ fontWeight: 700 }}>{repoName(repo)}</Typography>
               <Typography sx={caption}>{t('confirm.path')}</Typography>
-              <Typography sx={{ font: `12px ${monoFontFamily}`, overflowWrap: 'anywhere' }}>{repo.path}</Typography>
+              <Typography sx={{ font: `13px ${monoFontFamily}`, overflowWrap: 'anywhere' }}>{repo.path}</Typography>
               <Typography sx={caption}>{t('column.branch')}</Typography>
-              <Typography sx={{ font: `12px ${monoFontFamily}` }}>
+              <Typography sx={{ font: `13px ${monoFontFamily}` }}>
                 {pending.op === Operation.OperationSwitch ? `${repo.branch?.name ?? t('sync.detached')} → ${pending.branch}` : (repo.branch?.name ?? t('sync.detached'))}
               </Typography>
             </Box>
             <Typography sx={{ mt: 2 }}>{opEffect(repo, pending)}</Typography>
-            <Box component="pre" sx={{ font: `12px ${monoFontFamily}`, bgcolor: theme.app.chip, border: `1px solid ${theme.app.chipLine}`, borderRadius: '8px', p: 1.5, mt: 2, mb: 0, whiteSpace: 'pre-wrap' }}>
+            <Box component="pre" sx={{ font: `13px ${monoFontFamily}`, bgcolor: theme.app.chip, border: `1px solid ${theme.app.chipLine}`, borderRadius: '8px', p: 1.5, mt: 2, mb: 0, whiteSpace: 'pre-wrap' }}>
               {opCommands(repo, pending)}
             </Box>
             <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mt: 1.5 }}>

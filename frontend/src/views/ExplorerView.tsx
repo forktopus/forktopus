@@ -27,7 +27,7 @@ import { toneColor } from '../theme/theme'
 import { monoFontFamily } from '../theme/tokens'
 import { EmptyText } from './EmptyText'
 
-const sectionTitle = { ...caption, fontSize: 11, letterSpacing: '1.4px', mb: 1.5 } as const
+const sectionTitle = { ...caption, fontSize: 12, letterSpacing: '1.4px', mb: 1.5 } as const
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -71,7 +71,7 @@ function TreeRepo({ node, depth, selectedId }: { node: RepoNode; depth: number; 
           py: 0.9,
           my: '1px',
           borderRadius: '7px',
-          fontSize: 12,
+          fontSize: 13,
           textAlign: 'left',
           color: active ? 'primary.main' : 'text.secondary',
           bgcolor: active ? theme.app.tabActive : 'transparent',
@@ -79,7 +79,7 @@ function TreeRepo({ node, depth, selectedId }: { node: RepoNode; depth: number; 
           '&:hover': { bgcolor: active ? theme.app.tabActive : theme.app.chip },
         }}
       >
-        <Icon sx={{ fontSize: 14, flexShrink: 0 }} />
+        <Icon sx={{ fontSize: 15, flexShrink: 0 }} />
         <Box component="span" sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {repoName(r)}
         </Box>
@@ -101,7 +101,7 @@ function Toggle({ open, onClick, children }: { open: boolean; onClick(): void; c
       aria-expanded={open}
       sx={{ display: 'flex', width: '100%', justifyContent: 'flex-start', alignItems: 'center', gap: 0.75, px: 0.5, py: 0.9, borderRadius: '7px', textAlign: 'left', '&:hover': { bgcolor: theme.app.chip } }}
     >
-      <Icon sx={{ fontSize: 16, color: 'text.secondary', flexShrink: 0 }} />
+      <Icon sx={{ fontSize: 17, color: 'text.secondary', flexShrink: 0 }} />
       {children}
     </ButtonBase>
   )
@@ -119,7 +119,7 @@ function Tree({ tree, selectedId, rootsShown }: { tree: RootNode[]; selectedId: 
   return tree.map(({ root, hosts }) => {
     const rootOpen = !collapsed.has(root.id)
     const body = hosts.length === 0 ? (
-      <Typography sx={{ fontSize: 11, color: 'text.secondary', px: 3.5, py: 0.5 }}>{t('explorer.emptyRoot')}</Typography>
+      <Typography sx={{ fontSize: 12, color: 'text.secondary', px: 3.5, py: 0.5 }}>{t('explorer.emptyRoot')}</Typography>
     ) : (
       hosts.map((h) => {
         const key = `${root.id}\n${h.host}`
@@ -128,12 +128,12 @@ function Tree({ tree, selectedId, rootsShown }: { tree: RootNode[]; selectedId: 
           <Box key={h.host}>
             <Toggle open={open} onClick={() => toggle(key)}>
               {h.host && <ProviderIcon provider={h.provider} size={18} />}
-              <Typography component="span" sx={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 730, overflowWrap: 'anywhere' }}>
+              <Typography component="span" sx={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 730, overflowWrap: 'anywhere' }}>
                 {h.host || t('explorer.noRemote')}
               </Typography>
               {h.issue && (
                 <Tooltip title={t('registry.sourceIssue')}>
-                  <WarningAmberIcon sx={{ fontSize: 15, color: 'warning.main', mr: 0.75 }} />
+                  <WarningAmberIcon sx={{ fontSize: 16, color: 'warning.main', mr: 0.75 }} />
                 </Tooltip>
               )}
             </Toggle>
@@ -155,7 +155,7 @@ function Tree({ tree, selectedId, rootsShown }: { tree: RootNode[]; selectedId: 
     return (
       <Box key={root.id} sx={{ mb: 1 }}>
         <Toggle open={rootOpen} onClick={() => toggle(root.id)}>
-          <Typography component="span" sx={{ font: `11px ${monoFontFamily}`, color: 'text.secondary', overflowWrap: 'anywhere' }}>
+          <Typography component="span" sx={{ font: `12px ${monoFontFamily}`, color: 'text.secondary', overflowWrap: 'anywhere' }}>
             {root.path}
           </Typography>
         </Toggle>
@@ -170,9 +170,9 @@ function Tree({ tree, selectedId, rootsShown }: { tree: RootNode[]; selectedId: 
 function MiniCard({ name, value, note }: { name: string; value: number | null; note: string }) {
   return (
     <Card>
-      <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>{name}</Typography>
-      <Typography sx={{ fontSize: 23, fontWeight: 760, mt: 0.5 }}>{value ?? t('kpi.none')}</Typography>
-      <Typography sx={{ fontSize: 11, color: 'text.secondary', mt: 0.25, overflowWrap: 'anywhere' }}>{note}</Typography>
+      <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{name}</Typography>
+      <Typography sx={{ fontSize: 25, fontWeight: 760, mt: 0.5 }}>{value ?? t('kpi.none')}</Typography>
+      <Typography sx={{ fontSize: 12, color: 'text.secondary', mt: 0.25, overflowWrap: 'anywhere' }}>{note}</Typography>
     </Card>
   )
 }
@@ -186,18 +186,18 @@ function CurrentBranch({ repo }: { repo: Repository }) {
   return (
     <Card sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, p: 2 }}>
       <Box sx={{ minWidth: 0 }}>
-        <Typography sx={{ font: `700 13px ${monoFontFamily}`, color: 'primary.main', overflowWrap: 'anywhere' }}>⑂ {name}</Typography>
-        <Typography sx={{ fontSize: 11, color: 'text.secondary', mt: 0.5, overflowWrap: 'anywhere' }}>
+        <Typography sx={{ font: `700 14px ${monoFontFamily}`, color: 'primary.main', overflowWrap: 'anywhere' }}>⑂ {name}</Typography>
+        <Typography sx={{ fontSize: 12, color: 'text.secondary', mt: 0.5, overflowWrap: 'anywhere' }}>
           {b.upstream ? t('details.tracks', { upstream: b.upstream }) : t('explorer.noUpstream')}
         </Typography>
       </Box>
       <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
         <StatusText label={syncLabel(repo)} />
         {counts && (
-          <Typography sx={{ fontSize: 10, color: 'text.secondary', mt: 0.5 }}>{t('explorer.aheadBehind', { ahead: b.ahead!, behind: b.behind! })}</Typography>
+          <Typography sx={{ fontSize: 12, color: 'text.secondary', mt: 0.5 }}>{t('explorer.aheadBehind', { ahead: b.ahead!, behind: b.behind! })}</Typography>
         )}
         {/* A09: ahead/behind — по последнему fetch, а не живое состояние сервера. */}
-        <Typography sx={{ fontSize: 10, color: 'text.secondary' }}>{syncFreshness(repo, now)}</Typography>
+        <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{syncFreshness(repo, now)}</Typography>
       </Box>
     </Card>
   )
@@ -213,7 +213,7 @@ function Worktree({ repo }: { repo: Repository }) {
     { key: 'explorer.wt.untracked' as const, count: w.untracked, tone: 'warn' as const },
     { key: 'explorer.wt.conflicts' as const, count: w.conflicts, tone: 'bad' as const },
   ].filter((r) => r.count > 0)
-  const row = { display: 'flex', justifyContent: 'space-between', gap: 1.5, px: 1.5, py: 1.25, fontSize: 12, '& + &': { borderTop: `1px solid ${theme.app.line}` } }
+  const row = { display: 'flex', justifyContent: 'space-between', gap: 1.5, px: 1.5, py: 1.25, fontSize: 13, '& + &': { borderTop: `1px solid ${theme.app.line}` } }
   return (
     <Box sx={{ border: `1px solid ${theme.app.line}`, borderRadius: '10px', overflow: 'hidden' }}>
       {w.operation && (
@@ -248,12 +248,12 @@ function ChangedFiles({ files, more }: { files: ChangedFile[]; more: number }) {
             component="li"
             key={f.path}
             title={f.origPath ? `${f.origPath} → ${f.path}` : f.path}
-            sx={{ display: 'flex', alignItems: 'baseline', gap: 1.25, px: 1.5, py: 0.75, fontSize: 12, '& + &': { borderTop: `1px solid ${theme.app.line}` } }}
+            sx={{ display: 'flex', alignItems: 'baseline', gap: 1.25, px: 1.5, py: 0.75, fontSize: 13, '& + &': { borderTop: `1px solid ${theme.app.line}` } }}
           >
-            <Box component="code" sx={{ font: `11px ${monoFontFamily}`, whiteSpace: 'pre', color: 'text.secondary', flexShrink: 0 }}>
+            <Box component="code" sx={{ font: `12px ${monoFontFamily}`, whiteSpace: 'pre', color: 'text.secondary', flexShrink: 0 }}>
               {f.code}
             </Box>
-            <Box component="span" sx={{ font: `12px ${monoFontFamily}`, minWidth: 0, flex: 1, overflowWrap: 'anywhere' }}>
+            <Box component="span" sx={{ font: `13px ${monoFontFamily}`, minWidth: 0, flex: 1, overflowWrap: 'anywhere' }}>
               {f.origPath && (
                 <Box component="span" sx={{ color: 'text.secondary' }}>
                   {f.origPath} →{' '}
@@ -267,7 +267,7 @@ function ChangedFiles({ files, more }: { files: ChangedFile[]; more: number }) {
           </Box>
         ))}
       </Box>
-      {more > 0 && <Typography sx={{ fontSize: 11, color: 'text.secondary', px: 1.5, py: 1 }}>{t('explorer.wt.moreFiles', { count: more })}</Typography>}
+      {more > 0 && <Typography sx={{ fontSize: 12, color: 'text.secondary', px: 1.5, py: 1 }}>{t('explorer.wt.moreFiles', { count: more })}</Typography>}
     </Box>
   )
 }
@@ -289,7 +289,7 @@ function Branches({ repo, busy }: { repo: Repository; busy: boolean }) {
   }, [repo.id, repo.updatedAt, loadBranches])
 
   if (branches === null) return <CircularProgress size={16} />
-  if (branches.length === 0) return <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{t('explorer.noBranches')}</Typography>
+  if (branches.length === 0) return <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>{t('explorer.noBranches')}</Typography>
   const blocked = switchBlock(repo)
   return (
     <Box sx={{ border: `1px solid ${theme.app.line}`, borderRadius: '10px', overflow: 'hidden' }}>
@@ -302,10 +302,10 @@ function Branches({ repo, busy }: { repo: Repository; busy: boolean }) {
             sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto auto', gap: 1.5, alignItems: 'center', px: 1.5, py: 1, '& + &': { borderTop: `1px solid ${theme.app.line}` } }}
           >
             <Box sx={{ minWidth: 0 }}>
-              <Typography sx={{ font: `12px ${monoFontFamily}`, fontWeight: b.current ? 760 : 400, color: b.current ? 'primary.main' : 'text.primary', overflowWrap: 'anywhere' }}>
+              <Typography sx={{ font: `13px ${monoFontFamily}`, fontWeight: b.current ? 760 : 400, color: b.current ? 'primary.main' : 'text.primary', overflowWrap: 'anywhere' }}>
                 {b.name}
               </Typography>
-              <Typography sx={{ fontSize: 11, color: 'text.secondary', overflowWrap: 'anywhere' }}>
+              <Typography sx={{ fontSize: 12, color: 'text.secondary', overflowWrap: 'anywhere' }}>
                 {[
                   b.current && t('explorer.branchCurrent'),
                   b.upstream ? t('details.tracks', { upstream: b.upstream }) : t('explorer.noUpstream'),
@@ -352,7 +352,7 @@ function RepoMain({ repo }: { repo: Repository }) {
 
   return (
     <Box sx={{ p: { xs: 2.5, md: 3.5 }, minWidth: 0 }}>
-      <Typography sx={{ fontSize: 11, color: 'text.secondary', overflowWrap: 'anywhere' }}>
+      <Typography sx={{ fontSize: 12, color: 'text.secondary', overflowWrap: 'anywhere' }}>
         {crumbs.map((c, i) => (
           <Box component="span" key={i} sx={i === crumbs.length - 1 ? { color: 'primary.main' } : undefined}>
             {i > 0 && ' › '}
@@ -366,8 +366,8 @@ function RepoMain({ repo }: { repo: Repository }) {
           {repoName(repo)}
         </Typography>
       </Box>
-      <Typography sx={{ font: `11px ${monoFontFamily}`, color: 'text.secondary', mt: 1, overflowWrap: 'anywhere' }}>{repo.path}</Typography>
-      {nesting && <Typography sx={{ fontSize: 12, color: 'text.secondary', mt: 0.5 }}>{t(nesting)}</Typography>}
+      <Typography sx={{ font: `12px ${monoFontFamily}`, color: 'text.secondary', mt: 1, overflowWrap: 'anywhere' }}>{repo.path}</Typography>
+      {nesting && <Typography sx={{ fontSize: 13, color: 'text.secondary', mt: 0.5 }}>{t(nesting)}</Typography>}
 
       <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mt: 2.5 }}>
         <GuardedButton variant="contained" reason={pullBlock(repo)} disabled={busy} onClick={() => requestOp(repo.id, Operation.OperationPull)}>
@@ -376,7 +376,7 @@ function RepoMain({ repo }: { repo: Repository }) {
         <GuardedButton reason={repo.remote ? null : t('details.noRemote')} disabled={busy} onClick={() => requestOp(repo.id, Operation.OperationFetch)}>
           {t('action.fetch')}
         </GuardedButton>
-        <Button size="small" variant="outlined" startIcon={<ContentCopyIcon sx={{ fontSize: 14 }} />} onClick={() => void copyText(repo.path)}>
+        <Button size="small" variant="outlined" startIcon={<ContentCopyIcon sx={{ fontSize: 15 }} />} onClick={() => void copyText(repo.path)}>
           {t('action.copyPath')}
         </Button>
         <Tooltip title={t('action.refreshRepo')}>
@@ -391,7 +391,7 @@ function RepoMain({ repo }: { repo: Repository }) {
         {running ? (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <CircularProgress size={14} />
-            <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{t('op.running', { op: opName(running) })}</Typography>
+            <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>{t('op.running', { op: opName(running) })}</Typography>
           </Box>
         ) : (
           lastOp && <StatusText wrap label={opResultLabel(lastOp)} />
@@ -417,7 +417,7 @@ function RepoMain({ repo }: { repo: Repository }) {
 
       <Section title={`${t('explorer.worktree')}${repo.worktree ? ` · ${t(changeCount(repo) + repo.worktree.conflicts > 0 ? 'explorer.wt.dirty' : 'explorer.wt.cleanShort')}` : ''}`}>
         <Worktree repo={repo} />
-        <Typography sx={{ fontSize: 11, color: 'text.secondary', mt: 0.75 }}>{t('explorer.statusRead', { time: formatRelative(repo.updatedAt, now) })}</Typography>
+        <Typography sx={{ fontSize: 12, color: 'text.secondary', mt: 0.75 }}>{t('explorer.statusRead', { time: formatRelative(repo.updatedAt, now) })}</Typography>
       </Section>
 
       <Section title={t('explorer.branches')}>
@@ -439,8 +439,8 @@ function Inspector({ repo, onOpenTools }: { repo: Repository; onOpenTools(): voi
     <Box sx={{ p: 2.25, minWidth: 0 }}>
       <Typography sx={{ ...h3, mt: 1 }}>{t('explorer.remoteServer')}</Typography>
       <Card sx={{ bgcolor: theme.app.panel }}>
-        <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>{t('explorer.connection')}</Typography>
-        <Typography sx={{ fontSize: 13, fontWeight: 760, mt: 0.5, overflowWrap: 'anywhere' }}>
+        <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{t('explorer.connection')}</Typography>
+        <Typography sx={{ fontSize: 14, fontWeight: 760, mt: 0.5, overflowWrap: 'anywhere' }}>
           {host ? `${t(providerName[repoProvider(repo)])} · ${host}` : remoteCaption(repo)}
         </Typography>
         <Box sx={{ mt: 0.75 }}>
@@ -450,7 +450,7 @@ function Inspector({ repo, onOpenTools }: { repo: Repository; onOpenTools(): voi
 
       <Typography sx={h3}>{t('explorer.prs')}</Typography>
       <Card sx={{ bgcolor: theme.app.panel }}>
-        <Typography sx={{ fontSize: 11, color: 'text.secondary', mb: 0.75, overflowWrap: 'anywhere' }}>
+        <Typography sx={{ fontSize: 12, color: 'text.secondary', mb: 0.75, overflowWrap: 'anywhere' }}>
           {branch ? t('explorer.forBranch', { branch }) : t('sync.detached')}
         </Typography>
         <PRIndicator repo={repo} mode="inline" />
@@ -458,7 +458,7 @@ function Inspector({ repo, onOpenTools }: { repo: Repository; onOpenTools(): voi
 
       <Typography sx={h3}>{t('explorer.pipelines')}</Typography>
       <Card sx={{ bgcolor: theme.app.panel }}>
-        <Typography sx={{ fontSize: 11, color: 'text.secondary', mb: 0.75 }}>{t('explorer.branchOnly')}</Typography>
+        <Typography sx={{ fontSize: 12, color: 'text.secondary', mb: 0.75 }}>{t('explorer.branchOnly')}</Typography>
         <CIIndicator repo={repo} mode="inline" />
       </Card>
 
@@ -470,7 +470,7 @@ function Inspector({ repo, onOpenTools }: { repo: Repository; onOpenTools(): voi
           border: '1px dashed',
           borderColor: issue ? 'warning.main' : theme.app.line,
           color: issue ? 'warning.main' : 'text.secondary',
-          fontSize: 12,
+          fontSize: 13,
         }}
       >
         {issue ? t('explorer.cliIssue') : noServer ? t('explorer.noServer') : t('explorer.cliReady')}
@@ -512,10 +512,10 @@ export function ExplorerView({ onOpenTools }: { onOpenTools(): void }) {
         <Box sx={{ flex: 1 }}>
           <Tree tree={tree} selectedId={selected?.id ?? null} rootsShown={roots.length > 1} />
         </Box>
-        <Box sx={{ mt: 3, pt: 1.5, px: 1.25, borderTop: line, fontSize: 11, color: 'text.secondary' }}>
+        <Box sx={{ mt: 3, pt: 1.5, px: 1.25, borderTop: line, fontSize: 12, color: 'text.secondary' }}>
           <div>✓ {t('explorer.repoCount', { count: repos.length })}</div>
           {issueHosts > 0 && <div>⚠ {t('explorer.issueHosts', { count: issueHosts })}</div>}
-          <Button size="small" sx={{ px: 0, mt: 0.5, fontSize: 11 }} onClick={onOpenTools}>
+          <Button size="small" sx={{ px: 0, mt: 0.5, fontSize: 12 }} onClick={onOpenTools}>
             {t('explorer.openTools')}
           </Button>
         </Box>
