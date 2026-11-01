@@ -143,6 +143,22 @@ export function ListRoots(): $CancellablePromise<model$0.Root[] | null> {
 }
 
 /**
+ * OpenFolder открывает каталог в файловом менеджере системы; если его нет —
+ * ближайший существующий выше по пути (D-066).
+ */
+export function OpenFolder(path: string): $CancellablePromise<void> {
+    return $Call.ByID(2534125209, path);
+}
+
+/**
+ * OpenTerminal запускает терминал системы в каталоге; пустой путь —
+ * домашний каталог (D-066).
+ */
+export function OpenTerminal(path: string): $CancellablePromise<void> {
+    return $Call.ByID(1564260877, path);
+}
+
+/**
  * PickFolder открывает системный диалог выбора папки. Пустая строка —
  * пользователь закрыл диалог.
  */

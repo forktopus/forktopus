@@ -28,6 +28,8 @@ export const wailsSource: DataSource = {
   },
   openURL: (url) => Browser.OpenURL(url),
   copyText: (text) => Clipboard.SetText(text),
+  openFolder: (path) => AppService.OpenFolder(path),
+  openTerminal: (path) => AppService.OpenTerminal(path),
   getUI: () => AppService.GetUI(),
   saveUI: (ui) => AppService.SaveUI(ui),
   // Нативный зум WebView: масштабируется всё, включая размеры в px.

@@ -26,6 +26,7 @@ import { useSearchedRepos } from '../store/selectors'
 import { toneColor } from '../theme/theme'
 import { monoFontFamily } from '../theme/tokens'
 import { EmptyText } from './EmptyText'
+import { PathButtons } from '../components/PathButtons'
 
 const sectionTitle = { ...caption, fontSize: 12, letterSpacing: '1.4px', mb: 1.5 } as const
 
@@ -427,6 +428,7 @@ function RepoMain({ repo }: { repo: Repository }) {
         <Button size="small" variant="outlined" startIcon={<ContentCopyIcon sx={{ fontSize: 15 }} />} onClick={() => void copyText(repo.path)}>
           {t('action.copyPath')}
         </Button>
+        <PathButtons path={repo.path} />
         <Tooltip title={t('action.refreshRepo')}>
           <span>
             <IconButton size="small" aria-label={t('action.refreshRepo')} disabled={refreshing} onClick={() => void refresh()}>

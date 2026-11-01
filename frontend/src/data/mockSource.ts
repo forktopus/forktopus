@@ -641,6 +641,13 @@ export function createMockSource({ delayMs = 250, scenario = 'default' }: MockOp
       window.open(url, '_blank', 'noopener')
     },
     copyText: (text) => navigator.clipboard.writeText(text),
+    // Файлового менеджера и терминала у браузера нет: в превью — только в консоль.
+    async openFolder(path) {
+      console.info('openFolder', path)
+    },
+    async openTerminal(path) {
+      console.info('openTerminal', path)
+    },
     getUI: () => reply(ui),
     // Трея в браузере нет.
     setTraySummary: () => reply(undefined),

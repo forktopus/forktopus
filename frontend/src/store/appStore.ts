@@ -139,6 +139,8 @@ export interface AppState {
   dismissNotice(id: number): void
   copyText(text: string): Promise<void>
   openURL(url: string): void
+  openFolder(path: string): void
+  openTerminal(path: string): void
   setMode(mode: Mode): void
   setTheme(theme: ThemeMode): void
   setFetchPrune(on: boolean): void
@@ -588,6 +590,14 @@ export function createAppStore(source: DataSource): AppStore {
 
       openURL(url) {
         source.openURL(url).catch(fail)
+      },
+
+      openFolder(path) {
+        source.openFolder(path).catch(fail)
+      },
+
+      openTerminal(path) {
+        source.openTerminal(path).catch(fail)
       },
     }
   })

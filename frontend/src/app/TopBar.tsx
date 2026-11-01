@@ -1,6 +1,7 @@
 import AddIcon from '@mui/icons-material/Add'
 import DarkModeIcon from '@mui/icons-material/DarkMode'
 import LightModeIcon from '@mui/icons-material/LightMode'
+import MedicalServicesIcon from '@mui/icons-material/MedicalServicesOutlined'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import SearchIcon from '@mui/icons-material/Search'
 import SettingsIcon from '@mui/icons-material/Settings'
@@ -33,6 +34,10 @@ export function TopBar({ onOpenTools, onOpenRoots, onOpenSettings }: Props) {
   const lastCheckAt = useApp((s) => s.lastCheckAt)
   const demo = useApp((s) => s.sourceKind === 'mock')
   const setTheme = useApp((s) => s.setTheme)
+  const openTerminal = useApp((s) => s.openTerminal)
+  // Терминал — в выбранном репозитории (реестр, дерево), без него — в домашнем каталоге (З-5).
+  const selectedPath = useApp((s) => (s.selectedId && s.repos[s.selectedId]?.path) || '')
+  const terminalHint = selectedPath ? t('action.openTerminalAt', { path: selectedPath }) : t('action.openTerminalHome')
   const now = useNow()
   const searchRef = useRef<HTMLInputElement>(null)
   // Окно не уже 1000 px (MinWidth в main.go); до 1200 px панель компактная.
@@ -173,9 +178,14 @@ export function TopBar({ onOpenTools, onOpenRoots, onOpenSettings }: Props) {
             </IconButton>
           </span>
         </Tooltip>
+        <Tooltip title={terminalHint}>
+          <IconButton aria-label={terminalHint} onClick={() => openTerminal(selectedPath)}>
+            <TerminalIcon />
+          </IconButton>
+        </Tooltip>
         <Tooltip title={t('action.tools')}>
           <IconButton aria-label={t('action.tools')} onClick={onOpenTools}>
-            <TerminalIcon />
+            <MedicalServicesIcon />
           </IconButton>
         </Tooltip>
         <Tooltip title={t('action.settings')}>

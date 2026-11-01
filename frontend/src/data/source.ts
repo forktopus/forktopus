@@ -68,6 +68,10 @@ export interface DataSource {
   /** Открыть ссылку (PR, CI) в браузере системы. */
   openURL(url: string): Promise<void>
   copyText(text: string): Promise<void>
+  /** Каталог в файловом менеджере системы; нет каталога — ближайший существующий выше (D-066). */
+  openFolder(path: string): Promise<void>
+  /** Терминал системы в каталоге; '' — домашний каталог (D-066). */
+  openTerminal(path: string): Promise<void>
   getUI(): Promise<UI>
   saveUI(ui: UI): Promise<void>
   /** Запуск при входе в систему: состояние из системы; null — не поддерживается (D-063). */
