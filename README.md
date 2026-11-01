@@ -6,7 +6,7 @@
 
 Сайт: [forktopus.ru](https://forktopus.ru)
 
-> **Статус:** MVP (0.1.0). Проверен на Ubuntu 24.04 (GNOME, X11); на Windows 11 — локальная часть (без `gh`/`glab`/`tea`). macOS не проверялся.
+> **Статус:** 0.1.1. Проверен на Ubuntu 24.04 (GNOME, X11); на Windows 11 — локальная часть (без `gh`/`glab`/`tea`). macOS не проверялся.
 
 Три режима на общих данных: **Реестр** (таблица с фильтрами), **Проводник** (дерево корень → сервер → владелец → репозиторий с панелью деталей) и **Радар** (карточки по группам «Требует внимания» / «В работе» / «В порядке»).
 
@@ -34,9 +34,21 @@
 - Не клонирует репозитории, не удаляет папки: «убрать корень» — только из списка.
 - Не создаёт и не меняет PR/MR, не запускает CI.
 
-## Установка и запуск (Linux)
+## Установка
 
-Готовых пакетов нет — приложение собирается из исходников (см. «Требования для разработки» и «Быстрый старт»). Для запуска собранного `bin/forktopus` нужны GTK4 и WebKitGTK 6.0:
+Готовые сборки — на странице [Releases](https://github.com/forktopus/forktopus/releases):
+
+| Файл | Система | Как поставить |
+|---|---|---|
+| `forktopus_<версия>_amd64.deb` | Ubuntu 24.04+ / Debian 13+ | `sudo apt install ./forktopus_<версия>_amd64.deb` — подтянет GTK4 и WebKitGTK 6.0, добавит ярлык в меню |
+| `Forktopus-<версия>-x86_64.AppImage` | другие Linux x86_64 | `chmod +x` и запустить; GTK4 и WebKitGTK внутри (≈128 МБ), ярлыка в меню нет |
+| `forktopus-<версия>-windows-amd64.exe` | Windows 10/11 x64 | запустить; нужен WebView2 Runtime — в Windows 11 он есть всегда |
+
+Сборки не подписаны: Windows SmartScreen предупредит о неизвестном издателе («Подробнее» → «Выполнить в любом случае»).
+
+### Из исходников
+
+См. «Требования для разработки» и «Быстрый старт». Для запуска собранного `bin/forktopus` нужны GTK4 и WebKitGTK 6.0:
 
 ```bash
 sudo apt install libgtk-4-1 libwebkitgtk-6.0-4   # Ubuntu 24.04+
@@ -49,7 +61,7 @@ bash scripts/install-desktop.sh            # после wails3 build
 bash scripts/install-desktop.sh --remove   # убрать
 ```
 
-Windows: `wails3 build GOOS=windows` собирает `bin/forktopus.exe` прямо на Linux (без CGO и Docker). Нужен WebView2 Runtime — в Windows 11 он есть всегда.
+Пакеты: `wails3 task linux:create:deb` и `wails3 task linux:create:appimage` (скачивает linuxdeploy) кладут `.deb` и `.AppImage` в `bin/`. Windows: `wails3 build GOOS=windows` собирает `bin/forktopus.exe` прямо на Linux (без CGO и Docker).
 
 Файлы приложения:
 

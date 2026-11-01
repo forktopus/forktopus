@@ -12,3 +12,5 @@ build/android/gen/
 # Локальная среда Forktopus
 .env.dev
 .local/
+build/linux/appimage/forktopus
+build/linux/appimage/forktopus.png
