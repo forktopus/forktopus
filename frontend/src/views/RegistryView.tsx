@@ -1,6 +1,7 @@
 // Реестр (экран по умолчанию, макет 01-registry): источники, KPI, вкладки
 // статусов, таблица с Pull и меню действий; строка открывает панель деталей.
 
+import { keyframes } from '@emotion/react'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
@@ -198,6 +199,8 @@ const RowCells = memo(function RowCells({ repo: r, depth, nested, collapsed, onT
 
 interface TableContext {
   selectedId: string | null
+  /** строка, к которой только что перешли из другого режима: коротко вспыхивает */
+  flashId: string | null
   openDetails(id: string): void
   sx: ComponentProps<typeof Table>['sx']
 }
@@ -220,10 +223,28 @@ const tableComponents: TableComponents<Row, TableContext> = {
   TableBody: forwardRef<HTMLTableSectionElement>(function Body(props, ref) {
     return <TableBody {...props} ref={ref} />
   }),
-  TableRow: ({ item, context, ...props }) => (
-    <TableRow {...props} hover selected={item.repo.id === context?.selectedId} onClick={() => context?.openDetails(item.repo.id)} sx={{ cursor: 'pointer' }} />
-  ),
+  TableRow: ({ item, context, ...props }) => {
+    const selected = item.repo.id === context?.selectedId
+    return (
+      <TableRow
+        {...props}
+        hover
+        selected={selected}
+        onClick={() => context?.openDetails(item.repo.id)}
+        sx={{
+          cursor: 'pointer',
+          // Выбранная строка отличается от строки под курсором: полоса слева.
+          ...(selected && { '& > td:first-of-type': { boxShadow: (theme) => `inset 3px 0 0 ${theme.palette.primary.main}` } }),
+          ...(item.repo.id === context?.flashId && { '& > td': { animation: `${rowFlash} 1.8s ease-in` } }),
+        }}
+      />
+    )
+  },
 }
+
+const rowFlash = keyframes`
+  from { background-color: rgba(117, 141, 255, 0.45); }
+`
 
 // Ширины заданы заранее: при виртуализации автоширина колонок менялась бы от
 // набора строк в видимой области. Статусы — доля ширины таблицы, чтобы на
@@ -258,19 +279,27 @@ export function RegistryView() {
   const gitFoot = (key: 'kpi.changesFoot' | 'kpi.behindFoot') => (metrics.noStatus > 0 ? t('kpi.noStatus', { count: metrics.noStatus }) : t(key))
 
   // Выбранная в другом режиме строка (переход из радара или проводника) — в центре видимой области.
+  // Сразу после монтирования таблица ещё не размечена и прокрутка ни на что не
+  // влияет — прокручиваем в следующем кадре, затем строка вспыхивает.
   const virtuoso = useRef<TableVirtuosoHandle>(null)
   const revealed = useRef(false)
+  const [flashId, setFlashId] = useState<string | null>(null)
   useEffect(() => {
     if (revealed.current || !selectedId) return
     const index = rows.findIndex((r) => r.repo.id === selectedId)
     if (index < 0) return
-    revealed.current = true
-    virtuoso.current?.scrollToIndex({ index, align: 'center' })
+    const frame = requestAnimationFrame(() => {
+      revealed.current = true
+      virtuoso.current?.scrollToIndex({ index, align: 'center' })
+      setFlashId(selectedId)
+    })
+    return () => cancelAnimationFrame(frame)
   }, [rows, selectedId])
 
   const context = useMemo<TableContext>(
     () => ({
       selectedId,
+      flashId,
       openDetails,
       sx: {
         minWidth: 1170,
@@ -280,7 +309,7 @@ export function RegistryView() {
         '& td:last-of-type, & th:last-of-type': { pr: 2 },
       },
     }),
-    [selectedId, openDetails, theme],
+    [selectedId, flashId, openDetails, theme],
   )
 
   const sortBy = (key: SortKey) => setFilters(filters.sort === key ? { asc: !filters.asc } : { sort: key, asc: true })
