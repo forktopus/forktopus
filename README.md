@@ -67,20 +67,19 @@ bash scripts/install-desktop.sh --remove   # убрать
 
 Пакеты: `wails3 task linux:generate:deb` (упаковывает уже собранный `bin/forktopus`) и `wails3 task linux:create:appimage` (скачивает linuxdeploy) кладут `.deb` и `.AppImage` в `bin/`. Windows: `wails3 build GOOS=windows` собирает `bin/forktopus.exe` прямо на Linux (без CGO и Docker).
 
-Файлы релиза с `SHA256SUMS` — в `bin/release/<версия>/`:
+Локальная сборка файлов релиза с `SHA256SUMS` — в `bin/release/<версия>/` (версия — из `build/config.yml`):
 
 ```bash
-bash scripts/release.sh                                  # текущая версия: .deb, AppImage и .exe
-bash scripts/release.sh --version 0.3.0                  # сменить версию во всех файлах build/ и собрать
-bash scripts/release.sh --version 0.3.0 --os windows     # только .exe; --os можно повторять или через запятую
+bash scripts/release.sh                  # .deb, AppImage и .exe
+bash scripts/release.sh --os windows     # только .exe; --os можно повторять или через запятую
 ```
 
-`--os linux` собирается только на Linux, `--os windows` — где угодно, `--os macos` — `.app` (Intel и Apple Silicon) в zip, не проверялось:
+`--os linux` собирается только на Linux, `--os windows` — где угодно, `--os macos` — `.app` (Intel и Apple Silicon) в zip:
 
 - на Linux — в Docker-образе `wails-cross` (Zig и macOS SDK внутри; один раз `wails3 task setup:docker`, образ ~4 ГБ на диске). SDK образ скачивает из стороннего репозитория, а не у Apple. `.app` получается без подписи — на Mac перед первым запуском: `xattr -cr forktopus.app && codesign --force --deep --sign - forktopus.app`;
 - на macOS — нативно (нужен Xcode), с ad-hoc подписью.
 
-Скрипт ничего не коммитит и не публикует — в конце печатает команды для коммита, тега и `gh release create`.
+CI (GitHub Actions) на каждый push и PR проверяет формат, типы, тесты фронтенда и Go и актуальность bindings; на push в `main` тем же скриптом собирает файлы на Linux, Windows и macOS и прикладывает их к запуску. Релиз публикуется из этих файлов: `go run ./scripts/release plan|prepare|publish` — порядок в [docs/release.md](docs/release.md).
 
 Файлы приложения:
 
