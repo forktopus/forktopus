@@ -344,7 +344,11 @@ func (g Gitea) restPRs(ctx context.Context, q Query) model.PRSummary {
 	var prs []teaRESTPR
 	for page := 1; ; page++ {
 		if page > teaMaxPages {
-			return prFailed(model.Errorf(model.CodeOther, "открытых PR больше %d: поиск по коммиту был бы неполным", teaPageSize*teaMaxPages))
+			what := "сервер не фильтрует их по ветке, счёт"
+			if q.Branch == "" {
+				what = "поиск по коммиту"
+			}
+			return prFailed(model.Errorf(model.CodeOther, "открытых PR больше %d: %s был бы неполным", teaPageSize*teaMaxPages, what))
 		}
 		out, e := g.api(ctx, q.Dir, q.Target, "/repos/"+q.Target.Project+"/pulls?state=open&limit="+strconv.Itoa(teaPageSize)+"&page="+strconv.Itoa(page))
 		if e != nil {
