@@ -17,7 +17,7 @@
         PackageDisplayName="Forktopus"
         PublisherName="CN=Forktopus"
         PublisherDisplayName="Forktopus"
-        Version="0.2.0.0"
+        Version="0.3.0.0"
         PackageDescription="Все ваши Git-репозитории на одном экране">
         <Capabilities>
             <Capability Name="runFullTrust" />
