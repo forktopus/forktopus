@@ -7,7 +7,7 @@ import { useMemo, type MouseEvent } from 'react'
 import { Virtuoso } from 'react-virtuoso'
 import { useNow } from '../app/useNow'
 import { Sources, StatusTabs } from '../components/filters'
-import { RepoIcon, caption } from '../components/status'
+import { RepoIcon } from '../components/status'
 import { Operation, type Repository } from '../data/model'
 import { t, type MessageKey } from '../i18n'
 import { opName, pullBlock } from '../logic/ops'
@@ -190,12 +190,14 @@ export function RadarView() {
       >
         {radarGroups.map((g) => (
           <Box key={g} sx={{ minWidth: 0 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5, px: 0.5 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 0.5 }}>
               <Typography sx={{ fontSize: 14, fontWeight: 700, color: toneColor(theme, groupTone[g]) }}>● {t(groupTitle[g])}</Typography>
               <Box component="span" sx={{ fontSize: 12, bgcolor: theme.app.chip, borderRadius: '7px', px: 1, py: 0.25 }}>
                 {groups[g].length}
               </Box>
             </Box>
+            {/* Пояснение — над карточками: при длинных колонках строка внизу не видна (З-1). */}
+            <Typography sx={{ fontSize: 12, color: 'text.secondary', px: 0.5, mt: 0.5, mb: 1.5 }}>{t(groupLegend[g])}</Typography>
             {groups[g].length === 0 ? (
               <EmptyText text={t('radar.empty')} />
             ) : (
@@ -214,16 +216,6 @@ export function RadarView() {
               />
             )}
           </Box>
-        ))}
-      </Box>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 3, rowGap: 0.5, mt: 3 }}>
-        {radarGroups.map((g) => (
-          <Typography key={g} sx={{ ...caption, textTransform: 'none', letterSpacing: 0, fontWeight: 400, fontSize: 12 }}>
-            <Box component="span" sx={{ color: toneColor(theme, groupTone[g]) }}>
-              ●
-            </Box>{' '}
-            {t(groupLegend[g])}
-          </Typography>
         ))}
       </Box>
     </Box>
