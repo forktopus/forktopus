@@ -34,7 +34,7 @@ const (
 
 // Request — запрос состояния ветки.
 type Request struct {
-	Dir       string            // рабочая копия: tea работает только внутри неё
+	Dir       string            // рабочая копия: tea работает только внутри неё (gt — где угодно)
 	Remote    *model.RemoteInfo // nil — у репозитория нет выбранного remote
 	Branch    string            // пусто — detached HEAD
 	SHA       string            // текущий коммит при detached HEAD: PR/CI ищутся по нему
@@ -85,7 +85,7 @@ type call struct {
 	res  Result
 }
 
-// New создаёт Fetcher с адаптерами gh, glab и tea.
+// New создаёт Fetcher с адаптерами gh, glab и gt/tea.
 func New(r runner.Runner, opts Options) *Fetcher {
 	return newFetcher(map[model.Provider]providers.RemoteProvider{
 		model.ProviderGitHub: providers.GitHub{Runner: r},
@@ -266,7 +266,7 @@ func (f *Fetcher) Resolve(ctx context.Context, rm model.RemoteInfo, overrides ma
 	return providers.Resolver{Overrides: overrides, Logins: f.loginsFor(ctx, force)}.Resolve(rm)
 }
 
-// loginsFor — логины gh, glab и tea. Читаются одним вызовом за раз: при
+// loginsFor — логины gh, glab, gt и tea. Читаются одним вызовом за раз: при
 // запуске десятки репозиториев не должны запускать по три CLI каждый.
 func (f *Fetcher) loginsFor(ctx context.Context, force bool) []providers.Login {
 	f.loginsMu.Lock()

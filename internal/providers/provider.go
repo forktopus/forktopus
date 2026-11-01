@@ -1,5 +1,5 @@
 // Package providers получает PR/MR и CI текущей ветки через CLI хостингов
-// (gh, glab, tea) и выбирает, к какому проекту на каком сервере относится remote.
+// (gh, glab, gt или tea) и выбирает, к какому проекту на каком сервере относится remote.
 // Находки пилота по форматам CLI — docs/providers.md.
 package providers
 
@@ -19,8 +19,27 @@ type Target struct {
 	BaseURL string
 	// Project — путь проекта без base path: `owner/repo`, у GitLab — `group/sub/repo`.
 	Project string
-	// Login — имя логина CLI, которое передаётся явно (`tea -l`); пусто — CLI выбирает сам.
+	// Login — имя логина CLI, которое передаётся явно (`tea -l`, `gt --user`);
+	// пусто — CLI выбирает сам.
 	Login string
+	// Tool — CLI Gitea, у которого есть логин на этот сервер: gt или tea (D-074).
+	Tool string
+}
+
+// CLI — утилита, через которую адаптер обращается к серверу цели.
+func CLI(t Target) string {
+	switch t.Provider {
+	case model.ProviderGitHub:
+		return "gh"
+	case model.ProviderGitLab:
+		return "glab"
+	case model.ProviderGitea:
+		if t.Tool == "tea" {
+			return "tea"
+		}
+		return "gt"
+	}
+	return string(t.Provider)
 }
 
 // Query — запрос серверного состояния ветки.

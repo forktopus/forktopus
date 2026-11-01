@@ -35,7 +35,7 @@ interface MockRoot {
   ci: Availability
 }
 
-const offline = (host: string) => ({ code: ErrorCode.CodeNetworkError, message: `tea: dial tcp: lookup ${host}: no such host` })
+const offline = (host: string) => ({ code: ErrorCode.CodeNetworkError, message: `gt: cannot reach https://${host} (dial tcp: lookup ${host}: no such host)` })
 const authRequired = { code: ErrorCode.CodeAuthRequired, message: 'glab: нужна авторизация (glab auth login)' }
 
 const mockRoots: MockRoot[] = [
@@ -298,7 +298,7 @@ const mockTools: ToolDiagnostic[] = [
     version: '1.126.0',
     error: authRequired,
   },
-  { name: 'tea', host: 'git.home.test', availability: Availability.AvailabilityOK, path: '/usr/local/bin/tea', version: '0.16.0' },
+  { name: 'gt', host: 'git.home.test', availability: Availability.AvailabilityOK, path: '/usr/local/bin/gt', version: '0.2.0' },
 ]
 
 /** Ветки для демо: текущая, main и у каждого третьего — ветка, занятая соседним worktree. */

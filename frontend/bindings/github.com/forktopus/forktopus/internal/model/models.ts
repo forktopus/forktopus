@@ -588,7 +588,7 @@ export interface SkipDirs {
 }
 
 /**
- * ToolDiagnostic — результат проверки внешней утилиты (git, gh, glab, tea).
+ * ToolDiagnostic — результат проверки внешней утилиты (git, gh, glab, gt, tea).
  */
 export interface ToolDiagnostic {
     "name": string;

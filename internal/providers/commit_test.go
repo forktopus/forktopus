@@ -101,7 +101,7 @@ func TestGiteaByCommit(t *testing.T) {
 	}
 	for _, c := range cases {
 		g, s := gtWith(map[string]reply{open: ok(rest)})
-		got := g.PullRequests(ctx, shaQuery(gtTarget, c.sha))
+		got := g.PullRequests(ctx, shaQuery(teaTarget, c.sha))
 		if got.Availability != model.AvailabilityOK || *got.Open != c.open || *got.Draft != c.draft || got.URL != c.url || len(s.calls) != 1 {
 			t.Errorf("%s: %+v, вызовы %v", c.name, got, s.calls)
 		}
@@ -109,11 +109,11 @@ func TestGiteaByCommit(t *testing.T) {
 
 	// Коммит — head закрытого PR.
 	g, _ := gtWith(map[string]reply{open: ok(rest), closed: ok(string(fixture(t, "gitea/pulls-closed.json")))})
-	wantLast(t, "закрытый по коммиту", g.PullRequests(ctx, shaQuery(gtTarget, "0d85cbf3a0ec477f2b2b4382940ed8ac36aecf00")),
+	wantLast(t, "закрытый по коммиту", g.PullRequests(ctx, shaQuery(teaTarget, "0d85cbf3a0ec477f2b2b4382940ed8ac36aecf00")),
 		3, false, "https://git.example.org/OWNER/forktopus-pilot/pulls/3", "2026-10-31T17:07:36+03:00")
 
 	g, s := gtWith(map[string]reply{"api -l home -i /repos/OWNER/forktopus-pilot/actions/runs?head_sha=abc&": ok(string(fixture(t, "gitea/runs-fail.json")))})
-	if ci := g.CIRuns(ctx, shaQuery(gtTarget, "abc")); ci.Availability != model.AvailabilityOK || len(s.calls) != 1 {
+	if ci := g.CIRuns(ctx, shaQuery(teaTarget, "abc")); ci.Availability != model.AvailabilityOK || len(s.calls) != 1 {
 		t.Errorf("CI по коммиту: %+v, вызовы %v", ci, s.calls)
 	}
 }

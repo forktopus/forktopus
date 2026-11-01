@@ -252,7 +252,7 @@ type RemoteStatus struct {
 	CI       CISummary `json:"ci"`
 }
 
-// ToolDiagnostic — результат проверки внешней утилиты (git, gh, glab, tea).
+// ToolDiagnostic — результат проверки внешней утилиты (git, gh, glab, gt, tea).
 type ToolDiagnostic struct {
 	Name string `json:"name"`
 	// Host — сервер, для которого проверена авторизация; пусто — проверена только утилита.

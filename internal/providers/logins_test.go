@@ -17,6 +17,8 @@ const (
 {"host":"code.corp","state":"error","api_endpoint":"https://code.corp/gitlab/api/v4/"}]}`
 	teaLogins = `[{"name":"work","url":"https://git.work.example","ssh_host":"git.work.example","user":"OWNER","default":"false"},
 {"name":"home","url":"https://git.home.example/","ssh_host":"SSH.home.example","user":"OWNER","default":"true"}]`
+	// gt 0.2.0: `gt auth status --json host,user,active`.
+	gtAccounts = `[{"active":true,"host":"https://git.home.example","user":"OWNER"},{"active":false,"host":"https://git.home.example/","user":"bot"},{"active":true,"host":"","user":"x"}]`
 )
 
 func TestParseLogins(t *testing.T) {
@@ -35,16 +37,23 @@ func TestParseLogins(t *testing.T) {
 		t.Errorf("glab:\n got %+v\nwant %+v", got, glab)
 	}
 	tea := []Login{
-		{Provider: model.ProviderGitea, Name: "work", URL: "https://git.work.example", SSHHost: "git.work.example"},
-		{Provider: model.ProviderGitea, Name: "home", URL: "https://git.home.example", SSHHost: "ssh.home.example", Default: true},
+		{Provider: model.ProviderGitea, Name: "work", URL: "https://git.work.example", SSHHost: "git.work.example", Tool: "tea"},
+		{Provider: model.ProviderGitea, Name: "home", URL: "https://git.home.example", SSHHost: "ssh.home.example", Default: true, Tool: "tea"},
 	}
 	if got := parseTeaLogins([]byte(teaLogins)); !reflect.DeepEqual(got, tea) {
 		t.Errorf("tea:\n got %+v\nwant %+v", got, tea)
 	}
+	gt := []Login{
+		{Provider: model.ProviderGitea, Name: "OWNER", URL: "https://git.home.example", Default: true, Tool: "gt"},
+		{Provider: model.ProviderGitea, Name: "bot", URL: "https://git.home.example", Tool: "gt"},
+	}
+	if got := parseGtLogins([]byte(gtAccounts)); !reflect.DeepEqual(got, gt) {
+		t.Errorf("gt:\n got %+v\nwant %+v", got, gt)
+	}
 
 	// Ошибка вместо JSON (glab пишет её в stdout) и пустой вывод — логинов нет.
 	for _, out := range []string{`{"error":{"message":"401 Unauthorized"}}`, "", "not json"} {
-		if l := append(append(parseGHLogins([]byte(out)), parseGlabLogins([]byte(out))...), parseTeaLogins([]byte(out))...); len(l) != 0 {
+		if l := append(append(parseGHLogins([]byte(out)), parseGlabLogins([]byte(out))...), append(parseTeaLogins([]byte(out)), parseGtLogins([]byte(out))...)...); len(l) != 0 {
 			t.Errorf("%q: %+v", out, l)
 		}
 	}
@@ -64,6 +73,7 @@ func TestDiscoverLogins(t *testing.T) {
 	r := cliRunner{
 		// gh выходит с 1, если один из логинов не прошёл проверку, — хосты всё равно нужны.
 		"gh":  {Stdout: []byte(ghHosts), ExitCode: 1},
+		"gt":  {Stdout: []byte(gtAccounts)},
 		"tea": {Stdout: []byte(teaLogins)},
 	}
 	got := DiscoverLogins(context.Background(), r)
@@ -71,7 +81,7 @@ func TestDiscoverLogins(t *testing.T) {
 	for _, l := range got {
 		names = append(names, string(l.Provider)+":"+l.Name)
 	}
-	want := []string{"github:ghe.corp", "github:github.com", "gitea:work", "gitea:home"}
+	want := []string{"github:ghe.corp", "github:github.com", "gitea:OWNER", "gitea:bot", "gitea:work", "gitea:home"}
 	if !reflect.DeepEqual(names, want) {
 		t.Errorf("логины: %v, ожидались %v", names, want)
 	}

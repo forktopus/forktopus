@@ -23,6 +23,7 @@ const installURL: Record<string, string> = {
   git: 'https://git-scm.com/downloads',
   gh: 'https://cli.github.com',
   glab: 'https://gitlab.com/gitlab-org/cli',
+  gt: 'https://gitea.com/gitea/cli',
   tea: 'https://gitea.com/gitea/tea',
 }
 
@@ -32,6 +33,8 @@ function loginCommand(name: string, host: string): string | undefined {
       return `gh auth login --hostname ${host}`
     case 'glab':
       return `glab auth login --hostname ${host}`
+    case 'gt':
+      return `gt auth login --host https://${host}`
     case 'tea':
       return `tea login add --url https://${host}`
   }
@@ -54,7 +57,7 @@ export function toolHint(d: ToolDiagnostic): ToolHint | null {
 }
 
 /** Команды для самостоятельной проверки установленных CLI. */
-export const selfCheckCommands = ['git --version', 'gh auth status', 'glab auth status', 'tea logins list'].join('\n')
+export const selfCheckCommands = ['git --version', 'gh auth status', 'glab auth status', 'gt auth status'].join('\n')
 
 /**
  * Git не готов (A28): без него не прочитать ни одного статуса. null — git в

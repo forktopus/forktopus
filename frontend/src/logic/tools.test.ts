@@ -24,6 +24,15 @@ describe('toolHint', () => {
       error: { code: ErrorCode.CodeAuthRequired, message: '' },
     })
     expect(tea?.command).toBe('tea login add --url https://git.example.org')
+    const gt = toolHint({
+      name: 'gt',
+      host: 'git.example.org:3000',
+      availability: Availability.AvailabilityUnavailable,
+      error: { code: ErrorCode.CodeAuthRequired, message: '' },
+    })
+    expect(gt?.command).toBe('gt auth login --host https://git.example.org:3000')
+    const missingGt = toolHint({ name: 'gt', availability: Availability.AvailabilityUnavailable, error: { code: ErrorCode.CodeCLIMissing, message: '' } })
+    expect(missingGt?.text).toMatch(/gitea\.com\/gitea\/cli/) // D-074
   })
 
   it('нет сети — про сеть, а не про авторизацию', () => {

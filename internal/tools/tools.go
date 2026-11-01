@@ -35,7 +35,7 @@ func CheckGit(ctx context.Context, r runner.Runner) model.ToolDiagnostic {
 var versionRe = regexp.MustCompile(`\d+\.\d+(\.\d+)?`)
 
 // CheckCLI проверяет наличие утилиты провайдера и её версию (`NAME --version`).
-// Номер версии ищется в выводе: форматы у gh, glab и tea разные.
+// Номер версии ищется в выводе: форматы у gh, glab, gt и tea разные.
 func CheckCLI(ctx context.Context, r runner.Runner, name string) model.ToolDiagnostic {
 	diag := model.ToolDiagnostic{Name: name}
 	res, err := r.Run(ctx, runner.Command{Name: name, Args: []string{"--version"}})

@@ -36,7 +36,9 @@ export function CheckNow(): $CancellablePromise<void> {
 /**
  * CheckTools проверяет git и CLI провайдеров: для серверов, к которым относятся
  * репозитории, — версию и авторизацию (по одной проверке на CLI, сервер и
- * логин), для остальных CLI — только наличие и версию.
+ * логин), для остальных CLI — только наличие и версию. tea — запасной CLI
+ * Gitea (D-074): если его нет, это не проблема; gt не нужен, пока Gitea
+ * обслуживает tea.
  */
 export function CheckTools(): $CancellablePromise<model$0.ToolDiagnostic[] | null> {
     return $Call.ByID(476914070);

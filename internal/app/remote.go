@@ -175,16 +175,11 @@ func selectedRemote(r model.Repository) *model.RemoteInfo {
 	return &rm
 }
 
-// cliOf — CLI провайдера для диагностики.
-var cliOf = map[model.Provider]string{
-	model.ProviderGitHub: "gh",
-	model.ProviderGitLab: "glab",
-	model.ProviderGitea:  "tea",
-}
-
 // CheckTools проверяет git и CLI провайдеров: для серверов, к которым относятся
 // репозитории, — версию и авторизацию (по одной проверке на CLI, сервер и
-// логин), для остальных CLI — только наличие и версию.
+// логин), для остальных CLI — только наличие и версию. tea — запасной CLI
+// Gitea (D-074): если его нет, это не проблема; gt не нужен, пока Gitea
+// обслуживает tea.
 func (s *AppService) CheckTools(ctx context.Context) []model.ToolDiagnostic {
 	ctx, done := s.bind(ctx)
 	defer done()
@@ -208,7 +203,7 @@ func (s *AppService) CheckTools(ctx context.Context) []model.ToolDiagnostic {
 		if e != nil {
 			continue
 		}
-		key := string(t.Provider) + "|" + t.Host + "|" + t.Login
+		key := providers.CLI(t) + "|" + t.Host + "|" + t.Login
 		if !seen[key] {
 			seen[key] = true
 			checks = append(checks, check{dir: r.Path, t: t})
@@ -225,7 +220,7 @@ func (s *AppService) CheckTools(ctx context.Context) []model.ToolDiagnostic {
 				if p := recover(); p != nil {
 					e := model.Errorf(model.CodeOther, "внутренняя ошибка проверки: %v", p)
 					slog.Error("паника при проверке CLI", "error", e.Message)
-					diags[i] = model.ToolDiagnostic{Name: cliOf[c.t.Provider], Host: c.t.Host, Availability: model.AvailabilityError, Error: e}
+					diags[i] = model.ToolDiagnostic{Name: providers.CLI(c.t), Host: c.t.Host, Availability: model.AvailabilityError, Error: e}
 				}
 			}()
 			diags[i] = fetcher.Diagnose(ctx, c.dir, c.t)
@@ -233,10 +228,19 @@ func (s *AppService) CheckTools(ctx context.Context) []model.ToolDiagnostic {
 	}
 	wg.Wait()
 
-	for _, p := range []model.Provider{model.ProviderGitHub, model.ProviderGitLab, model.ProviderGitea} {
-		if !slices.ContainsFunc(checks, func(c check) bool { return c.t.Provider == p }) {
-			diags = append(diags, tools.CheckCLI(ctx, s.runner, cliOf[p]))
+	uses := func(name string) bool {
+		return slices.ContainsFunc(checks, func(c check) bool { return providers.CLI(c.t) == name })
+	}
+	for _, name := range []string{"gh", "glab", "gt", "tea"} {
+		if uses(name) {
+			continue
 		}
+		d := tools.CheckCLI(ctx, s.runner, name)
+		spare := name == "tea" || (name == "gt" && uses("tea"))
+		if spare && model.CodeOf(d.Error) == model.CodeCLIMissing {
+			continue
+		}
+		diags = append(diags, d)
 	}
 	slices.SortStableFunc(diags, func(a, b model.ToolDiagnostic) int {
 		if c := strings.Compare(a.Name, b.Name); c != 0 {

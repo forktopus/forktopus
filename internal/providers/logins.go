@@ -17,13 +17,16 @@ import (
 // self-hosted сервера и его base path (D-042).
 type Login struct {
 	Provider model.Provider
-	// Name — имя логина для явного выбора (`tea -l`); у gh и glab — хост.
+	// Name — имя логина для явного выбора (`tea -l`, у gt — пользователь
+	// для `--user`); у gh и glab — хост.
 	Name string
 	// URL — адрес инстанса `https://host[:port][/base]`.
 	URL string
 	// SSHHost — хост SSH-remote, если он не совпадает с хостом URL (tea).
 	SSHHost string
 	Default bool
+	// Tool — CLI логина Gitea: gt (основной) или tea (запасной); у gh и glab пусто.
+	Tool string
 }
 
 // loginsTimeout — glab без сети отвечает через ~12 с (docs/providers.md).
@@ -36,10 +39,11 @@ var loginSources = []struct {
 }{
 	{runner.Command{Name: "gh", Args: []string{"auth", "status", "--json", "hosts"}, Timeout: loginsTimeout}, parseGHLogins},
 	{runner.Command{Name: "glab", Args: []string{"auth", "status", "--all", "--output", "json"}, Timeout: loginsTimeout}, parseGlabLogins},
+	{runner.Command{Name: "gt", Args: []string{"auth", "status", "--json", "host,user,active"}, Timeout: loginsTimeout}, parseGtLogins},
 	{runner.Command{Name: "tea", Args: []string{"logins", "list", "-o", "json"}, Timeout: loginsTimeout}, parseTeaLogins},
 }
 
-// DiscoverLogins опрашивает gh, glab и tea параллельно. CLI, которого нет или
+// DiscoverLogins опрашивает gh, glab, gt и tea параллельно. CLI, которого нет или
 // который не ответил, логинов не даёт: его состояние покажет Diagnose адаптера.
 // Код завершения не проверяется: gh и glab выходят с 1, если хоть один логин
 // не прошёл проверку, но список хостов при этом печатают.
@@ -133,6 +137,35 @@ func parseTeaLogins(out []byte) []Login {
 			URL:      strings.TrimSuffix(l.URL, "/"),
 			SSHHost:  strings.ToLower(l.SSHHost),
 			Default:  l.Default == "true",
+			Tool:     "tea",
+		})
+	}
+	return logins
+}
+
+// parseGtLogins разбирает `gt auth status --json host,user,active`:
+// [{"host":"https://HOST[/base]","user","active"}]. С --json gt выходит с 0,
+// даже если учётка не работает: это покажет Diagnose.
+func parseGtLogins(out []byte) []Login {
+	var v []struct {
+		Host   string `json:"host"`
+		User   string `json:"user"`
+		Active bool   `json:"active"`
+	}
+	if json.Unmarshal(out, &v) != nil {
+		return nil
+	}
+	var logins []Login
+	for _, l := range v {
+		if l.Host == "" || l.User == "" {
+			continue
+		}
+		logins = append(logins, Login{
+			Provider: model.ProviderGitea,
+			Name:     l.User,
+			URL:      strings.TrimSuffix(l.Host, "/"),
+			Default:  l.Active,
+			Tool:     "gt",
 		})
 	}
 	return logins

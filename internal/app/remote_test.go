@@ -118,7 +118,7 @@ func TestRemoteStatusFlow(t *testing.T) {
 		return r.PR.Availability == model.AvailabilityOK && *r.PR.Open == 0
 	})
 
-	// CheckTools: gh проверен для github.com, glab и tea — без хоста.
+	// CheckTools: gh проверен для github.com, glab и gt — без хоста; tea не установлен — его нет.
 	diags := s.CheckTools(ctx)
 	if len(diags) != 4 || diags[1].Name != "gh" || diags[1].Host != "github.com" || diags[1].Availability != model.AvailabilityOK ||
 		diags[2].Name != "glab" || diags[2].Availability != model.AvailabilityUnavailable {

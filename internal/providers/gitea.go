@@ -15,9 +15,11 @@ import (
 	"github.com/forktopus/forktopus/internal/runner"
 )
 
-// Gitea — адаптер `tea` (docs/providers.md, раздел Gitea). Каждая команда tea
-// требует cwd внутри git-репозитория и явного логина (`-l`): логина по
-// умолчанию может не быть, а на хосте их бывает несколько.
+// Gitea — адаптер Gitea через `gt` или, если у gt нет входа на сервер, через
+// `tea` (D-074; docs/providers.md, разделы Gitea). CLI выбирает резолвер по
+// логину (Target.Tool). gt получает инстанс и пользователя явно (`--host`,
+// `--user`); каждая команда tea требует cwd внутри git-репозитория и явного
+// логина (`-l`): логина по умолчанию может не быть, а на хосте их бывает несколько.
 type Gitea struct {
 	Runner runner.Runner
 }
@@ -39,51 +41,113 @@ var teaMarkers = []marker{
 	{model.CodeUnsupported, "is older than"},
 }
 
-func (g Gitea) exec(ctx context.Context, dir string, args ...string) (runner.Result, error) {
-	return g.Runner.Run(ctx, runner.Command{Name: "tea", Args: args, Dir: dir, Timeout: cliTimeout})
+// gtMarkers — тексты ошибок gt 0.2.0 (docs/providers.md, раздел gt); нет
+// аккаунта или учётка отклонена — ещё и код выхода 4.
+var gtMarkers = []marker{
+	{model.CodeNetworkError, "cannot reach"},
+	{model.CodeNetworkError, "dial tcp"},
+	{model.CodeNetworkError, "x509:"},
+	{model.CodeAuthRequired, "no account for"},
+	{model.CodeAuthRequired, "is not logged in"},
+	{model.CodeAuthRequired, "log in again"},
+	{model.CodeAuthRequired, "run gt auth login"},
+	{model.CodeRepoUnresolved, "not found"},
+	{model.CodeUnsupported, "is older than"},
 }
 
-func (g Gitea) run(ctx context.Context, dir string, args ...string) ([]byte, *model.Error) {
-	res, err := g.exec(ctx, dir, args...)
+// gtAuthExit — код выхода gt «нет аккаунта или учётка отклонена».
+const gtAuthExit = 4
+
+func (g Gitea) exec(ctx context.Context, dir string, t Target, args ...string) (runner.Result, error) {
+	name := CLI(t)
+	if name == "gt" {
+		args = append(args, "--host", t.BaseURL, "--user", t.Login, "--no-input")
+	}
+	return g.Runner.Run(ctx, runner.Command{Name: name, Args: args, Dir: dir, Timeout: cliTimeout})
+}
+
+func (g Gitea) run(ctx context.Context, dir string, t Target, args ...string) ([]byte, *model.Error) {
+	res, err := g.exec(ctx, dir, t, args...)
 	if err == nil && res.OK() {
 		return res.Stdout, nil
 	}
-	return nil, classify("tea", res, err, teaMarkers)
+	return nil, g.classify(t, res, err)
 }
 
-// noLogin — у tea нет логина на этот сервер (резолвер не нашёл его в `tea logins`).
+func (g Gitea) classify(t Target, res runner.Result, err error) *model.Error {
+	if CLI(t) == "tea" {
+		return classify("tea", res, err, teaMarkers)
+	}
+	e := classify("gt", res, err, gtMarkers)
+	if err == nil && res.ExitCode == gtAuthExit {
+		e.Code = model.CodeAuthRequired
+	}
+	return e
+}
+
+// noLogin — ни у gt, ни у tea нет логина на этот сервер (резолвер не нашёл его
+// в `gt auth status` и `tea logins`). Советуется gt: tea архивирован.
 func noLogin(t Target) *model.Error {
-	return model.Errorf(model.CodeAuthRequired, "у tea нет логина на %s: выполните tea login add", hostname(t.Host))
+	return model.Errorf(model.CodeAuthRequired, "у gt нет входа на %s: выполните gt auth login --host https://%s", hostname(t.Host), t.Host)
 }
 
-// api вызывает REST через `tea api -i`. tea выходит с 0 и на 401/404, поэтому
-// успех определяется по строке статуса HTTP — первой строке stderr (D-041).
+// api вызывает REST через `gt api` или `tea api -i`.
 func (g Gitea) api(ctx context.Context, dir string, t Target, path string) ([]byte, *model.Error) {
-	res, err := g.exec(ctx, dir, "api", "-l", t.Login, "-i", path)
+	if CLI(t) == "gt" {
+		return g.gtAPI(ctx, dir, t, path)
+	}
+	// tea выходит с 0 и на 401/404, поэтому успех определяется по строке
+	// статуса HTTP — первой строке stderr (D-041).
+	res, err := g.exec(ctx, dir, t, "api", "-l", t.Login, "-i", path)
 	if err != nil || !res.OK() {
-		return nil, classify("tea", res, err, teaMarkers)
+		return nil, g.classify(t, res, err)
 	}
 	code := httpStatus(res.Stderr)
 	if code == http.StatusOK {
 		return res.Stdout, nil
 	}
+	if code == 0 {
+		return nil, model.Errorf(model.CodeOther, "tea: нет строки статуса HTTP в ответе")
+	}
+	return nil, statusError("tea", code, res.Stdout)
+}
+
+// gtStatusRe — статус в ошибке `gt api`: `Error: not found (HTTP 404 GET /api/v1/…)`.
+var gtStatusRe = regexp.MustCompile(`\(HTTP (\d{3}) `)
+
+// gtAPI — REST через `gt api`: путь — без /api/v1. Ответ вне 2xx — код 1,
+// тело в stdout, статус — в тексте ошибки.
+func (g Gitea) gtAPI(ctx context.Context, dir string, t Target, path string) ([]byte, *model.Error) {
+	res, err := g.exec(ctx, dir, t, "api", strings.TrimPrefix(path, "/"))
+	if err == nil && res.OK() {
+		return res.Stdout, nil
+	}
+	if err == nil && res.ExitCode != gtAuthExit {
+		if m := gtStatusRe.FindSubmatch(res.Stderr); m != nil {
+			code, _ := strconv.Atoi(string(m[1]))
+			return nil, statusError("gt", code, res.Stdout)
+		}
+	}
+	return nil, g.classify(t, res, err)
+}
+
+// statusError — ответ REST Gitea вне 2xx.
+func statusError(cli string, code int, out []byte) *model.Error {
 	var body struct {
 		Message string `json:"message"`
 	}
-	isJSON := json.Unmarshal(res.Stdout, &body) == nil
-	msg := "tea: HTTP " + strconv.Itoa(code)
+	isJSON := json.Unmarshal(out, &body) == nil
+	msg := cli + ": HTTP " + strconv.Itoa(code)
 	if body.Message != "" {
 		msg += ": " + body.Message
 	}
 	e := &model.Error{Code: model.CodeOther, Message: msg}
 	switch {
-	case code == 0:
-		e.Message = "tea: нет строки статуса HTTP в ответе"
 	case code == http.StatusUnauthorized:
 		e.Code = model.CodeAuthRequired
 	case code == http.StatusForbidden:
 		// Вход есть, но роли не хватает прав на раздел (например, Actions при
-		// доступе к коду и PR) — не проблема настройки tea (D-068).
+		// доступе к коду и PR) — не проблема настройки CLI (D-068).
 		e.Code = model.CodeAccessDenied
 	case code == http.StatusTooManyRequests:
 		e.Code = model.CodeRateLimit
@@ -95,7 +159,7 @@ func (g Gitea) api(ctx context.Context, dir string, t Target, path string) ([]by
 		e.Code = model.CodeUnsupported
 		e.Message = "сервер Gitea не отдаёт запуски Actions по API (нужна версия с /actions/runs)"
 	}
-	return nil, e
+	return e
 }
 
 // httpStatus — код из `HTTP/2.0 200 OK`; 0 — строки статуса нет.
@@ -110,18 +174,21 @@ func httpStatus(stderr []byte) int {
 
 var versionRe = regexp.MustCompile(`\d+\.\d+\.\d+`)
 
-// Diagnose проверяет tea и логин на сервере цели запросом `/user`.
+// Diagnose проверяет CLI цели и логин на сервере запросом `/user`. Логина нет
+// ни у gt, ни у tea — проверяется gt: ставить советуем его.
 func (g Gitea) Diagnose(ctx context.Context, dir string, t Target) model.ToolDiagnostic {
-	d := model.ToolDiagnostic{Name: "tea"}
+	d := model.ToolDiagnostic{Name: CLI(t)}
 	fail := func(e *model.Error) model.ToolDiagnostic {
 		d.Availability, d.Error = AvailabilityOf(e.Code), e
 		return d
 	}
-	// `Version: 0.16.0	golang: …` — номер выделен ANSI-кодами даже при NO_COLOR.
-	out, e := g.run(ctx, dir, "--version")
-	if e != nil {
-		return fail(e)
+	// tea: `Version: 0.16.0	golang: …` — номер выделен ANSI-кодами даже при
+	// NO_COLOR; gt: `gt version 0.2.0 (2026-10-26)`.
+	res, err := g.Runner.Run(ctx, runner.Command{Name: d.Name, Args: []string{"--version"}, Dir: dir, Timeout: cliTimeout})
+	if err != nil || !res.OK() {
+		return fail(g.classify(t, res, err))
 	}
+	out := res.Stdout
 	d.Version = versionRe.FindString(string(out))
 	if t.Login == "" {
 		return fail(noLogin(t))
@@ -162,15 +229,17 @@ func (g Gitea) PullRequests(ctx context.Context, q Query) model.PRSummary {
 	if q.Target.Login == "" {
 		return prFailed(noLogin(q.Target))
 	}
-	if q.Branch == "" {
-		return g.commitPRs(ctx, q)
+	// `gt pr list --head` отбирает на клиенте и читает только первую страницу,
+	// поэтому у gt — тот же REST, что для detached HEAD у tea.
+	if q.Branch == "" || CLI(q.Target) == "gt" {
+		return g.restPRs(ctx, q)
 	}
 	var prs []teaPR
 	for page := 1; ; page++ {
 		if page > teaMaxPages {
 			return prFailed(model.Errorf(model.CodeOther, "открытых PR больше %d: tea не фильтрует их по ветке, счёт был бы неполным", teaPageSize*teaMaxPages))
 		}
-		out, e := g.run(ctx, q.Dir, "pulls", "list", "-l", q.Target.Login, "-r", q.Target.Project, "--state", "open",
+		out, e := g.run(ctx, q.Dir, q.Target, "pulls", "list", "-l", q.Target.Login, "-r", q.Target.Project, "--state", "open",
 			"--limit", strconv.Itoa(teaPageSize), "--page", strconv.Itoa(page), "-f", "index,head,url,title", "-o", "json")
 		if e != nil {
 			return prFailed(e)
@@ -265,10 +334,10 @@ func (g Gitea) lastClosed(ctx context.Context, q Query) *model.PRRef {
 	return latestPR(refs)
 }
 
-// commitPRs — открытые PR, у которых head — текущий коммит (detached HEAD).
-// Найти PR, где коммит в середине, Gitea по API не позволяет. Страницы —
-// как у PullRequests (D-040).
-func (g Gitea) commitPRs(ctx context.Context, q Query) model.PRSummary {
+// restPRs — открытые PR ветки из этого репозитория через REST (gt), а при
+// detached HEAD — PR, у которых head — текущий коммит: найти PR, где коммит в
+// середине, Gitea по API не позволяет. Страницы — как у PullRequests (D-040).
+func (g Gitea) restPRs(ctx context.Context, q Query) model.PRSummary {
 	var prs []teaRESTPR
 	for page := 1; ; page++ {
 		if page > teaMaxPages {
@@ -280,7 +349,7 @@ func (g Gitea) commitPRs(ctx context.Context, q Query) model.PRSummary {
 		}
 		var list []teaRESTPR
 		if err := json.Unmarshal(out, &list); err != nil {
-			return prFailed(badOutput("tea", err))
+			return prFailed(badOutput(CLI(q.Target), err))
 		}
 		for _, p := range list {
 			if teaOwn(q, p) {
@@ -339,7 +408,7 @@ func (g Gitea) CIRuns(ctx context.Context, q Query) model.CISummary {
 		Runs []teaRun `json:"workflow_runs"`
 	}
 	if err := json.Unmarshal(out, &v); err != nil {
-		return ciFailed(badOutput("tea", err))
+		return ciFailed(badOutput(CLI(q.Target), err))
 	}
 	runs := v.Runs
 	// Новые первыми: id растёт с каждым запуском.

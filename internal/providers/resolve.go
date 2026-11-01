@@ -17,7 +17,7 @@ import (
 type Resolver struct {
 	// Overrides — тип провайдера из настроек: host[:port] или host → провайдер.
 	Overrides map[string]model.Provider
-	// Logins — логины gh, glab и tea (DiscoverLogins).
+	// Logins — логины gh, glab, gt и tea (DiscoverLogins).
 	Logins []Login
 }
 
@@ -43,7 +43,7 @@ func (r Resolver) Resolve(remote model.RemoteInfo) (Target, *model.Error) {
 
 	t := Target{Provider: provider, Host: remote.Host, Project: remote.Path}
 	if c, ok := best(cands, provider); ok {
-		t.BaseURL, t.Login, t.Project = c.login.URL, c.login.Name, c.project
+		t.BaseURL, t.Login, t.Project, t.Tool = c.login.URL, c.login.Name, c.project, c.login.Tool
 	}
 	if !validProject(provider, t.Project) {
 		want := "owner/repo"
@@ -73,7 +73,7 @@ func (r Resolver) provider(host string, cands []candidate) (model.Provider, *mod
 		}
 		switch len(found) {
 		case 0:
-			return "", model.Errorf(model.CodeUnsupported, "для сервера %s нет адаптера: тип не указан в настройках, и ни у gh, glab, tea нет логина на этот хост", host)
+			return "", model.Errorf(model.CodeUnsupported, "для сервера %s нет адаптера: тип не указан в настройках, и ни у gh, glab, gt, tea нет логина на этот хост", host)
 		case 1:
 			return found[0], nil
 		}
@@ -124,8 +124,9 @@ func (r Resolver) matching(remote model.RemoteInfo) []candidate {
 	return out
 }
 
-// best — лучший логин провайдера: самый длинный base path, затем логин по
-// умолчанию, затем по имени — чтобы выбор не зависел от порядка вывода CLI.
+// best — лучший логин провайдера: самый длинный base path, затем логин gt
+// раньше tea (tea — запасной, D-074), затем логин по умолчанию, затем по
+// имени — чтобы выбор не зависел от порядка вывода CLI.
 func best(cands []candidate, p model.Provider) (candidate, bool) {
 	cands = slices.DeleteFunc(slices.Clone(cands), func(c candidate) bool { return c.login.Provider != p })
 	if len(cands) == 0 {
@@ -134,6 +135,12 @@ func best(cands []candidate, p model.Provider) (candidate, bool) {
 	slices.SortStableFunc(cands, func(a, b candidate) int {
 		if c := cmp.Compare(b.baseLen, a.baseLen); c != 0 {
 			return c
+		}
+		if (a.login.Tool == "tea") != (b.login.Tool == "tea") {
+			if b.login.Tool == "tea" {
+				return -1
+			}
+			return 1
 		}
 		if a.login.Default != b.login.Default {
 			if a.login.Default {

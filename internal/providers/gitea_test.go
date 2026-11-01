@@ -10,10 +10,10 @@ import (
 	"github.com/forktopus/forktopus/internal/model"
 )
 
-// Фикстуры testdata/gitea — ответы tea 0.16.0 и Gitea 1.26.2 с пилотного
+// Фикстуры testdata/gitea — ответы tea 0.16.0 (REST — тот же у gt 0.2.0) и Gitea 1.26.2 с пилотного
 // репозитория; хост заменён на git.example.org, владелец — на OWNER, у запусков
 // убраны actor / trigger_actor / repository.
-var gtTarget = Target{Provider: model.ProviderGitea, Host: "git.example.org", BaseURL: "https://git.example.org", Project: "OWNER/forktopus-pilot", Login: "home"}
+var teaTarget = Target{Provider: model.ProviderGitea, Host: "git.example.org", BaseURL: "https://git.example.org", Project: "OWNER/forktopus-pilot", Login: "home", Tool: "tea"}
 
 func gtWith(answers map[string]reply) (Gitea, *scripted) {
 	s := &scripted{answers: answers}
@@ -21,7 +21,7 @@ func gtWith(answers map[string]reply) (Gitea, *scripted) {
 }
 
 func gtQuery(branch string) Query {
-	return Query{Dir: "/repo", Target: gtTarget, Branch: branch}
+	return Query{Dir: "/repo", Target: teaTarget, Branch: branch}
 }
 
 // apiReply — ответ `tea api -i`: статус в первой строке stderr, тело в stdout, код 0.
@@ -199,16 +199,16 @@ func TestGiteaDiagnose(t *testing.T) {
 		avail   model.Availability
 		code    model.ErrorCode
 	}{
-		{"всё хорошо", gtTarget, map[string]reply{"--version": version, "api -l home -i /user": apiReply("HTTP/2.0 200 OK", `{"login":"OWNER"}`)}, model.AvailabilityOK, ""},
-		{"токен отозван", gtTarget, map[string]reply{"--version": version, "api": apiReply("HTTP/2.0 401 Unauthorized", `{"message":"invalid username, password or token"}`)}, model.AvailabilityUnavailable, model.CodeAuthRequired},
-		{"нет сети", gtTarget, map[string]reply{"--version": version, "api": stderr(1, "Error: request failed: Get \"https://git.example.org/api/v1/user\": dial tcp: lookup git.example.org: network is unreachable\n")}, model.AvailabilityError, model.CodeNetworkError},
+		{"всё хорошо", teaTarget, map[string]reply{"--version": version, "api -l home -i /user": apiReply("HTTP/2.0 200 OK", `{"login":"OWNER"}`)}, model.AvailabilityOK, ""},
+		{"токен отозван", teaTarget, map[string]reply{"--version": version, "api": apiReply("HTTP/2.0 401 Unauthorized", `{"message":"invalid username, password or token"}`)}, model.AvailabilityUnavailable, model.CodeAuthRequired},
+		{"нет сети", teaTarget, map[string]reply{"--version": version, "api": stderr(1, "Error: request failed: Get \"https://git.example.org/api/v1/user\": dial tcp: lookup git.example.org: network is unreachable\n")}, model.AvailabilityError, model.CodeNetworkError},
 		{"нет логина на сервере", Target{Provider: model.ProviderGitea, Host: "git.example.org", Project: "OWNER/x"}, map[string]reply{"--version": version}, model.AvailabilityUnavailable, model.CodeAuthRequired},
-		{"нет tea", gtTarget, map[string]reply{"--version": missingTea}, model.AvailabilityUnavailable, model.CodeCLIMissing},
+		{"нет tea", teaTarget, map[string]reply{"--version": missingTea}, model.AvailabilityUnavailable, model.CodeCLIMissing},
 	}
 	for _, c := range cases {
 		g, s := gtWith(c.answers)
 		d := g.Diagnose(ctx, "/repo", c.target)
-		if d.Name != "tea" || d.Availability != c.avail || (c.code == "") != (d.Error == nil) || (d.Error != nil && d.Error.Code != c.code) {
+		if d.Name != CLI(c.target) || d.Availability != c.avail || (c.code == "") != (d.Error == nil) || (d.Error != nil && d.Error.Code != c.code) {
 			t.Errorf("%s: %+v %+v", c.name, d, d.Error)
 		}
 		if c.code != model.CodeCLIMissing && d.Version != "0.16.0" {

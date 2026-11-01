@@ -1,4 +1,4 @@
-// Package runner запускает внешние утилиты (git, gh, glab, tea) без shell.
+// Package runner запускает внешние утилиты (git, gh, glab, gt, tea) без shell.
 package runner
 
 import (

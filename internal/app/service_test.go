@@ -115,10 +115,15 @@ func TestCheckTools(t *testing.T) {
 	diags := s.CheckTools(context.Background())
 	// Репозиториев с серверными remote нет — CLI провайдеров проверяются без хоста.
 	// Установлены ли они в окружении теста, неважно: важно, что не «ок» без версии.
-	if len(diags) != 4 || diags[0].Name != "git" || diags[0].Availability != model.AvailabilityOK {
+	// tea — запасной CLI Gitea (D-074): не установлен — в списке его нет.
+	names := []string{"gh", "glab", "gt"}
+	if len(diags) == 5 {
+		names = append(names, "tea")
+	}
+	if len(diags) != len(names)+1 || diags[0].Name != "git" || diags[0].Availability != model.AvailabilityOK {
 		t.Fatalf("CheckTools: %+v", diags)
 	}
-	for i, name := range []string{"gh", "glab", "tea"} {
+	for i, name := range names {
 		d := diags[i+1]
 		if d.Name != name || d.Host != "" || (d.Availability == model.AvailabilityOK) == (d.Version == "") {
 			t.Errorf("%s: %+v", name, d)

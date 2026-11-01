@@ -16,7 +16,7 @@ func RedactURLs(s string) string {
 	return userinfoRe.ReplaceAllString(s, "${1}***@")
 }
 
-// secretRes — токены в виде, в котором их печатают gh, glab, tea и HTTP:
+// secretRes — токены в виде, в котором их печатают gh, glab, gt, tea и HTTP:
 // префиксы токенов GitHub / GitLab, заголовок Authorization и пары
 // «token=…», «password: …».
 var secretRes = []struct {
