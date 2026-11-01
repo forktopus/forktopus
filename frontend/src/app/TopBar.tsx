@@ -3,6 +3,7 @@ import DarkModeIcon from '@mui/icons-material/DarkMode'
 import LightModeIcon from '@mui/icons-material/LightMode'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import SearchIcon from '@mui/icons-material/Search'
+import SettingsIcon from '@mui/icons-material/Settings'
 import TerminalIcon from '@mui/icons-material/Terminal'
 import { Box, Button, ButtonBase, CircularProgress, IconButton, InputAdornment, TextField, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material'
 import { useEffect, useRef } from 'react'
@@ -16,9 +17,10 @@ const modeLabel: Record<Mode, MessageKey> = { registry: 'mode.registry', explore
 interface Props {
   onOpenTools(): void
   onOpenRoots(): void
+  onOpenSettings(): void
 }
 
-export function TopBar({ onOpenTools, onOpenRoots }: Props) {
+export function TopBar({ onOpenTools, onOpenRoots, onOpenSettings }: Props) {
   const theme = useTheme()
   const app = theme.app
   const mode = useApp((s) => s.mode)
@@ -174,6 +176,11 @@ export function TopBar({ onOpenTools, onOpenRoots }: Props) {
         <Tooltip title={t('action.tools')}>
           <IconButton aria-label={t('action.tools')} onClick={onOpenTools}>
             <TerminalIcon />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title={t('action.settings')}>
+          <IconButton aria-label={t('action.settings')} onClick={onOpenSettings}>
+            <SettingsIcon />
           </IconButton>
         </Tooltip>
         <Tooltip title={dark ? t('action.themeToLight') : t('action.themeToDark')}>

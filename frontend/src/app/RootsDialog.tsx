@@ -1,31 +1,10 @@
-import AddIcon from '@mui/icons-material/Add'
 import CloseIcon from '@mui/icons-material/Close'
 import FolderOpenIcon from '@mui/icons-material/FolderOpen'
-import RemoveIcon from '@mui/icons-material/Remove'
-import {
-  Box,
-  Button,
-  Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  FormControlLabel,
-  IconButton,
-  MenuItem,
-  Select,
-  Switch,
-  TextField,
-  Tooltip,
-  Typography,
-  useTheme,
-} from '@mui/material'
+import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { useEffect, useState, type FormEvent } from 'react'
 import type { ScanIssue } from '../data/model'
 import type { SkipList } from '../data/source'
 import { t } from '../i18n'
-import { maxZoom, minZoom, zoomStep } from '../logic/zoom'
-import { backgroundIntervals } from '../store/appStore'
 import { useApp } from '../store/context'
 import { useRepos } from '../store/selectors'
 import { monoFontFamily } from '../theme/tokens'
@@ -104,9 +83,6 @@ export function RootsDialog({ open, onClose }: { open: boolean; onClose(): void 
           </Button>
         </Box>
         <SkipDirsEditor />
-        <BackgroundSetting />
-        <FetchPruneSetting />
-        <ZoomSetting />
       </DialogContent>
       <DialogActions>
         <Button onClick={() => void scan()} disabled={scanning || roots.length === 0}>
@@ -118,96 +94,6 @@ export function RootsDialog({ open, onClose }: { open: boolean; onClose(): void 
   )
 }
 
-/** Фоновая проверка (D-063): интервал и fetch перед ней; применяются и сохраняются сразу. */
-function BackgroundSetting() {
-  const theme = useTheme()
-  const minutes = useApp((s) => s.backgroundMinutes)
-  const setMinutes = useApp((s) => s.setBackgroundMinutes)
-  const autoFetch = useApp((s) => s.autoFetch)
-  const setAutoFetch = useApp((s) => s.setAutoFetch)
-  return (
-    <Box sx={{ mt: 4, pt: 2, borderTop: `1px solid ${theme.app.line}` }}>
-      <Typography variant="subtitle2">{t('roots.backgroundTitle')}</Typography>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 1 }}>
-        <Typography variant="body2">{t('roots.backgroundInterval')}</Typography>
-        <Select size="small" value={minutes} onChange={(e) => setMinutes(Number(e.target.value))} inputProps={{ 'aria-label': t('roots.backgroundInterval') }}>
-          {backgroundIntervals.map((m) => (
-            <MenuItem key={m} value={m}>
-              {t('roots.backgroundMinutes', { n: m })}
-            </MenuItem>
-          ))}
-        </Select>
-      </Box>
-      <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-        {t('roots.backgroundDescription')}
-      </Typography>
-      <FormControlLabel
-        sx={{ mt: 1.5 }}
-        control={<Switch checked={autoFetch} onChange={(e) => setAutoFetch(e.target.checked)} />}
-        label={<Typography variant="subtitle2">{t('roots.autoFetchTitle')}</Typography>}
-      />
-      <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-        {t('roots.autoFetchDescription')}
-      </Typography>
-    </Box>
-  )
-}
-
-/** Fetch с --prune (D-057): применяется к следующим Fetch, сохраняется сразу. */
-function FetchPruneSetting() {
-  const theme = useTheme()
-  const fetchPrune = useApp((s) => s.fetchPrune)
-  const setFetchPrune = useApp((s) => s.setFetchPrune)
-  return (
-    <Box sx={{ mt: 4, pt: 2, borderTop: `1px solid ${theme.app.line}` }}>
-      <FormControlLabel
-        control={<Switch checked={fetchPrune} onChange={(e) => setFetchPrune(e.target.checked)} />}
-        label={<Typography variant="subtitle2">{t('roots.pruneTitle')}</Typography>}
-      />
-      <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-        {t('roots.pruneDescription')}
-      </Typography>
-    </Box>
-  )
-}
-
-/** Масштаб интерфейса (D-061): применяется и сохраняется сразу. */
-function ZoomSetting() {
-  const theme = useTheme()
-  const zoom = useApp((s) => s.zoom)
-  const setZoom = useApp((s) => s.setZoom)
-  return (
-    <Box sx={{ mt: 4, pt: 2, borderTop: `1px solid ${theme.app.line}` }}>
-      <Typography variant="subtitle2">{t('roots.zoomTitle')}</Typography>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-        <Tooltip title={t('roots.zoomOut')}>
-          <span>
-            <IconButton aria-label={t('roots.zoomOut')} disabled={zoom <= minZoom} onClick={() => setZoom(zoom - zoomStep)}>
-              <RemoveIcon fontSize="small" />
-            </IconButton>
-          </span>
-        </Tooltip>
-        <Typography sx={{ minWidth: 56, textAlign: 'center', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{Math.round(zoom * 100)} %</Typography>
-        <Tooltip title={t('roots.zoomIn')}>
-          <span>
-            <IconButton aria-label={t('roots.zoomIn')} disabled={zoom >= maxZoom} onClick={() => setZoom(zoom + zoomStep)}>
-              <AddIcon fontSize="small" />
-            </IconButton>
-          </span>
-        </Tooltip>
-        <Button size="small" disabled={zoom === minZoom} onClick={() => setZoom(minZoom)}>
-          {t('roots.zoomReset')}
-        </Button>
-      </Box>
-      <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-        {t('roots.zoomDescription')}
-      </Typography>
-    </Box>
-  )
-}
-
-// Список пропусков правится черновиком: «Применить» сохраняет его в настройках
-// Go и пересканирует корни (D-024). Пустой список Go сбрасывает к умолчанию.
 function SkipDirsEditor() {
   const theme = useTheme()
   const loadSkipDirs = useApp((s) => s.loadSkipDirs)

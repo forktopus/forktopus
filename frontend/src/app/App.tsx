@@ -16,6 +16,7 @@ import { ExplorerView } from '../views/ExplorerView'
 import { RadarView } from '../views/RadarView'
 import { RegistryView } from '../views/RegistryView'
 import { RootsDialog } from './RootsDialog'
+import { SettingsDialog } from './SettingsDialog'
 import { ToolsDialog } from './ToolsDialog'
 import { useZoomKeys } from './useZoomKeys'
 import { TopBar } from './TopBar'
@@ -162,18 +163,19 @@ export function App() {
   const systemDark = useMediaQuery('(prefers-color-scheme: dark)')
   const mode = choice ?? (systemDark ? 'dark' : 'light')
   const theme = useMemo(() => createAppTheme(mode), [mode])
-  const [dialog, setDialog] = useState<'tools' | 'roots' | null>(null)
+  const [dialog, setDialog] = useState<'tools' | 'roots' | 'settings' | null>(null)
   useZoomKeys()
 
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <TopBar onOpenTools={() => setDialog('tools')} onOpenRoots={() => setDialog('roots')} />
+      <TopBar onOpenTools={() => setDialog('tools')} onOpenRoots={() => setDialog('roots')} onOpenSettings={() => setDialog('settings')} />
       <Box component="main" sx={{ px: { xs: 2, md: 4 }, py: 4 }}>
         <Content onOpenRoots={() => setDialog('roots')} onOpenTools={() => setDialog('tools')} />
       </Box>
       <ToolsDialog open={dialog === 'tools'} onClose={() => setDialog(null)} />
       <RootsDialog open={dialog === 'roots'} onClose={() => setDialog(null)} />
+      <SettingsDialog open={dialog === 'settings'} onClose={() => setDialog(null)} />
       <RepoDetails onOpenTools={() => setDialog('tools')} />
       <OpConfirmDialog />
       <Notifications />
