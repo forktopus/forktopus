@@ -134,6 +134,11 @@ func TestSkipPaths(t *testing.T) {
 	if _, err := s.SetSkipPaths(nil); err != nil {
 		t.Fatal(err)
 	}
+	// Вернувшийся репозиторий доступен по ID, как только сканирование его нашло, — до конца скана.
+	s.scanFound(model.Repository{ID: "back", RootID: "x", Path: filepath.Join(root, "skipped", "repo")})
+	if _, err := s.GetRepo("back"); err != nil {
+		t.Fatalf("найденный во время скана: %v", err)
+	}
 	if res, err := s.ScanRoots(ctx); err != nil || len(res.Repositories) != 1 {
 		t.Fatalf("скан после возврата: %+v err=%v", res.Repositories, err)
 	}

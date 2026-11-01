@@ -244,12 +244,7 @@ func (s *AppService) ScanRoots(ctx context.Context) (model.ScanResult, error) {
 	s.mu.Lock()
 	roots := slices.Clone(s.cfg.Roots)
 	opts := s.scanOptionsLocked()
-	opts.OnRepository = func(r model.Repository) {
-		s.mu.Lock()
-		r = s.withRemoteLocked(r, s.prevLocked(r.ID))
-		s.mu.Unlock()
-		emit(EventScanRepository, r)
-	}
+	opts.OnRepository = func(r model.Repository) { emit(EventScanRepository, s.scanFound(r)) }
 	opts.Lock = s.locks.Lock
 	s.mu.Unlock()
 
@@ -276,6 +271,20 @@ func (s *AppService) ScanRoots(ctx context.Context) (model.ScanResult, error) {
 	s.saveCacheLocked()
 	go s.refreshRemoteAll(false)
 	return res, nil
+}
+
+// scanFound — репозиторий, найденный идущим сканированием. Новый сразу
+// попадает в снимок: фронтенд показывает его до конца сканирования и может
+// запросить ветки или статус (так возвращается исключённый каталог, D-071).
+func (s *AppService) scanFound(r model.Repository) model.Repository {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	prev := s.prevLocked(r.ID)
+	r = s.withRemoteLocked(r, prev)
+	if prev == nil {
+		s.snapshot.Repositories = append(s.snapshot.Repositories, r)
+	}
+	return r
 }
 
 // prevLocked — прежняя запись репозитория в списке или nil.
