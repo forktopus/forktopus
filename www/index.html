@@ -513,6 +513,45 @@
       .notes p {
         margin: 8px 0;
       }
+      .clis {
+        margin: 8px 0 16px;
+        padding: 0;
+        list-style: none;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--panel);
+      }
+      .clis li {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px 16px;
+        padding: 10px 16px;
+        border-top: 1px solid var(--line);
+      }
+      .clis li:first-child {
+        border-top: 0;
+      }
+      .clis .os {
+        display: flex;
+        gap: 6px;
+      }
+      .clis .os a {
+        padding: 2px 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .clis .os a:hover,
+      .clis .os a.current {
+        border-color: var(--primary);
+      }
+      .clis .os a.current {
+        background: var(--chip);
+      }
 
       footer {
         padding: 40px 0 56px;
@@ -807,9 +846,44 @@
             </div>
           </div>
           <div class="notes">
+            <p>Forktopus использует CLI, которые уже установлены у&nbsp;вас:</p>
+            <ul class="clis">
+              <li>
+                <span><code>git</code> — обязателен: всё о&nbsp;локальных репозиториях</span>
+                <span class="os">
+                  <a data-os="linux" href="https://git-scm.com/install/linux">Linux</a>
+                  <a data-os="windows" href="https://git-scm.com/install/windows">Windows</a>
+                  <a data-os="mac" href="https://git-scm.com/install/mac">macOS</a>
+                </span>
+              </li>
+              <li>
+                <span><code>gh</code> — PR и&nbsp;CI на&nbsp;GitHub</span>
+                <span class="os">
+                  <a data-os="linux" href="https://github.com/cli/cli/blob/trunk/docs/install_linux.md">Linux</a>
+                  <a data-os="windows" href="https://github.com/cli/cli/blob/trunk/docs/install_windows.md">Windows</a>
+                  <a data-os="mac" href="https://github.com/cli/cli/blob/trunk/docs/install_macos.md">macOS</a>
+                </span>
+              </li>
+              <li>
+                <span><code>glab</code> — MR и&nbsp;пайплайны на&nbsp;GitLab</span>
+                <span class="os">
+                  <a data-os="linux" href="https://gitlab.com/gitlab-org/cli/-/blob/main/docs/installation_options.md#linux">Linux</a>
+                  <a data-os="windows" href="https://gitlab.com/gitlab-org/cli/-/blob/main/docs/installation_options.md#windows">Windows</a>
+                  <a data-os="mac" href="https://gitlab.com/gitlab-org/cli/-/blob/main/docs/installation_options.md#macos">macOS</a>
+                </span>
+              </li>
+              <li>
+                <span><code>tea</code> — PR и&nbsp;CI на&nbsp;Gitea</span>
+                <span class="os">
+                  <a data-os="linux" href="https://dl.gitea.com/tea/">Linux</a>
+                  <a data-os="windows" href="https://dl.gitea.com/tea/">Windows</a>
+                  <a data-os="mac" href="https://gitea.com/gitea/tea">macOS</a>
+                </span>
+              </li>
+            </ul>
             <p>
-              Для PR/MR и&nbsp;CI установите и&nbsp;авторизуйте нужные CLI: <code>gh</code> для GitHub, <code>glab</code> для GitLab, <code>tea</code> для
-              Gitea. Без них Forktopus показывает всё, что знает локальный <code>git</code>.
+              <code>gh</code>, <code>glab</code> и&nbsp;<code>tea</code> нужны только для своих серверов; авторизуйтесь в&nbsp;них как обычно — что выполнить,
+              подскажет «Диагностика CLI». Без них Forktopus показывает всё, что знает локальный <code>git</code>.
             </p>
             <p>
               Проверено на&nbsp;Ubuntu 24.04; на&nbsp;Windows&nbsp;11 — локальная часть. Сборка для macOS на&nbsp;Mac пока не&nbsp;проверялась. Файлы не
@@ -877,6 +951,7 @@
 
       function render(current, version) {
         document.querySelectorAll('.platform').forEach((card) => card.classList.toggle('current', card.dataset.target === current))
+        document.querySelectorAll('.clis a').forEach((link) => link.classList.toggle('current', link.dataset.os === current))
         document.querySelectorAll('a.file').forEach((link) => {
           const asset = find(link.dataset.suffix)
           const small = link.querySelector('small')
