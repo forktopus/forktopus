@@ -39,8 +39,8 @@ for s in "${SIZES[@]}"; do
 done
 
 mkdir -p -- "$APPS"
-# Exec из шаблона указывает на /usr/local/bin — подменяем на собранный бинарник.
-sed -e "s|^Exec=.*|Exec=\"$BIN\"|" -e '/^# The Exec line/d' "$PROJECT_ROOT/build/linux/desktop" > "$APPS/forktopus.desktop"
+# В пакетах Exec=forktopus (бинарник в PATH) — здесь подменяем на собранный.
+sed -e "s|^Exec=.*|Exec=\"$BIN\"|" "$PROJECT_ROOT/build/linux/forktopus.desktop" > "$APPS/forktopus.desktop"
 
 refresh
 echo "Установлено в $DATA (меню: Forktopus)"

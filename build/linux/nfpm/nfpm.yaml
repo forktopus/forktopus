@@ -6,23 +6,28 @@
 name: "forktopus"
 arch: ${GOARCH}
 platform: "linux"
-version: "0.1.0"
-section: "default"
+version: "0.1.1"
+section: "devel"
 priority: "extra"
-maintainer: ${GIT_COMMITTER_NAME} <${GIT_COMMITTER_EMAIL}>
+maintainer: "yarkovaleksei <yarkov_aleksei@mail.ru>"
 description: "Обзор состояния множества Git-репозиториев"
 vendor: "Forktopus"
-homepage: "https://wails.io"
+homepage: "https://github.com/forktopus/forktopus"
 license: "MIT"
 release: "1"
 
 contents:
   - src: "./bin/forktopus"
-    dst: "/usr/local/bin/forktopus"
-  - src: "./build/appicon.png"
-    dst: "/usr/share/icons/hicolor/128x128/apps/forktopus.png"
+    dst: "/usr/bin/forktopus"
+    file_info:
+      mode: 0755
+  # 256×256 с прозрачным фоном (scripts/make-icon.sh); меньшие размеры GNOME масштабирует сам.
+  - src: "./frontend/public/forktopus-icon.png"
+    dst: "/usr/share/icons/hicolor/256x256/apps/forktopus.png"
   - src: "./build/linux/forktopus.desktop"
     dst: "/usr/share/applications/forktopus.desktop"
+    file_info:
+      mode: 0644
 
 # Default dependencies for the GTK4 + WebKitGTK 6.0 stack (Ubuntu 24.04+ / Debian 13+)
 depends:
@@ -46,9 +51,7 @@ overrides:
 # scripts section to ensure desktop database is updated after install
 scripts:
   postinstall: "./build/linux/nfpm/scripts/postinstall.sh"
-  # You can also add preremove, postremove if needed
-  # preremove: "./build/linux/nfpm/scripts/preremove.sh"
-  # postremove: "./build/linux/nfpm/scripts/postremove.sh"
+  postremove: "./build/linux/nfpm/scripts/postremove.sh"
 
 # If you build your app with -tags gtk3 (legacy WebKit2GTK 4.1 stack — supported through v3.0.x, removed in v3.1),
 # replace the depends/overrides above with these:

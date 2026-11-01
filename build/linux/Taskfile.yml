@@ -166,17 +166,11 @@ tasks:
       - wails3 tool package -name "{{.APP_NAME}}" -format archlinux -config ./build/linux/nfpm/nfpm.yaml -out {{.ROOT_DIR}}/bin
 
   generate:dotdesktop:
-    summary: Generates a `.desktop` file
-    dir: build
+    # build/linux/forktopus.desktop ведётся вручную: генератор Wails не пишет
+    # StartupWMClass, без него GTK4 не находит значок окна (D-052).
+    summary: Checks the hand-written `.desktop` file
     cmds:
-      - mkdir -p {{.ROOT_DIR}}/build/linux/appimage
-      - wails3 generate .desktop -name "{{.APP_NAME}}" -exec "{{.EXEC}}" -icon "{{.ICON}}" -outputfile "{{.ROOT_DIR}}/build/linux/{{.APP_NAME}}.desktop" -categories "{{.CATEGORIES}}"
-    vars:
-      APP_NAME: '{{.APP_NAME}}'
-      EXEC: '{{.APP_NAME}}'
-      ICON: '{{.APP_NAME}}'
-      CATEGORIES: 'Development;'
-      OUTPUTFILE: '{{.ROOT_DIR}}/build/linux/{{.APP_NAME}}.desktop'
+      - grep -q '^StartupWMClass={{.APP_NAME}}$' "{{.ROOT_DIR}}/build/linux/{{.APP_NAME}}.desktop"
 
   run:
     cmds:
