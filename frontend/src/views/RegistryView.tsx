@@ -1,7 +1,7 @@
 // Реестр (экран по умолчанию, макет 01-registry): источники, KPI, вкладки
 // статусов, таблица с Pull и меню действий; строка открывает панель деталей.
 
-import { keyframes } from '@emotion/react'
+import { keyframes } from '@mui/material/styles'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
