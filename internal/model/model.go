@@ -89,6 +89,24 @@ type WorktreeStatus struct {
 	Conflicts int `json:"conflicts"`
 	// Operation — незавершённая операция Git: merge, rebase, am, cherry-pick, revert; пусто, если нет.
 	Operation string `json:"operation,omitempty"`
+	// Files — изменённые файлы в порядке `git status`, не больше MaxChangedFiles;
+	// MoreFiles — сколько ещё не вошло. Счётчики выше считают все.
+	Files     []ChangedFile `json:"files,omitempty"`
+	MoreFiles int           `json:"moreFiles,omitempty"`
+}
+
+// MaxChangedFiles — сколько изменённых файлов репозитория хранится в модели и кэше.
+const MaxChangedFiles = 100
+
+// ChangedFile — изменённый файл рабочей копии.
+type ChangedFile struct {
+	// Path — путь от корня репозитория, через «/».
+	Path string `json:"path"`
+	// OrigPath — исходный путь при переименовании или копировании.
+	OrigPath string `json:"origPath,omitempty"`
+	// Code — два символа как в `git status --short`: индекс и рабочее дерево
+	// («M », " M", "R ", "??", "UU").
+	Code string `json:"code"`
 }
 
 // PRSummary — открытые PR/MR, где текущая ветка — источник.

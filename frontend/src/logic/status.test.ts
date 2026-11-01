@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Availability, ErrorCode } from '../data/model'
 import { repo, unavailable } from '../test/fixtures'
-import { changesDetail, changesLabel, ciLabel, hasChanges, integrationIssue, isBehind, prLabel, remoteCaption, remoteCount, remoteDetail, syncFreshness, syncLabel, syncState } from './status'
+import { changesDetail, changesLabel, ciLabel, fileLabel, hasChanges, integrationIssue, isBehind, prLabel, remoteCaption, remoteCount, remoteDetail, syncFreshness, syncLabel, syncState } from './status'
 
 describe('unavailable не отображается как 0', () => {
   it('PR/CI без данных — «нет данных», а не 0', () => {
@@ -141,5 +141,22 @@ describe('подпись без сервера', () => {
     local.remotes = [{ ...local.remotes![0], host: '', fetchUrl: '/srv/remotes/demo.git' }]
     expect(remoteCaption(local)).toBe('remote — локальный путь')
     expect(remoteCaption(repo())).toBe('')
+  })
+})
+
+describe('изменённые файлы', () => {
+  const label = (code: string) => fileLabel({ path: 'a', code })
+  it('подпись и цвет по коду XY', () => {
+    expect(label('??')).toEqual({ tone: 'warn', text: 'новый' })
+    expect(label('M ')).toEqual({ tone: 'info', text: 'изменён' })
+    expect(label(' M')).toEqual({ tone: 'warn', text: 'изменён' })
+    expect(label('MM')).toEqual({ tone: 'warn', text: 'изменён' })
+    expect(label('A ')).toEqual({ tone: 'info', text: 'добавлен' })
+    expect(label(' D')).toEqual({ tone: 'warn', text: 'удалён' })
+    expect(label('R ')).toEqual({ tone: 'info', text: 'переименован' })
+    expect(label('C ')).toEqual({ tone: 'info', text: 'скопирован' })
+  })
+  it('все коды unmerged — конфликт', () => {
+    for (const code of ['DD', 'AU', 'UD', 'UA', 'DU', 'AA', 'UU']) expect(label(code)).toEqual({ tone: 'bad', text: 'конфликт' })
   })
 })

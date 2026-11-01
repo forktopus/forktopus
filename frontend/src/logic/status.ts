@@ -1,7 +1,7 @@
 // Статусы репозитория для отображения. Правило: «нет данных» никогда не
 // превращается в 0 — число показывается только при Availability = ok.
 
-import { Availability, ErrorCode, type BranchStatus, type CISummary, type PRSummary, type Repository } from '../data/model'
+import { Availability, ErrorCode, type BranchStatus, type ChangedFile, type CISummary, type PRSummary, type Repository } from '../data/model'
 import { formatRelative, t, type MessageKey } from '../i18n'
 import type { Tone } from '../theme/theme'
 import { repoHost, selectedRemote } from './repo'
@@ -186,4 +186,21 @@ export function ciLabel(r: Repository): Label {
   if (r.ci.lastResult === 'failure') return { tone: 'bad', text: t('ci.failure') }
   if (r.ci.lastResult === 'success') return { tone: 'good', text: t('ci.success') }
   return { tone: 'muted', text: t('ci.none') }
+}
+
+/**
+ * Подпись изменённого файла по коду XY из `git status --short`. Цвет — как у
+ * счётчиков Проводника: только в индексе — info, есть правки вне индекса или
+ * новый файл — warn, конфликт — bad.
+ */
+export function fileLabel(f: ChangedFile): Label {
+  const [x, y] = f.code
+  if (f.code === '??') return { tone: 'warn', text: t('file.untracked') }
+  if (x === 'U' || y === 'U' || f.code === 'AA' || f.code === 'DD') return { tone: 'bad', text: t('file.conflict') }
+  const tone: Tone = y === ' ' ? 'info' : 'warn'
+  if (x === 'R') return { tone, text: t('file.renamed') }
+  if (x === 'C') return { tone, text: t('file.copied') }
+  if (x === 'A') return { tone, text: t('file.added') }
+  if (x === 'D' || y === 'D') return { tone, text: t('file.deleted') }
+  return { tone, text: t('file.modified') }
 }

@@ -86,27 +86,52 @@ func parseStatus(out []byte) Status {
 				abSet = true
 			}
 		case '1', '2':
-			// «1 XY ...»: X — индекс (staged), Y — рабочее дерево (unstaged); «.» — без изменений.
-			if len(line) > 3 {
-				if line[2] != '.' {
-					st.Worktree.Staged++
-				}
-				if line[3] != '.' {
-					st.Worktree.Unstaged++
-				}
-			}
+			// «1 XY sub mH mI mW hH hI path», у «2» перед путём ещё «Xscore»;
+			// X — индекс (staged), Y — рабочее дерево (unstaged); «.» — без изменений.
+			n := 9
 			if line[0] == '2' {
-				i++ // исходный путь переименования/копирования
+				n = 10
 			}
+			parts := strings.SplitN(line, " ", n)
+			if len(parts) < n || len(parts[1]) != 2 {
+				continue
+			}
+			xy := parts[1]
+			if xy[0] != '.' {
+				st.Worktree.Staged++
+			}
+			if xy[1] != '.' {
+				st.Worktree.Unstaged++
+			}
+			f := model.ChangedFile{Path: parts[n-1], Code: strings.ReplaceAll(xy, ".", " ")}
+			if line[0] == '2' && i+1 < len(fields) {
+				i++ // исходный путь переименования/копирования — следующая запись
+				f.OrigPath = string(fields[i])
+			}
+			addFile(&st.Worktree, f)
 		case 'u':
+			// «u XY sub m1 m2 m3 mW h1 h2 h3 path»
 			st.Worktree.Conflicts++
+			if parts := strings.SplitN(line, " ", 11); len(parts) == 11 {
+				addFile(&st.Worktree, model.ChangedFile{Path: parts[10], Code: parts[1]})
+			}
 		case '?':
 			st.Worktree.Untracked++
+			addFile(&st.Worktree, model.ChangedFile{Path: strings.TrimPrefix(line, "? "), Code: "??"})
 		}
 	}
 	// upstream есть, а ahead/behind нет — remote-tracking ветка пропала.
 	st.Branch.UpstreamGone = upstreamSet && !abSet
 	return st
+}
+
+// addFile добавляет файл в список, пока не набралось MaxChangedFiles.
+func addFile(w *model.WorktreeStatus, f model.ChangedFile) {
+	if len(w.Files) < model.MaxChangedFiles {
+		w.Files = append(w.Files, f)
+	} else {
+		w.MoreFiles++
+	}
 }
 
 // opMarkers — файлы и каталоги в git dir, по которым видна незавершённая операция.

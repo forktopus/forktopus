@@ -13,6 +13,7 @@ import {
   type OpRecord,
   type OpResult,
   Provider,
+  type ChangedFile,
   type CISummary,
   type PRSummary,
   type RemoteStatus,
@@ -104,6 +105,17 @@ function idOf(path: string): string {
   return 'm' + (h >>> 0).toString(16).padStart(8, '0')
 }
 
+/** Изменённые файлы под счётчики сценария; первый staged — переименование. */
+function mockFiles(s: Scenario): ChangedFile[] {
+  const files: ChangedFile[] = []
+  for (let i = 0; i < (s.conflicts ?? 0); i++) files.push({ path: `src/merge/part-${i + 1}.ts`, code: 'UU' })
+  for (let i = 0; i < (s.staged ?? 0); i++)
+    files.push(i === 0 ? { path: 'docs/guide.md', origPath: 'docs/README old.md', code: 'R ' } : { path: `src/api/handler-${i}.ts`, code: 'M ' })
+  for (let i = 0; i < (s.unstaged ?? 0); i++) files.push({ path: `src/components/Панель ${i + 1}.tsx`, code: ' M' })
+  for (let i = 0; i < (s.untracked ?? 0); i++) files.push({ path: `notes/todo-${i + 1}.md`, code: '??' })
+  return files
+}
+
 function buildRepository(s: Scenario, index: number): Repository {
   const r = mockRoots.find((m) => m.root.id === s.root)!
   const path = `${r.root.path}/${s.dir ?? `${s.ns}/${s.name}`}`
@@ -168,6 +180,7 @@ function buildRepository(s: Scenario, index: number): Repository {
       untracked: s.untracked ?? 0,
       conflicts: s.conflicts ?? 0,
       operation: s.operation,
+      files: mockFiles(s),
     },
     pr,
     ci,

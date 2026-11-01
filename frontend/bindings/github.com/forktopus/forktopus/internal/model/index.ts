@@ -13,6 +13,7 @@ export type {
     BranchInfo,
     BranchStatus,
     CISummary,
+    ChangedFile,
     Diagnostics,
     Error,
     LogEntry,

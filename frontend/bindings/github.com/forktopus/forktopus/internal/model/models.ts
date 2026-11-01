@@ -115,6 +115,27 @@ export interface CISummary {
 }
 
 /**
+ * ChangedFile — изменённый файл рабочей копии.
+ */
+export interface ChangedFile {
+    /**
+     * Path — путь от корня репозитория, через «/».
+     */
+    "path": string;
+
+    /**
+     * OrigPath — исходный путь при переименовании или копировании.
+     */
+    "origPath"?: string;
+
+    /**
+     * Code — два символа как в `git status --short`: индекс и рабочее дерево
+     * («M », " M", "R ", "??", "UU").
+     */
+    "code": string;
+}
+
+/**
  * Diagnostics — сведения для отчёта диагностики. Пути — с «~» вместо
  * домашнего каталога, тексты пропущены через маскировку секретов.
  */
@@ -544,4 +565,11 @@ export interface WorktreeStatus {
      * Operation — незавершённая операция Git: merge, rebase, am, cherry-pick, revert; пусто, если нет.
      */
     "operation"?: string;
+
+    /**
+     * Files — изменённые файлы в порядке `git status`, не больше MaxChangedFiles;
+     * MoreFiles — сколько ещё не вошло. Счётчики выше считают все.
+     */
+    "files"?: ChangedFile[] | null;
+    "moreFiles"?: number;
 }

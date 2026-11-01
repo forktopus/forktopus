@@ -5,6 +5,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -109,10 +110,56 @@ func TestParseStatus(t *testing.T) {
 			if got != tt.branch {
 				t.Errorf("ветка:\n получено  %+v\n ожидалось %+v", got, tt.branch)
 			}
-			if st.Worktree != tt.wt {
-				t.Errorf("изменения: получено %+v, ожидалось %+v", st.Worktree, tt.wt)
+			if counts(st.Worktree) != counts(tt.wt) {
+				t.Errorf("изменения: получено %+v, ожидалось %+v", counts(st.Worktree), counts(tt.wt))
 			}
 		})
+	}
+}
+
+// wtCounts — счётчики WorktreeStatus без списка файлов, чтобы сравнивать через ==.
+type wtCounts struct {
+	Staged, Unstaged, Untracked, Conflicts int
+	Operation                              string
+}
+
+func counts(w model.WorktreeStatus) wtCounts {
+	return wtCounts{w.Staged, w.Unstaged, w.Untracked, w.Conflicts, w.Operation}
+}
+
+func TestParseStatusFiles(t *testing.T) {
+	const sha = "1111111111111111111111111111111111111111"
+	out := z("# branch.oid "+sha, "# branch.head main",
+		"1 .M N... 100644 100644 100644 "+sha+" "+sha+" src/с пробелом и кириллицей.ts",
+		"1 MD N... 100644 100644 000000 "+sha+" "+sha+" both.txt",
+		"2 R. N... 100644 100644 100644 "+sha+" "+sha+" R100 docs/new name.md", "docs/old name.md",
+		"u UU N... 100644 100644 100644 100644 "+sha+" "+sha+" "+sha+" conflict.go",
+		"? новый файл.txt")
+	want := []model.ChangedFile{
+		{Path: "src/с пробелом и кириллицей.ts", Code: " M"},
+		{Path: "both.txt", Code: "MD"},
+		{Path: "docs/new name.md", OrigPath: "docs/old name.md", Code: "R "},
+		{Path: "conflict.go", Code: "UU"},
+		{Path: "новый файл.txt", Code: "??"},
+	}
+	st := parseStatus(out)
+	if !reflect.DeepEqual(st.Worktree.Files, want) || st.Worktree.MoreFiles != 0 {
+		t.Errorf("получено %+v (ещё %d)\nожидалось %+v", st.Worktree.Files, st.Worktree.MoreFiles, want)
+	}
+	if got := counts(st.Worktree); got != (wtCounts{Staged: 2, Unstaged: 2, Untracked: 1, Conflicts: 1}) {
+		t.Errorf("счётчики: %+v", got)
+	}
+}
+
+// В модели — не больше MaxChangedFiles файлов, остальные только считаются.
+func TestParseStatusFilesLimit(t *testing.T) {
+	records := []string{"# branch.head main"}
+	for i := range model.MaxChangedFiles + 5 {
+		records = append(records, "? f"+strconv.Itoa(i))
+	}
+	w := parseStatus(z(records...)).Worktree
+	if len(w.Files) != model.MaxChangedFiles || w.MoreFiles != 5 || w.Untracked != model.MaxChangedFiles+5 {
+		t.Errorf("файлов %d, ещё %d, untracked %d", len(w.Files), w.MoreFiles, w.Untracked)
 	}
 }
 
@@ -135,7 +182,7 @@ func intp(p *int) string {
 func TestReadStatusClean(t *testing.T) { // A06
 	repo := gittest.Clean(t)
 	st := readStatus(t, repo)
-	if st.Worktree != (model.WorktreeStatus{}) {
+	if counts(st.Worktree) != (wtCounts{}) || st.Worktree.Files != nil {
 		t.Errorf("чистый репозиторий: %+v", st.Worktree)
 	}
 	b := st.Branch
@@ -151,8 +198,12 @@ func TestReadStatusClean(t *testing.T) { // A06
 func TestReadStatusDirty(t *testing.T) { // A07
 	st := readStatus(t, gittest.Dirty(t))
 	want := model.WorktreeStatus{Staged: 1, Unstaged: 1, Untracked: 1}
-	if st.Worktree != want {
+	if counts(st.Worktree) != counts(want) {
 		t.Errorf("получено %+v, ожидалось %+v", st.Worktree, want)
+	}
+	files := []model.ChangedFile{{Path: "README.md", Code: " M"}, {Path: "staged.txt", Code: "A "}, {Path: "untracked.txt", Code: "??"}}
+	if !reflect.DeepEqual(st.Worktree.Files, files) {
+		t.Errorf("файлы: получено %+v, ожидалось %+v", st.Worktree.Files, files)
 	}
 }
 

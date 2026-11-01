@@ -15,12 +15,12 @@ import { useNow } from '../app/useNow'
 import { CIIndicator, PRIndicator } from '../components/indicators'
 import { CliStatus, GuardedButton, nestingName, providerName } from '../components/RepoDetails'
 import { ProviderIcon, RepoIcon, StatusText, caption } from '../components/status'
-import { Availability, Operation, type BranchInfo, type Repository } from '../data/model'
+import { Availability, Operation, type BranchInfo, type ChangedFile, type Repository } from '../data/model'
 import { formatRelative, t } from '../i18n'
 import { buildTree, healthTone, treeRepos, type RepoNode, type RootNode } from '../logic/explorer'
 import { opName, opResultLabel, pullBlock, switchBlock } from '../logic/ops'
 import { branchOf, repoHost, repoName, repoNamespace, repoProvider } from '../logic/repo'
-import { changeCount, ciLabel, hasStatus, integrationIssue, prLabel, remoteCaption, remoteCount, syncFreshness, syncLabel } from '../logic/status'
+import { changeCount, ciLabel, fileLabel, hasStatus, integrationIssue, prLabel, remoteCaption, remoteCount, syncFreshness, syncLabel } from '../logic/status'
 import { useApp } from '../store/context'
 import { useSearchedRepos } from '../store/selectors'
 import { toneColor } from '../theme/theme'
@@ -231,6 +231,43 @@ function Worktree({ repo }: { repo: Repository }) {
       {rows.length === 0 && !w.operation && (
         <Box sx={{ ...row, color: toneColor(theme, 'good') }}>{t('explorer.wt.clean')}</Box>
       )}
+      {(w.files?.length ?? 0) > 0 && <ChangedFiles files={w.files!} more={w.moreFiles ?? 0} />}
+    </Box>
+  )
+}
+
+/** Изменённые файлы (как `git status --short`): код, путь, подпись. Только просмотр. */
+function ChangedFiles({ files, more }: { files: ChangedFile[]; more: number }) {
+  const theme = useTheme()
+  return (
+    <Box sx={{ borderTop: `1px solid ${theme.app.line}` }}>
+      <Typography sx={{ ...caption, px: 1.5, pt: 1.25, pb: 0.5 }}>{t('explorer.wt.files')}</Typography>
+      <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0, maxHeight: 360, overflowY: 'auto' }}>
+        {files.map((f) => (
+          <Box
+            component="li"
+            key={f.path}
+            title={f.origPath ? `${f.origPath} → ${f.path}` : f.path}
+            sx={{ display: 'flex', alignItems: 'baseline', gap: 1.25, px: 1.5, py: 0.75, fontSize: 12, '& + &': { borderTop: `1px solid ${theme.app.line}` } }}
+          >
+            <Box component="code" sx={{ font: `11px ${monoFontFamily}`, whiteSpace: 'pre', color: 'text.secondary', flexShrink: 0 }}>
+              {f.code}
+            </Box>
+            <Box component="span" sx={{ font: `12px ${monoFontFamily}`, minWidth: 0, flex: 1, overflowWrap: 'anywhere' }}>
+              {f.origPath && (
+                <Box component="span" sx={{ color: 'text.secondary' }}>
+                  {f.origPath} →{' '}
+                </Box>
+              )}
+              {f.path}
+            </Box>
+            <Box sx={{ flexShrink: 0 }}>
+              <StatusText label={fileLabel(f)} />
+            </Box>
+          </Box>
+        ))}
+      </Box>
+      {more > 0 && <Typography sx={{ fontSize: 11, color: 'text.secondary', px: 1.5, py: 1 }}>{t('explorer.wt.moreFiles', { count: more })}</Typography>}
     </Box>
   )
 }
