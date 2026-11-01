@@ -1,5 +1,5 @@
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Tooltip, Typography, useTheme } from '@mui/material'
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Link, Tooltip, Typography, useTheme } from '@mui/material'
 import { useEffect, useState } from 'react'
 import type { Diagnostics } from '../data/model'
 import { formatRelative, formatTime, t } from '../i18n'
@@ -93,6 +93,7 @@ export function ToolsDialog({ open, onClose }: { open: boolean; onClose(): void 
   const checkTools = useApp((s) => s.checkTools)
   const loadDiagnostics = useApp((s) => s.loadDiagnostics)
   const copyText = useApp((s) => s.copyText)
+  const openURL = useApp((s) => s.openURL)
   const [busy, setBusy] = useState(false)
   const [diag, setDiag] = useState<Diagnostics | null>(null)
 
@@ -156,6 +157,11 @@ export function ToolsDialog({ open, onClose }: { open: boolean; onClose(): void 
                   <Typography variant="caption" sx={{ display: 'block', mt: 0.5 }}>
                     {hint.text}
                   </Typography>
+                )}
+                {hint?.url && (
+                  <Link component="button" variant="caption" onClick={() => openURL(hint.url!)} sx={{ display: 'block', mt: 0.5 }}>
+                    {t('tools.installLink', { name: tool.name })}
+                  </Link>
                 )}
                 {hint?.command && <Command text={hint.command} />}
               </Box>

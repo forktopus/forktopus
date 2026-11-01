@@ -17,14 +17,17 @@ export interface ToolHint {
   text: string
   /** команда для терминала; пусто — только текст */
   command?: string
+  /** страница установки — ссылка под текстом */
+  url?: string
 }
 
-const installURL: Record<string, string> = {
+/** Разделы установки: на каждой странице — способы для Linux, Windows и macOS. */
+export const installURL: Record<string, string> = {
   git: 'https://git-scm.com/downloads',
-  gh: 'https://cli.github.com',
-  glab: 'https://gitlab.com/gitlab-org/cli',
-  gt: 'https://gitea.com/gitea/cli',
-  tea: 'https://gitea.com/gitea/tea',
+  gh: 'https://github.com/cli/cli#installation',
+  glab: 'https://gitlab.com/gitlab-org/cli/-/blob/main/docs/installation_options.md',
+  gt: 'https://gitea.com/gitea/cli#installation',
+  tea: 'https://gitea.com/gitea/tea#installation',
 }
 
 function loginCommand(name: string, host: string): string | undefined {
@@ -46,7 +49,7 @@ export function toolHint(d: ToolDiagnostic): ToolHint | null {
   const host = d.host ?? ''
   switch (d.error?.code) {
     case ErrorCode.CodeCLIMissing:
-      return { text: t('tools.install', { name: d.name, url: installURL[d.name] ?? '' }) }
+      return { text: t('tools.install', { name: d.name }), url: installURL[d.name] }
     case ErrorCode.CodeAuthRequired:
       return host ? { text: t('tools.login', { host }), command: loginCommand(d.name, host) } : { text: t('tools.loginAny') }
     case ErrorCode.CodeNetworkError:

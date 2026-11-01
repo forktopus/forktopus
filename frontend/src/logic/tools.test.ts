@@ -9,7 +9,7 @@ describe('toolHint', () => {
 
   it('нет CLI — где взять; нет авторизации — команда входа для хоста', () => {
     const missing = toolHint({ name: 'git', availability: Availability.AvailabilityUnavailable, error: { code: ErrorCode.CodeCLIMissing, message: '' } })
-    expect(missing?.text).toMatch(/git-scm\.com/) // A28
+    expect(missing?.url).toMatch(/git-scm\.com/) // A28
     const auth = toolHint({
       name: 'glab',
       host: 'gitlab.com',
@@ -32,7 +32,7 @@ describe('toolHint', () => {
     })
     expect(gt?.command).toBe('gt auth login --host https://git.example.org:3000')
     const missingGt = toolHint({ name: 'gt', availability: Availability.AvailabilityUnavailable, error: { code: ErrorCode.CodeCLIMissing, message: '' } })
-    expect(missingGt?.text).toMatch(/gitea\.com\/gitea\/cli/) // D-074
+    expect(missingGt?.url).toMatch(/gitea\.com\/gitea\/cli/) // D-074
   })
 
   it('нет сети — про сеть, а не про авторизацию', () => {
