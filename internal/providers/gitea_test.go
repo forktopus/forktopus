@@ -56,7 +56,7 @@ func TestGiteaPullRequests(t *testing.T) { // A19, A21
 			t.Errorf("%s: %+v", c.name, got)
 		}
 		args := s.calls[0].Args
-		if !slices.Contains(args, "home") || !slices.Contains(args, "OWNER/forktopus-pilot") || s.calls[0].Dir != "/repo" || len(s.calls) != 1 {
+		if !slices.Contains(args, "home") || !slices.Contains(args, "OWNER/forktopus-pilot") || s.calls[0].Dir != "/repo" || len(s.calls) != 1+min(1, 1-c.open) {
 			t.Errorf("%s: команды %v", c.name, s.calls)
 		}
 	}

@@ -20,6 +20,7 @@ export type {
     OpExpect,
     OpRecord,
     OpResult,
+    PRRef,
     PRSummary,
     RemoteInfo,
     RemoteStatus,

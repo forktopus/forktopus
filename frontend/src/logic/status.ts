@@ -99,8 +99,12 @@ export function remoteDetail(s: PRSummary | CISummary, now: Date = new Date()): 
   if (s.availability !== Availability.AvailabilityOK) {
     if (s.error?.message) parts.push(s.error.message)
     if (s.lastSuccessAt) parts.push(t('remote.lastSuccess', { time: formatRelative(s.lastSuccessAt, now) }))
-  } else if (s.lastAttemptAt) {
-    parts.push(t('remote.checkedAt', { time: formatRelative(s.lastAttemptAt, now) }))
+  } else {
+    // Подпись показывает последний закрытый PR — напомнить, что открытых нет.
+    const last = 'last' in s ? s.last : undefined
+    if (last) parts.push(t('pr.none'))
+    if (last && !last.merged && last.closedAt) parts.push(t('pr.closedAt', { time: formatRelative(last.closedAt, now) }))
+    if (s.lastAttemptAt) parts.push(t('remote.checkedAt', { time: formatRelative(s.lastAttemptAt, now) }))
   }
   return parts.join(' · ')
 }
@@ -170,10 +174,17 @@ export function syncLabel(r: Repository): Label {
   }
 }
 
-export function prLabel(r: Repository): Label {
+/** Открытые PR/MR; если их нет — последний закрытый или влитый, когда он известен. */
+export function prLabel(r: Repository, now: Date = new Date()): Label {
   const open = remoteCount(r.pr, r.pr.open)
   if (open == null) return unknownLabel(r.pr)
-  if (open === 0) return { tone: 'muted', text: t('pr.none') }
+  if (open === 0) {
+    const last = r.pr.last
+    if (!last) return { tone: 'muted', text: t('pr.none') }
+    if (!last.merged) return { tone: 'muted', text: t('pr.closed', { number: last.number }) }
+    if (!last.closedAt) return { tone: 'muted', text: t('pr.merged', { number: last.number }) }
+    return { tone: 'muted', text: t('pr.mergedAt', { number: last.number, time: formatRelative(last.closedAt, now) }) }
+  }
   const draft = r.pr.draft ?? 0
   const text = t('pr.open', { count: open })
   return { tone: 'info', text: draft > 0 ? `${text} · ${t('pr.draft', { count: draft })}` : text }

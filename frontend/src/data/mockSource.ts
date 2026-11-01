@@ -66,6 +66,8 @@ interface Scenario {
   operation?: string
   prs?: number
   drafts?: number
+  /** Последний закрытый PR, когда открытых нет: номер, влит ли, сколько минут назад. */
+  lastPR?: { number: number; merged: boolean; minutes: number }
   ciActive?: number
   ciResult?: string
   ciAvailability?: Availability
@@ -77,7 +79,7 @@ interface Scenario {
 const scenarios: Scenario[] = [
   { root: 'r-github', ns: 'schemor', name: 'schemor', branch: 'feature/permissions', staged: 1, unstaged: 3, untracked: 1, ahead: 1, prs: 2, drafts: 1, ciActive: 1, ciResult: 'success' },
   { root: 'r-github', ns: 'schemor', name: 'ui-kit', dir: 'schemor/schemor/libs/ui-kit', nesting: Nesting.NestingSubmodule, detached: true, prs: 0, ciResult: 'success' },
-  { root: 'r-github', ns: 'schemor', name: 'schemor-docs', dir: 'schemor/schemor/docs-site', nesting: Nesting.NestingNested, branch: 'main', untracked: 1, prs: 0 },
+  { root: 'r-github', ns: 'schemor', name: 'schemor-docs', dir: 'schemor/schemor/docs-site', nesting: Nesting.NestingNested, branch: 'main', untracked: 1, prs: 0, lastPR: { number: 41, merged: true, minutes: 2 * 24 * 60 } },
   { root: 'r-github', ns: 'ai-development-harness', name: 'ai-development-harness-template', branch: 'main', behind: 3, prs: 1, ciResult: 'success' },
   { root: 'r-github', ns: 'ai-development-harness', name: 'ai-development-harness-client', branch: 'ui/activity-feed', ahead: 2, behind: 1, prs: 1, ciResult: 'failure' },
   { root: 'r-github', ns: 'ai-animation-tools', name: 'music-clip-tools', branch: 'main', ciResult: 'success' },
@@ -89,7 +91,7 @@ const scenarios: Scenario[] = [
   { root: 'r-gitea', ns: 'homelab', name: 'infrastructure', branch: 'main', behind: 1, prs: 1, ciActive: 2, ciResult: 'success' },
   { root: 'r-gitea', ns: 'homelab', name: 'services', branch: 'release/1.2', prs: 2, ciResult: 'failure' },
   { root: 'r-gitea', ns: 'homelab', name: 'media-server', branch: 'main', offline: true },
-  { root: 'r-gitea', ns: 'homelab', name: 'dotfiles', branch: 'main', prs: 0, ciAvailability: Availability.AvailabilityNotSupported },
+  { root: 'r-gitea', ns: 'homelab', name: 'dotfiles', branch: 'main', prs: 0, lastPR: { number: 7, merged: false, minutes: 5 * 60 }, ciAvailability: Availability.AvailabilityNotSupported },
   { root: 'r-other', ns: 'tools', name: 'shell-utils', branch: 'main', unstaged: 2 },
   { root: 'r-other', ns: 'tools', name: 'scratch', branch: 'main', unborn: true, noUpstream: true, untracked: 3 },
   { root: 'r-gitlab', ns: 'studio', name: 'promo-2025', branch: 'promo/autumn', upstreamGone: true },
@@ -135,6 +137,7 @@ function buildRepository(s: Scenario, index: number): Repository {
     error: sourceError,
     lastSuccessAt: prOk || s.offline ? lastSuccessAt : null,
     lastAttemptAt,
+    last: prOk && !s.prs && s.lastPR ? { number: s.lastPR.number, merged: s.lastPR.merged, url: `https://${r.host}/${s.ns}/${s.name}/pulls/${s.lastPR.number}`, closedAt: minutesAgo(s.lastPR.minutes) } : undefined,
   }
   const ci: CISummary = {
     availability: ciAvailability,

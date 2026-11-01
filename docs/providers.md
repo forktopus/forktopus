@@ -39,6 +39,15 @@ gh pr list -R OWNER/REPO --head BRANCH --state open --limit 30 \
 - `-R` принимает и `HOST/OWNER/REPO` (`github.com/OWNER/REPO`) — пригодится для GitHub Enterprise.
 - Запрос идёт в GraphQL, ~0,5 с.
 
+Последний закрытый или влитый PR (когда открытых нет, D-058):
+
+```sh
+gh pr list -R HOST/OWNER/REPO --head BRANCH --state closed --limit 20 \
+  --json number,state,url,closedAt,mergedAt,isCrossRepository,headRefName
+```
+
+- `--state closed` включает и влитые: у них `state: "MERGED"` и `mergedAt`; у закрытых без слияния `mergedAt: null`. Время — RFC 3339 в UTC.
+
 Пример (сокращён):
 
 ```json
@@ -108,6 +117,7 @@ glab mr list -R OWNER/REPO --source-branch BRANCH -F json
 - `state` — `opened` / `closed` / `merged` / `locked` (нижний регистр).
 - MR из форка: `source_project_id` ≠ `target_project_id` — по ним отличать свои MR (idea 04 §7).
 - Нужные поля: `iid`, `state`, `draft`, `source_branch`, `target_branch`, `source_project_id`, `target_project_id`, `sha`, `web_url`, `updated_at`. Ответ — полный объект REST API, список полей не выбирается.
+- Последний закрытый или влитый MR (D-058): тот же запрос с `--all --per-page 20`, из ответа берутся `state` `merged` (время `merged_at`) и `closed` (`closed_at`); у влитого `closed_at` — `null`. Время — с миллисекундами (`2026-10-31T14:02:20.028Z`).
 - `-R` принимает `OWNER/REPO`, `GROUP/SUBGROUP/REPO`, `HOST/OWNER/REPO`, URL `https://…` и `git@…:….git` — проверено на gitlab.com. Self-hosted с подпутём (`https://host/gitlab/group/repo`) не проверялся: проверить на 08.6 (возможно, понадобится `GITLAB_HOST`).
 
 ### Pipelines ветки
@@ -162,6 +172,13 @@ tea pulls list -l LOGIN -r OWNER/REPO --state open --limit 50 --page N \
 - **Черновик** — только префикс заголовка `WIP:` (так его ставит `tea pulls create --draft`; Gitea по умолчанию понимает `WIP:` и `[WIP]`). Отдельного поля нет.
 - `ci` — сводный статус коммитов head PR (`pending` / `success` / `failure` …).
 - PR из форка по выводу `tea` не отличить (`head` — только имя ветки).
+- Последний закрытый или влитый PR (D-058) — через REST, там PR из форка видно:
+
+  ```sh
+  tea api -l LOGIN -i '/repos/OWNER/REPO/pulls?state=closed&sort=recentupdate&limit=50'
+  ```
+
+  `state=closed` включает влитые (`merged: true`, `merged_at`); свои PR — `head.ref` == ветка и `head.repo.id` == `base.repo.id` (у PR из удалённого форка `head.repo` — `null`). Читается одна страница: PR ветки, закрытый раньше 50 последних обновлённых, не найдётся. Время — с часовым поясом сервера (`2026-10-31T17:07:36+03:00`).
 
 ### CI-запуски ветки
 

@@ -194,7 +194,50 @@ func (g Gitea) PullRequests(ctx context.Context, q Query) model.PRSummary {
 	case len(prs) > 1:
 		link = webURL(q.Target, "/pulls?state=open")
 	}
-	return prOK(len(prs), draft, link)
+	return withLast(prOK(len(prs), draft, link), func() *model.PRRef { return g.lastClosed(ctx, q) })
+}
+
+type teaBranch struct {
+	Ref  string `json:"ref"`
+	Repo *struct {
+		ID int64 `json:"id"`
+	} `json:"repo"`
+}
+
+type teaClosedPR struct {
+	Number   int       `json:"number"`
+	Merged   bool      `json:"merged"`
+	MergedAt string    `json:"merged_at"`
+	ClosedAt string    `json:"closed_at"`
+	HTMLURL  string    `json:"html_url"`
+	Head     teaBranch `json:"head"`
+	Base     teaBranch `json:"base"`
+}
+
+// lastClosed — последний закрытый или влитый PR ветки через REST: в отличие
+// от `tea pulls list`, там видно, из того ли репозитория PR. Читается одна
+// страница недавно обновлённых закрытых PR — более старые не найдутся.
+func (g Gitea) lastClosed(ctx context.Context, q Query) *model.PRRef {
+	out, e := g.api(ctx, q.Dir, q.Target, "/repos/"+q.Target.Project+"/pulls?state=closed&sort=recentupdate&limit="+strconv.Itoa(teaPageSize))
+	if e != nil {
+		return nil
+	}
+	var prs []teaClosedPR
+	if json.Unmarshal(out, &prs) != nil {
+		return nil
+	}
+	var refs []model.PRRef
+	for _, p := range prs {
+		if p.Head.Ref != q.Branch || p.Head.Repo == nil || p.Base.Repo == nil || p.Head.Repo.ID != p.Base.Repo.ID {
+			continue
+		}
+		at := p.ClosedAt
+		if p.Merged && p.MergedAt != "" {
+			at = p.MergedAt
+		}
+		refs = append(refs, model.PRRef{Number: p.Number, Merged: p.Merged, URL: p.HTMLURL, ClosedAt: parseTime(at)})
+	}
+	return latestPR(refs)
 }
 
 type teaRun struct {

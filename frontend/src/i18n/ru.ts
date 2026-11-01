@@ -197,6 +197,10 @@ export const ru = {
 
   'pr.open': { one: '{count} открыт', few: '{count} открыто', many: '{count} открыто' },
   'pr.none': 'нет открытых',
+  'pr.merged': '#{number} влит',
+  'pr.mergedAt': '#{number} влит {time}',
+  'pr.closed': '#{number} закрыт без слияния',
+  'pr.closedAt': 'закрыт {time}',
   'pr.draft': { one: '{count} черновик', few: '{count} черновика', many: '{count} черновиков' },
   'ci.active': '{count} выполняется',
   'ci.success': 'Успешно',

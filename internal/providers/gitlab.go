@@ -182,7 +182,44 @@ func (g GitLab) PullRequests(ctx context.Context, q Query) model.PRSummary {
 	case len(mrs) > 1:
 		link = webURL(q.Target, "/-/merge_requests?state=opened&source_branch="+url.QueryEscape(q.Branch))
 	}
-	return prOK(len(mrs), draft, link)
+	return withLast(prOK(len(mrs), draft, link), func() *model.PRRef { return g.lastClosed(ctx, q) })
+}
+
+type glClosedMR struct {
+	IID             int    `json:"iid"`
+	State           string `json:"state"`
+	SourceBranch    string `json:"source_branch"`
+	SourceProjectID int64  `json:"source_project_id"`
+	TargetProjectID int64  `json:"target_project_id"`
+	WebURL          string `json:"web_url"`
+	MergedAt        string `json:"merged_at"`
+	ClosedAt        string `json:"closed_at"`
+}
+
+// lastClosed — последний закрытый или влитый MR ветки. `--all` отдаёт и
+// открытые, и закрытые (отдельного флага «закрытые или влитые» у glab нет).
+func (g GitLab) lastClosed(ctx context.Context, q Query) *model.PRRef {
+	out, e := g.run(ctx, q.Dir, "mr", "list", "-R", glRepo(q.Target), "--source-branch", q.Branch, "--all", "--per-page", "20", "-F", "json")
+	if e != nil {
+		return nil
+	}
+	var mrs []glClosedMR
+	if json.Unmarshal(out, &mrs) != nil {
+		return nil
+	}
+	var refs []model.PRRef
+	for _, m := range mrs {
+		if m.SourceProjectID != m.TargetProjectID || m.SourceBranch != q.Branch {
+			continue
+		}
+		switch m.State {
+		case "merged":
+			refs = append(refs, model.PRRef{Number: m.IID, Merged: true, URL: m.WebURL, ClosedAt: parseTime(m.MergedAt)})
+		case "closed":
+			refs = append(refs, model.PRRef{Number: m.IID, URL: m.WebURL, ClosedAt: parseTime(m.ClosedAt)})
+		}
+	}
+	return latestPR(refs)
 }
 
 type glPipeline struct {

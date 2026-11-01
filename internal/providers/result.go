@@ -48,6 +48,37 @@ func ciOK(active int, last, url string) model.CISummary {
 	return model.CISummary{Availability: model.AvailabilityOK, Active: &active, LastResult: last, URL: url, LastSuccessAt: &at, LastAttemptAt: &at}
 }
 
+// latestPR — последний по времени закрытия из закрытых/влитых PR ветки;
+// без времени — в конце. nil — таких нет.
+func latestPR(refs []model.PRRef) *model.PRRef {
+	var best *model.PRRef
+	for i := range refs {
+		r := &refs[i]
+		if best == nil || r.ClosedAt != nil && (best.ClosedAt == nil || r.ClosedAt.After(*best.ClosedAt)) {
+			best = r
+		}
+	}
+	return best
+}
+
+// parseTime — время RFC 3339 из ответа CLI; пустое или неразобранное — nil.
+func parseTime(s string) *time.Time {
+	t, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		return nil
+	}
+	return &t
+}
+
+// withLast — сводка без открытых PR дополняется последним закрытым (best effort:
+// ошибка этого запроса сводку не портит).
+func withLast(sum model.PRSummary, last func() *model.PRRef) model.PRSummary {
+	if sum.Open != nil && *sum.Open == 0 {
+		sum.Last = last()
+	}
+	return sum
+}
+
 // noBranch — при detached HEAD PR/CI не запрашиваются (idea 04 §7).
 func noBranch() *model.Error {
 	return model.Errorf(model.CodeInvalidInput, "нет текущей ветки (detached HEAD)")

@@ -371,6 +371,20 @@ export enum Operation {
 };
 
 /**
+ * PRRef — закрытый или влитый PR/MR.
+ */
+export interface PRRef {
+    "number": number;
+    "merged": boolean;
+    "url"?: string;
+
+    /**
+     * ClosedAt — время слияния или закрытия.
+     */
+    "closedAt"?: string | null;
+}
+
+/**
  * PRSummary — открытые PR/MR, где текущая ветка — источник.
  */
 export interface PRSummary {
@@ -381,6 +395,11 @@ export interface PRSummary {
     "error"?: Error | null;
     "lastSuccessAt"?: string | null;
     "lastAttemptAt"?: string | null;
+
+    /**
+     * Last — последний закрытый или влитый PR/MR ветки; только когда открытых нет.
+     */
+    "last"?: PRRef | null;
 }
 
 /**

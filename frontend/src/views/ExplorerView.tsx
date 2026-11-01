@@ -410,7 +410,7 @@ function RepoMain({ repo }: { repo: Repository }) {
       <Section title={t('explorer.project')}>
         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 1.25 }}>
           <MiniCard name={t('explorer.changedFiles')} value={hasStatus(repo) ? changeCount(repo) : null} note={hasStatus(repo) ? '' : t('status.unknown')} />
-          <MiniCard name={t('column.pr')} value={pr} note={pr == null ? prLabel(repo).text : ''} />
+          <MiniCard name={t('column.pr')} value={pr} note={pr == null || repo.pr.last ? prLabel(repo, now).text : ''} />
           <MiniCard name={t('explorer.activeCI')} value={ci} note={ci == null ? ciLabel(repo).text : ''} />
         </Box>
       </Section>

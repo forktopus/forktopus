@@ -154,7 +154,44 @@ func (g GitHub) PullRequests(ctx context.Context, q Query) model.PRSummary {
 	case len(prs) > 1:
 		link = webURL(q.Target, "/pulls?q="+url.QueryEscape("is:pr is:open head:"+q.Branch))
 	}
-	return prOK(len(prs), draft, link)
+	return withLast(prOK(len(prs), draft, link), func() *model.PRRef { return g.lastClosed(ctx, q) })
+}
+
+type ghClosedPR struct {
+	Number            int    `json:"number"`
+	State             string `json:"state"`
+	URL               string `json:"url"`
+	ClosedAt          string `json:"closedAt"`
+	MergedAt          string `json:"mergedAt"`
+	IsCrossRepository bool   `json:"isCrossRepository"`
+	HeadRefName       string `json:"headRefName"`
+}
+
+// lastClosed — последний закрытый или влитый PR ветки; `--state closed`
+// включает и влитые.
+func (g GitHub) lastClosed(ctx context.Context, q Query) *model.PRRef {
+	out, e := g.run(ctx, q.Dir, "pr", "list", "-R", repoArg(q.Target), "--head", q.Branch, "--state", "closed",
+		"--limit", "20", "--json", "number,state,url,closedAt,mergedAt,isCrossRepository,headRefName")
+	if e != nil {
+		return nil
+	}
+	var prs []ghClosedPR
+	if json.Unmarshal(out, &prs) != nil {
+		return nil
+	}
+	var refs []model.PRRef
+	for _, p := range prs {
+		if p.IsCrossRepository || p.HeadRefName != q.Branch {
+			continue
+		}
+		merged := p.MergedAt != "" || p.State == "MERGED"
+		at := p.ClosedAt
+		if p.MergedAt != "" {
+			at = p.MergedAt
+		}
+		refs = append(refs, model.PRRef{Number: p.Number, Merged: merged, URL: p.URL, ClosedAt: parseTime(at)})
+	}
+	return latestPR(refs)
 }
 
 type ghRun struct {

@@ -1,0 +1,22 @@
+[
+ {
+  "number": 3,
+  "state": "closed",
+  "merged": false,
+  "merged_at": null,
+  "closed_at": "2026-10-31T17:07:36+03:00",
+  "html_url": "https://git.example.org/OWNER/forktopus-pilot/pulls/3",
+  "head": {
+   "ref": "pilot/closed-pr",
+   "repo": {
+    "id": 25
+   }
+  },
+  "base": {
+   "ref": "main",
+   "repo": {
+    "id": 25
+   }
+  }
+ }
+]

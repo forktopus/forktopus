@@ -118,6 +118,17 @@ type PRSummary struct {
 	Error         *Error       `json:"error,omitempty"`
 	LastSuccessAt *time.Time   `json:"lastSuccessAt,omitempty"`
 	LastAttemptAt *time.Time   `json:"lastAttemptAt,omitempty"`
+	// Last — последний закрытый или влитый PR/MR ветки; только когда открытых нет.
+	Last *PRRef `json:"last,omitempty"`
+}
+
+// PRRef — закрытый или влитый PR/MR.
+type PRRef struct {
+	Number int    `json:"number"`
+	Merged bool   `json:"merged"`
+	URL    string `json:"url,omitempty"`
+	// ClosedAt — время слияния или закрытия.
+	ClosedAt *time.Time `json:"closedAt,omitempty"`
 }
 
 // CISummary — CI-запуски на текущей ветке.

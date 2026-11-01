@@ -59,12 +59,14 @@ export function SyncIndicator({ repo, mode = 'tooltip' }: { repo: Repository; mo
 
 function RemoteLink({ summary }: { summary: PRSummary | CISummary }) {
   const openURL = useApp((s) => s.openURL)
-  if (summary.availability !== Availability.AvailabilityOK || !summary.url) return null
+  // Открытых PR нет — ссылка на последний закрытый.
+  const url = summary.url || ('last' in summary ? summary.last?.url : undefined)
+  if (summary.availability !== Availability.AvailabilityOK || !url) return null
   return (
     <Tooltip title={t('action.openOnServer')}>
       <IconButton size="small" aria-label={t('action.openOnServer')} onClick={(e) => {
           e.stopPropagation() // строка таблицы открывает детали
-          openURL(summary.url!)
+          openURL(url)
         }} sx={{ p: 0.25 }}>
         <OpenInNewIcon sx={{ fontSize: 14 }} />
       </IconButton>
@@ -75,7 +77,7 @@ function RemoteLink({ summary }: { summary: PRSummary | CISummary }) {
 /** Открытые PR/MR ветки: число только при успешном ответе CLI, иначе причина. */
 export function PRIndicator({ repo, mode = 'tooltip' }: { repo: Repository; mode?: DetailMode }) {
   const now = useNow()
-  return <Indicator label={prLabel(repo)} detail={remoteDetail(repo.pr, now)} mode={mode} action={<RemoteLink summary={repo.pr} />} />
+  return <Indicator label={prLabel(repo, now)} detail={remoteDetail(repo.pr, now)} mode={mode} action={<RemoteLink summary={repo.pr} />} />
 }
 
 /** CI-запуски ветки: активные, последний итог или причина отсутствия данных. */

@@ -1,0 +1,14 @@
+[
+ {
+  "iid": 3,
+  "state": "closed",
+  "draft": false,
+  "source_branch": "pilot/closed-pr",
+  "source_project_id": 88339103,
+  "target_project_id": 88339103,
+  "web_url": "https://gitlab.com/OWNER/forktopus-pilot/-/merge_requests/3",
+  "merged_at": null,
+  "closed_at": "2026-10-31T14:02:20.028Z",
+  "updated_at": "2026-10-31T14:02:20.321Z"
+ }
+]

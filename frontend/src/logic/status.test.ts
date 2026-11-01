@@ -30,6 +30,36 @@ describe('unavailable не отображается как 0', () => {
   })
 })
 
+describe('последний закрытый PR, когда открытых нет', () => {
+  const now = new Date('2026-11-01T12:00:00Z')
+  const checked = '2026-11-01T11:58:00Z'
+
+  it('влитый — номер и когда', () => {
+    const r = repo({ pr: { open: 0, lastAttemptAt: checked, last: { number: 5, merged: true, url: 'u5', closedAt: '2026-10-30T12:00:00Z' } } })
+    expect(prLabel(r, now)).toEqual({ tone: 'muted', text: '#5 влит позавчера' })
+    expect(remoteDetail(r.pr, now)).toBe('нет открытых · проверено 2 мин. назад')
+  })
+
+  it('влитый без времени', () => {
+    expect(prLabel(repo({ pr: { open: 0, last: { number: 5, merged: true } } }), now).text).toBe('#5 влит')
+  })
+
+  it('закрытый без слияния — время в пояснении', () => {
+    const r = repo({ pr: { open: 0, lastAttemptAt: checked, last: { number: 3, merged: false, closedAt: '2026-11-01T09:00:00Z' } } })
+    expect(prLabel(r, now).text).toBe('#3 закрыт без слияния')
+    expect(remoteDetail(r.pr, now)).toBe('нет открытых · закрыт 3 ч назад · проверено 2 мин. назад')
+  })
+
+  it('есть открытые — последний закрытый не показывается', () => {
+    expect(prLabel(repo({ pr: { open: 1, draft: 0, last: { number: 3, merged: false } } }), now).text).toBe('1 открыт')
+  })
+
+  it('при ошибке источника — причина, а не прошлый PR', () => {
+    const r = repo({ pr: { availability: Availability.AvailabilityError, open: null, last: { number: 3, merged: true } } })
+    expect(prLabel(r, now).text).toBe('ошибка источника')
+  })
+})
+
 describe('причина отсутствия данных PR/CI', () => {
   const err = (availability: Availability, code: ErrorCode) => ({ availability, open: null, active: null, error: { code, message: `${code}: подробности` } })
 
