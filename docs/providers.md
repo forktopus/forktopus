@@ -212,7 +212,16 @@ tea api -l LOGIN -i "/repos/OWNER/REPO/actions/runs?branch=BRANCH&limit=20"
 
 ## Gitea — `gt` (на смену `tea`)
 
-Репозиторий `gitea/tea` архивирован 2026-10-29; официальный CLI Gitea теперь `gt` (`gitea.com/gitea/cli`). Адаптер пока работает через `tea` (раздел выше); здесь — что `gt` отдаёт на те же вопросы.
+Репозиторий `gitea/tea` архивирован 2026-10-29; официальный CLI Gitea теперь `gt` (`gitea.com/gitea/cli`). Адаптер (D-074) работает через `gt`, если у него есть вход на сервер remote, иначе — через `tea` (раздел выше).
+
+Как адаптер использует `gt`:
+
+- логины — `gt auth status --json host,user,active` (пользователь → `--user`, `host` → `--host`);
+- каждый вызов — с `--host URL --user USER --no-input`;
+- PR, последний закрытый PR и CI — тот же REST, что у `tea api`, через `gt api repos/…` (ответы одинаковые, разбор общий): `gt pr list --head` отбирает PR на клиенте по первой странице (`--debug` показывает один запрос `pulls?limit=50&page=1&state=open`), а у `gt run list` лишний запрос `actions/workflows`;
+- диагностика — `gt --version` и `gt api user`.
+
+Проверено вживую (2026-11-01): на одном репозитории `gt` и `tea` дали одинаковые PR (черновик, ноль) и CI.
 
 Проверено: `gt` 0.2.0, Gitea 1.26.2, 2026-11-01, только чтение. Устроен по образцу `gh`: `--json ПОЛЯ`, `--jq`, `-R OWNER/REPO`, `--host URL`.
 
