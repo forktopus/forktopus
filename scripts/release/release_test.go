@@ -17,7 +17,7 @@ type fakeGH struct {
 	releases  []Release
 	assets    map[int64][]Asset
 	runs      []Run
-	artifacts map[string]map[string][]byte // артефакт → файл → байты
+	artifacts map[string]map[string][]byte // артефакт → путь «версия/файл» → байты, как их выкладывает CI
 	failOnce  string                       // загрузка этого файла обрывается, оставляя starter
 	corrupt   string                       // у этого файла GitHub «насчитает» другой digest
 	nextID    int64
@@ -49,18 +49,24 @@ func (g *fakeGH) DeleteAsset(id int64) error {
 
 func (g *fakeGH) Download(runID int64, dir string) error {
 	for name, files := range g.artifacts {
-		var sums strings.Builder
-		if err := os.MkdirAll(filepath.Join(dir, name), 0o755); err != nil {
-			return err
-		}
+		sums := map[string]*strings.Builder{} // каталог → его SHA256SUMS
 		for f, b := range files {
-			if err := os.WriteFile(filepath.Join(dir, name, f), b, 0o644); err != nil {
+			path := filepath.Join(dir, name, f)
+			if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 				return err
 			}
-			fmt.Fprintf(&sums, "%s  %s\n", digest(b), f)
+			if err := os.WriteFile(path, b, 0o644); err != nil {
+				return err
+			}
+			if sums[filepath.Dir(path)] == nil {
+				sums[filepath.Dir(path)] = &strings.Builder{}
+			}
+			fmt.Fprintf(sums[filepath.Dir(path)], "%s  %s\n", digest(b), filepath.Base(f))
 		}
-		if err := os.WriteFile(filepath.Join(dir, name, "SHA256SUMS"), []byte(sums.String()), 0o644); err != nil {
-			return err
+		for d, s := range sums {
+			if err := os.WriteFile(filepath.Join(d, "SHA256SUMS"), []byte(s.String()), 0o644); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -131,7 +137,7 @@ func (g *fakeGH) setArtifacts(version string) {
 	for name, files := range artifacts(version) {
 		g.artifacts[name] = map[string][]byte{}
 		for _, f := range files {
-			g.artifacts[name][f] = []byte("содержимое " + f)
+			g.artifacts[name][version+"/"+f] = []byte("содержимое " + f)
 		}
 	}
 }
@@ -285,9 +291,9 @@ func TestPrepareChecksArtifacts(t *testing.T) {
 	tool, gh, _ := newRepo(t)
 	gh.runs = []Run{{ID: 1, Name: "CI", Event: "push", Status: "completed", Conclusion: "success"}}
 	gh.setArtifacts("0.1.0")
-	delete(gh.artifacts["forktopus-macos"], "Forktopus-0.1.0-macos-universal.zip")
+	delete(gh.artifacts["forktopus-linux"], "0.1.0/Forktopus-0.1.0-x86_64.AppImage")
 	_, err := tool.Prepare("0.1.0", notes(t, "x\n"))
-	wantRefusal(t, err, "нет Forktopus-0.1.0-macos-universal.zip")
+	wantRefusal(t, err, "нет Forktopus-0.1.0-x86_64.AppImage")
 
 	_, err = tool.Prepare("0.2.0", notes(t, "x\n"))
 	wantRefusal(t, err, "release bump --version 0.2.0")

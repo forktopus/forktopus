@@ -564,14 +564,15 @@ func (t *Tool) Prepare(version, notesFile string) (map[string]any, error) {
 		return nil, fail("Не удалось скачать артефакты запуска %d: %v.", run.ID, err)
 	}
 	// У каждого артефакта свой SHA256SUMS от scripts/release.sh: файлы сверяются с ним.
+	// Файлы лежат в каталоге версии: upload-artifact сохраняет его из bin/release/<версия>/.
 	for name, files := range artifacts(version) {
-		listed, err := os.ReadFile(filepath.Join(download, name, "SHA256SUMS"))
+		listed, err := os.ReadFile(filepath.Join(download, name, version, "SHA256SUMS"))
 		if err != nil {
 			return nil, fail("В артефакте %s запуска %d нет SHA256SUMS.", name, run.ID)
 		}
 		sums := parseSums(string(listed))
 		for _, f := range files {
-			b, err := os.ReadFile(filepath.Join(download, name, f))
+			b, err := os.ReadFile(filepath.Join(download, name, version, f))
 			if err != nil {
 				return nil, fail("В артефакте %s запуска %d нет %s.", name, run.ID, f)
 			}
@@ -591,7 +592,7 @@ func (t *Tool) Prepare(version, notesFile string) (map[string]any, error) {
 	sums := map[string]string{}
 	for name, files := range artifacts(version) {
 		for _, f := range files {
-			if err := copyFile(filepath.Join(download, name, f), filepath.Join(dir, f)); err != nil {
+			if err := copyFile(filepath.Join(download, name, version, f), filepath.Join(dir, f)); err != nil {
 				return nil, err
 			}
 			b, _ := os.ReadFile(filepath.Join(dir, f))
