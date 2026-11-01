@@ -548,11 +548,11 @@ func (t *Tool) Prepare(version, notesFile string) (map[string]any, error) {
 	}
 	run, ci := ciRun(runs)
 	hint := map[string]string{
-		"absent":  " Отправьте коммит в main: git push origin main.",
+		"absent":  " Отправьте коммит в main: git push origin main. Если в коммите только документация, CI не запускался: gh workflow run CI --ref main.",
 		"pending": " Дождитесь окончания: gh run watch " + strconv.FormatInt(run.ID, 10) + ".",
 		"failure": " Отменённый или упавший запуск перезапускают: gh run rerun " + strconv.FormatInt(run.ID, 10) + ".",
 	}[ci]
-	if err := require(ci == "success", "CI коммита %s: %s. Файлы выпуска берутся из его успешного запуска на push.%s", short(s.revision), ci, hint); err != nil {
+	if err := require(ci == "success", "CI коммита %s: %s. Файлы выпуска берутся из его успешного запуска на push или вручную.%s", short(s.revision), ci, hint); err != nil {
 		return nil, err
 	}
 	download := filepath.Join(t.Dir, "bin", "release", "."+s.tag+".download")

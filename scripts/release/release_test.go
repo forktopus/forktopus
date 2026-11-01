@@ -337,4 +337,9 @@ func TestVersions(t *testing.T) {
 	if run.ID != 2 || state != "failure" {
 		t.Fatalf("ciRun: %v %s", run, state)
 	}
+	// После коммита только с документацией сборки запускают вручную.
+	run, state = ciRun([]Run{{ID: 2, Name: "CI", Event: "push", Status: "completed", Conclusion: "cancelled"}, {ID: 3, Name: "CI", Event: "workflow_dispatch", Status: "completed", Conclusion: "success"}})
+	if run.ID != 3 || state != "success" {
+		t.Fatalf("ciRun вручную: %v %s", run, state)
+	}
 }

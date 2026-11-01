@@ -1,12 +1,29 @@
-# Проверки на каждый push и PR; на push в main — ещё и сборки под три ОС
+# Проверки на push и PR; на push в main и ручном запуске — ещё и сборки под три ОС
 # (файлы прикладываются к запуску, релиз отдельно).
 
 name: CI
 
+# Раннер запускается только при изменении файлов, которые читают сборка и
+# проверки. `*.md` без папки — только корневые документы.
 on:
   push:
     branches: [main]
+    paths: &checked-paths
+      - '**'
+      - '!*.md'
+      - '!LICENSE'
+      - '!docs/**'
+      - '!assets/**'
+      - '!.claude/**'
+      - '!.agents/**'
+      - '!.vscode/**'
+      - '!compose.dev.yaml'
+      - '!docker/**'
   pull_request:
+    paths: *checked-paths
+  # Выпуск требует успешного CI своего коммита: после правок только
+  # документации сборки запускают вручную (gh workflow run CI).
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -81,7 +98,7 @@ jobs:
   build:
     name: Сборка ${{ matrix.name }}
     needs: checks
-    if: github.event_name == 'push'
+    if: github.event_name != 'pull_request'
     strategy:
       fail-fast: false
       matrix:

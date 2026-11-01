@@ -148,12 +148,12 @@ func (g ghClient) Latest() (Release, error) {
 	return r, nil
 }
 
-// ciRun — последний запуск workflow CI на push этого коммита (только он
-// собирает файлы выпуска) и его состояние: success, failure, pending или absent.
+// ciRun — последний запуск workflow CI этого коммита на push или вручную
+// (только они собирают файлы выпуска) и его состояние: success, failure, pending или absent.
 func ciRun(runs []Run) (Run, string) {
 	var push []Run
 	for _, r := range runs {
-		if r.Name == "CI" && r.Event == "push" {
+		if r.Name == "CI" && (r.Event == "push" || r.Event == "workflow_dispatch") {
 			push = append(push, r)
 		}
 	}
