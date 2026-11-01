@@ -183,6 +183,7 @@ docker compose --env-file .env.dev -f compose.dev.yaml build toolbox
 Замечания:
 
 - `wails3 dev` использует порт 9245, контейнерный `ui` — 5173, их можно запускать одновременно.
+- Рядом с установленным Forktopus `wails3 dev` запускается со своими настройками: `FORKTOPUS_DIR=/tmp/forktopus-dev WAILS_VITE_PORT=9246 wails3 task dev`. В `FORKTOPUS_DIR` лежат настройки, кэш и лог; с общим каталогом второй экземпляр только покажет окно первого.
 - `node_modules` общий для хоста и контейнера (оба linux/amd64). На macOS/Windows перед `wails3 dev` выполнить `npm ci` на хосте.
 - Фикстуры создаются **на хосте**: скрипт прописывает remote абсолютным путём, и созданные в контейнере (`/workspace/...`) репозитории на хосте будут со сломанным remote. Повторный запуск не перезаписывает существующую папку — сначала удалить `.local/git-fixtures/` вручную.
 - `frontend/bindings/` генерируется Wails (`wails3 generate bindings`, а также при `dev`/`build`) и хранится в репозитории, чтобы фронтенд собирался без wails3.

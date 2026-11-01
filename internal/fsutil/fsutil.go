@@ -37,3 +37,17 @@ func WriteFileAtomic(path string, data []byte, perm os.FileMode) error {
 	}
 	return os.Rename(tmp.Name(), path)
 }
+
+// AppDir — каталог приложения внутри base (os.UserConfigDir или
+// os.UserCacheDir). Переменная FORKTOPUS_DIR заменяет оба: для разработки —
+// второй экземпляр со своими настройками рядом с установленным.
+func AppDir(base func() (string, error)) (string, error) {
+	if dir := os.Getenv("FORKTOPUS_DIR"); dir != "" {
+		return dir, nil
+	}
+	dir, err := base()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "forktopus"), nil
+}

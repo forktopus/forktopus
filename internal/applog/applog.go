@@ -13,6 +13,8 @@ import (
 	"slices"
 	"sync"
 	"time"
+
+	"github.com/forktopus/forktopus/internal/fsutil"
 )
 
 const (
@@ -26,11 +28,11 @@ const (
 
 // DefaultPath — путь к логу в каталоге кэша ОС (рядом с кэшем репозиториев).
 func DefaultPath() (string, error) {
-	dir, err := os.UserCacheDir()
+	dir, err := fsutil.AppDir(os.UserCacheDir)
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, "forktopus", FileName), nil
+	return filepath.Join(dir, FileName), nil
 }
 
 // File — файл лога с ротацией по размеру. Права как у настроек: каталог 0700, файл 0600.

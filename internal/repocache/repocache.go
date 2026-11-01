@@ -25,11 +25,11 @@ type file struct {
 
 // DefaultPath — путь к файлу кэша в каталоге кэша ОС.
 func DefaultPath() (string, error) {
-	dir, err := os.UserCacheDir()
+	dir, err := fsutil.AppDir(os.UserCacheDir)
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, "forktopus", "repositories.json"), nil
+	return filepath.Join(dir, "repositories.json"), nil
 }
 
 // Load читает кэш. ok = false — кэша нет, он повреждён или другой версии.
