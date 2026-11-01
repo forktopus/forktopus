@@ -1,0 +1,130 @@
+# Проверки на каждый push и PR; на push в main — ещё и сборки под три ОС
+# (файлы прикладываются к запуску, релиз отдельно).
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GO_VERSION: '1.26.x'
+  NODE_VERSION: '24'
+  WAILS_VERSION: v3.0.0
+
+jobs:
+  checks:
+    name: Проверки
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      # GTK4 и WebKitGTK нужны CGO: пакет app тянет Wails.
+      - name: GTK4 и WebKitGTK
+        run: sudo apt-get update && sudo apt-get install -y build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: go.sum
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Зависимости фронтенда
+        working-directory: frontend
+        run: npm ci
+
+      - name: Форматирование
+        working-directory: frontend
+        run: npm run format:check
+
+      - name: Типы
+        working-directory: frontend
+        run: npm run typecheck
+
+      - name: Тесты фронтенда
+        working-directory: frontend
+        run: npm test
+
+      # main.go встраивает frontend/dist.
+      - name: Сборка фронтенда
+        working-directory: frontend
+        run: npm run build
+
+      - name: wails3
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
+
+      - name: Bindings совпадают с Go
+        run: |
+          wails3 generate bindings -clean=true -ts -i
+          git diff --exit-code -- frontend/bindings || { echo "::error::bindings устарели: wails3 generate bindings -clean=true -ts -i"; exit 1; }
+          test -z "$(git status --porcelain -- frontend/bindings)" || { git status --short -- frontend/bindings; echo "::error::в bindings лишние файлы"; exit 1; }
+
+      - name: go vet
+        run: go vet . ./internal/...
+
+      - name: Тесты Go
+        run: go test . ./internal/...
+
+  build:
+    name: Сборка ${{ matrix.name }}
+    needs: checks
+    if: github.event_name == 'push'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux
+            runner: ubuntu-24.04
+          - name: windows
+            runner: windows-latest
+          - name: macos
+            runner: macos-latest
+    runs-on: ${{ matrix.runner }}
+    env:
+      # linuxdeploy — сам AppImage; на раннере без FUSE распаковывается и запускается.
+      APPIMAGE_EXTRACT_AND_RUN: 1
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: GTK4 и WebKitGTK
+        if: matrix.name == 'linux'
+        run: sudo apt-get update && sudo apt-get install -y build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: go.sum
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: wails3
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
+
+      - name: Сборка
+        shell: bash
+        run: bash scripts/release.sh --os ${{ matrix.name }}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: forktopus-${{ matrix.name }}
+          path: bin/release/*/*
+          if-no-files-found: error
+          # Отсюда их берёт release prepare (D-072); выпуск обычно в пределах месяца от коммита.
+          retention-days: 30
