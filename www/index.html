@@ -829,10 +829,12 @@
               <h3>Windows</h3>
               <div class="what">Windows 10 и 11, x64 · .exe</div>
               <p>
-                Запустите файл, установка не нужна. Нужен WebView2 Runtime — в&nbsp;Windows&nbsp;11 он есть всегда. SmartScreen предупредит о&nbsp;неизвестном
+                Установщик ставит Forktopus для текущего пользователя без прав администратора, добавляет ярлыки и&nbsp;запись в&nbsp;«Приложениях», при
+                необходимости — WebView2 Runtime. Программу без установки можно запустить из&nbsp;любой папки. SmartScreen предупредит о&nbsp;неизвестном
                 издателе: «Подробнее» → «Выполнить в&nbsp;любом случае».
               </p>
-              <a class="file" data-suffix="-windows-amd64.exe" href="https://github.com/forktopus/forktopus/releases/latest">Программа .exe<small>x64</small></a>
+              <a class="file" data-suffix="-windows-amd64-setup.exe" href="https://github.com/forktopus/forktopus/releases/latest">Установщик .exe<small>x64</small></a>
+              <a class="file" data-suffix="-windows-amd64.exe" href="https://github.com/forktopus/forktopus/releases/latest">Без установки .exe<small>x64</small></a>
             </div>
             <div class="platform" data-target="mac">
               <span class="badge">Ваша система</span>
@@ -913,10 +915,17 @@
       const repo = 'forktopus/forktopus'
       const releases = `https://github.com/${repo}/releases/latest`
       // Суффиксы совпадают с вложениями релиза. @link ../scripts/release/release.go (artifacts)
+      // Главная кнопка берёт первый файл, который есть в релизе.
       const targets = {
-        linux: { name: 'Linux', suffix: '_amd64.deb', label: '.deb для Ubuntu и Debian' },
-        windows: { name: 'Windows', suffix: '-windows-amd64.exe', label: '.exe' },
-        mac: { name: 'macOS', suffix: '-macos-universal.zip', label: '.app в zip' }
+        linux: { name: 'Linux', files: [{ suffix: '_amd64.deb', label: '.deb для Ubuntu и Debian' }] },
+        windows: {
+          name: 'Windows',
+          files: [
+            { suffix: '-windows-amd64-setup.exe', label: 'установщик .exe' },
+            { suffix: '-windows-amd64.exe', label: '.exe без установки' }
+          ]
+        },
+        mac: { name: 'macOS', files: [{ suffix: '-macos-universal.zip', label: '.app в zip' }] }
       }
       const assets = {}
 
@@ -969,7 +978,8 @@
         const label = document.getElementById('main-label')
         const meta = document.getElementById('main-meta')
         const target = targets[current]
-        const asset = target && find(target.suffix)
+        const file = target && (target.files.find((f) => find(f.suffix)) ?? target.files[0])
+        const asset = file && find(file.suffix)
         if (current === 'mobile') document.body.classList.add('is-mobile')
         if (!target || (version && !asset)) {
           main.href = '#download'
@@ -980,7 +990,7 @@
         }
         main.href = asset ? asset.browser_download_url : releases
         label.textContent = `Скачать для ${target.name}`
-        if (asset) meta.textContent = `${version} · ${target.label} · ${formatSize(asset.size)}`
+        if (asset) meta.textContent = `${version} · ${file.label} · ${formatSize(asset.size)}`
       }
 
       async function init() {
