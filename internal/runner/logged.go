@@ -23,15 +23,15 @@ type logged struct {
 func (l logged) Run(ctx context.Context, c Command) (Result, error) {
 	start := time.Now()
 	res, err := l.r.Run(ctx, c)
-	attrs := []any{
-		slog.String("bin", c.Name),
-		slog.String("cmd", Subcommand(c.Args)),
-		slog.Int("exit", res.ExitCode),
-		slog.Int64("ms", time.Since(start).Milliseconds()),
+	attrs := []any{slog.String("bin", c.Name), slog.String("cmd", Subcommand(c.Args))}
+	ms := slog.Int64("ms", time.Since(start).Milliseconds())
+	if err != nil {
+		// Процесс не запустился или прерван — кода завершения нет.
+		l.log.Warn("команда не выполнена", append(attrs, ms, slog.String("error", Brief(err.Error())))...)
+		return res, err
 	}
+	attrs = append(attrs, slog.Int("exit", res.ExitCode), ms)
 	switch {
-	case err != nil:
-		l.log.Warn("команда не выполнена", append(attrs, slog.String("error", Brief(err.Error())))...)
 	case res.ExitCode != 0 && strings.TrimSpace(string(res.Stderr)) != "":
 		l.log.Warn("команда завершилась с ошибкой", append(attrs, slog.String("error", Brief(string(res.Stderr))))...)
 	default:

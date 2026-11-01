@@ -8,14 +8,17 @@ import { monoFontFamily } from '../theme/tokens'
 /** Подпись поля: мелкие заглавные. */
 export const caption = { fontSize: 10, fontWeight: 800, letterSpacing: '1.3px', textTransform: 'uppercase', color: 'text.secondary' } as const
 
-/** Точка и подпись в цвете тона статуса. wrap — для длинных сообщений (причина блокировки операции). */
-export function StatusText({ label, wrap = false }: { label: Label; wrap?: boolean }) {
+/**
+ * Точка и подпись в цвете тона статуса. wrap — для длинных сообщений (причина
+ * блокировки операции); 'words' — перенос только между словами (узкая таблица).
+ */
+export function StatusText({ label, wrap = false }: { label: Label; wrap?: boolean | 'words' }) {
   const theme = useTheme()
   const color = toneColor(theme, label.tone)
   return (
     <Box
       component="span"
-      sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, fontSize: 12, color, ...(wrap ? { minWidth: 0, overflowWrap: 'anywhere' } : { whiteSpace: 'nowrap' }) }}
+      sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, fontSize: 12, color, ...(wrap === true ? { minWidth: 0, overflowWrap: 'anywhere' } : wrap ? {} : { whiteSpace: 'nowrap' }) }}
     >
       <Box component="i" sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: color, flexShrink: 0 }} />
       {label.text}
@@ -63,9 +66,10 @@ export function BranchChip({ repo }: { repo: Repository }) {
   return (
     <Box
       component="span"
+      title={text}
       sx={{
         display: 'inline-block',
-        maxWidth: 220,
+        maxWidth: 180,
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',

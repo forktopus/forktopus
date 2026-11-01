@@ -15,7 +15,7 @@ import { StatusText } from './status'
 export type DetailMode = 'inline' | 'tooltip'
 
 function Indicator({ label, detail, mode, action }: { label: Label; detail: string; mode: DetailMode; action?: ReactNode }) {
-  const text = <StatusText label={label} wrap={mode === 'inline'} />
+  const text = <StatusText label={label} wrap={mode === 'inline' || 'words'} />
   if (mode === 'tooltip') {
     return (
       <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>

@@ -80,6 +80,9 @@ func TestLoggedWritesNoSecrets(t *testing.T) {
 	Logged(fakeRunner{err: model.Errorf(model.CodeTimeout, "git: превышено время ожидания")}, log).Run(ctx, Command{Name: "git", Args: []string{"fetch", "https://u:p@h/r"}})
 
 	out := buf.String()
+	if strings.Contains(out, "cmd=fetch exit=") {
+		t.Errorf("у незапущенной команды не должно быть exit:\n%s", out)
+	}
 	for _, secret := range []string{"user:tok", "glpat-secretvalue", "glpat-fromstdout", "glpat-abcdef", "private-project", "/srv/x", "GITLAB_TOKEN", "u:p@", "projects/", "more"} {
 		if strings.Contains(out, secret) {
 			t.Errorf("в логе %q:\n%s", secret, out)

@@ -157,7 +157,7 @@ const RegistryRow = memo(function RegistryRow({ repo: r, depth, nested, collapse
   const reveal = useCallback((el: HTMLTableRowElement | null) => el?.scrollIntoView({ block: 'center' }), [])
   return (
     <TableRow hover selected={selected} ref={selected ? reveal : undefined} onClick={() => openDetails(r.id)} sx={{ cursor: 'pointer' }}>
-      <TableCell sx={{ minWidth: 260 }}>
+      <TableCell sx={{ minWidth: 220 }}>
         <RepoCell repo={r} depth={depth} nested={nested} collapsed={collapsed} onToggle={() => onToggle(r.id)} />
       </TableCell>
       <TableCell>
@@ -239,7 +239,7 @@ export function RegistryView() {
       <StatusTabs />
 
       <Paper sx={{ borderRadius: '15px', overflowX: 'auto' }}>
-        <Table size="small" sx={{ minWidth: 1100, '& td, & th': { borderColor: theme.app.line, py: 1.5 } }}>
+        <Table size="small" sx={{ minWidth: 1100, '& td, & th': { borderColor: theme.app.line, py: 1.5, px: 1 }, '& td:first-of-type, & th:first-of-type': { pl: 2 }, '& td:last-of-type, & th:last-of-type': { pr: 2 } }}>
           <TableHead sx={{ bgcolor: theme.app.panelAlt }}>
             <TableRow>
               {columns.map((c) => (
