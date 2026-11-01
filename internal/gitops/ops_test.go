@@ -275,3 +275,40 @@ func TestGitErrorNamesTheCause(t *testing.T) {
 		t.Errorf("причина потерялась: %+v", e)
 	}
 }
+
+// Пути с пробелами и кириллицей и кириллическое имя ветки передаются Git
+// аргументами без shell (A29).
+func TestOpsInPathWithSpacesAndCyrillic(t *testing.T) {
+	ctx := context.Background()
+	base := filepath.Join(t.TempDir(), "Мои проекты $HOME; 'кавычки'")
+	bare := filepath.Join(base, "удалённый репо.git")
+	if err := os.MkdirAll(base, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	gittest.Git(t, base, "init", "-q", "--bare", "-b", "main", bare)
+	repo := gittest.Init(t, filepath.Join(base, "локальный репо"))
+	gittest.Git(t, repo, "remote", "add", "origin", bare)
+	gittest.Git(t, repo, "push", "-q", "-u", "origin", "main")
+	gittest.PushFromOtherClone(t, bare, "новый файл.txt", "x\n", "коммит")
+	remoteHead := gittest.Git(t, bare, "rev-parse", "main")
+
+	if err := Fetch(ctx, r, repo, "origin"); err != nil {
+		t.Fatalf("fetch: %v", err)
+	}
+	if err := Pull(ctx, r, repo); err != nil {
+		t.Fatalf("pull: %v", err)
+	}
+	if head := gittest.Git(t, repo, "rev-parse", "HEAD"); head != remoteHead {
+		t.Errorf("HEAD = %s, ожидалось %s", head, remoteHead)
+	}
+	if err := Switch(ctx, r, repo, "фича с пробелом"); model.CodeOf(err) != model.CodeInvalidInput {
+		t.Errorf("имя с пробелом: %v", err)
+	}
+	gittest.Git(t, repo, "branch", "фича")
+	if err := Switch(ctx, r, repo, "фича"); err != nil {
+		t.Fatalf("switch: %v", err)
+	}
+	if cur := gittest.Git(t, repo, "branch", "--show-current"); cur != "фича" {
+		t.Errorf("текущая ветка %q", cur)
+	}
+}

@@ -53,3 +53,22 @@ func TestScanIsolatesPanics(t *testing.T) {
 		t.Fatalf("Refresh: %+v", got)
 	}
 }
+
+// Без git в PATH репозитории находятся обходом ФС, у каждого — ошибка
+// CLI_MISSING, скан не падает (A28).
+func TestScanWithoutGit(t *testing.T) {
+	root := tempRoot(t)
+	gittest.Init(t, mkdir(t, root, "a"))
+	gittest.Init(t, mkdir(t, root, "b"))
+	t.Setenv("PATH", t.TempDir())
+
+	res := run(t, []model.Root{{ID: "r", Path: root}}, Options{})
+	if len(res.Repositories) != 2 {
+		t.Fatalf("найдено %d, ожидалось 2", len(res.Repositories))
+	}
+	for _, r := range res.Repositories {
+		if model.CodeOf(r.Error) != model.CodeCLIMissing || r.Branch != nil {
+			t.Errorf("%s: ошибка %v, ветка %+v", r.Path, r.Error, r.Branch)
+		}
+	}
+}
