@@ -1,0 +1,44 @@
+# Лендинг forktopus.ru из www публикуется на GitHub Pages как есть, без сборки.
+# Домен и HTTPS заданы в настройках Pages репозитория (при публикации через Actions файл CNAME не нужен).
+name: Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'www/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Публикации идут по очереди; начатую не прерываем, чтобы сайт не остался наполовину обновлённым.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Публикация лендинга
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      # Сайт весит меньше мегабайта, артефакт нужен только на время публикации.
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: www
+          retention-days: 1
+      - name: Опубликовать на GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

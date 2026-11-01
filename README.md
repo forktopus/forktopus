@@ -79,7 +79,7 @@ bash scripts/release.sh --os windows     # только .exe; --os можно п
 - на Linux — в Docker-образе `wails-cross` (Zig и macOS SDK внутри; один раз `wails3 task setup:docker`, образ ~4 ГБ на диске). SDK образ скачивает из стороннего репозитория, а не у Apple. `.app` получается без подписи — на Mac перед первым запуском: `xattr -cr forktopus.app && codesign --force --deep --sign - forktopus.app`;
 - на macOS — нативно (нужен Xcode), с ad-hoc подписью.
 
-CI (GitHub Actions) на push и PR проверяет формат, типы, тесты фронтенда и Go и актуальность bindings; на push в `main` тем же скриптом собирает файлы на Linux, Windows и macOS и прикладывает их к запуску. Коммиты только с документацией CI пропускает. Релиз публикуется из этих файлов: `go run ./scripts/release plan|prepare|publish` — порядок в [docs/release.md](docs/release.md).
+CI (GitHub Actions) на push и PR проверяет формат, типы, тесты фронтенда и Go и актуальность bindings; на push в `main` тем же скриптом собирает файлы на Linux, Windows и macOS и прикладывает их к запуску. Коммиты только с документацией CI пропускает. Сайт [forktopus.ru](https://forktopus.ru) — статическая страница из `www/`: её публикует на GitHub Pages workflow `pages.yml` при изменениях в `www/`; скриншоты сняты в демо-режиме. Релиз публикуется из этих файлов: `go run ./scripts/release plan|prepare|publish` — порядок в [docs/release.md](docs/release.md).
 
 Файлы приложения:
 

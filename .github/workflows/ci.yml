@@ -19,6 +19,9 @@ on:
       - '!.vscode/**'
       - '!compose.dev.yaml'
       - '!docker/**'
+      # Лендинг публикует отдельный workflow Pages.
+      - '!www/**'
+      - '!.github/workflows/pages.yml'
   pull_request:
     paths: *checked-paths
   # Выпуск требует успешного CI своего коммита: после правок только

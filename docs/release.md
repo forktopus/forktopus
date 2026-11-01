@@ -18,7 +18,7 @@
 | `forktopus-windows` | `forktopus-<v>-windows-amd64.exe` | `windows-latest` |
 | `forktopus-macos` | `Forktopus-<v>-macos-universal.zip` (`.app` с ad-hoc подписью) | `macos-latest` |
 
-CI не запускается, если коммит меняет только документацию и вспомогательные файлы: корневые `*.md`, `LICENSE`, `docs/`, `assets/`, `.claude/`, `.agents/`, `.vscode/`, `compose.dev.yaml` и `docker/`. Список — в `paths` workflow. Чтобы выпустить такой коммит, запустите CI вручную: `gh workflow run CI --ref main`.
+CI не запускается, если коммит меняет только документацию и вспомогательные файлы: корневые `*.md`, `LICENSE`, `docs/`, `assets/`, `.claude/`, `.agents/`, `.vscode/`, `compose.dev.yaml`, `docker/` и лендинг `www/` (его публикует workflow Pages). Список — в `paths` workflow. Чтобы выпустить такой коммит, запустите CI вручную: `gh workflow run CI --ref main`.
 
 В каждом артефакте есть свой `SHA256SUMS`. Артефакты хранятся 30 дней. Выпуск из более старого коммита требует перезапустить его CI: `gh run rerun <id>`.
 
