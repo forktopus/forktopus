@@ -1,18 +1,70 @@
 #!/usr/bin/env bash
-# Собирает файлы релиза: .deb и AppImage для Linux, .exe для Windows и
-# SHA256SUMS — в bin/release/<версия>/ с именами, как на странице Releases.
-#   bash scripts/release.sh 0.3.0   — сменить версию в build/ и собрать
-#   bash scripts/release.sh         — собрать текущую версию
+# Собирает файлы релиза с именами, как на странице Releases, и SHA256SUMS
+# в bin/release/<версия>/:
+#   linux   — forktopus_<v>_amd64.deb и Forktopus-<v>-x86_64.AppImage (только на Linux);
+#   windows — forktopus-<v>-windows-amd64.exe (на любой ОС: сборка без CGO);
+#   macos   — Forktopus-<v>-macos-universal.zip с .app (только на macOS; не проверялось).
+#
+#   bash scripts/release.sh [--version X.Y.Z] [--os linux|windows|macos ...]
+#
+#   --version  сменить версию во всех файлах build/ и собрать её; без флага —
+#              текущая из build/config.yml
+#   --os       что собирать: можно повторять или через запятую (--os linux,windows);
+#              без флага — linux и windows
+# Без флагов: текущая версия, Linux и Windows.
+#
 # Версия хранится в build/config.yml и ещё в десяти файлах build/ (манифесты,
 # plist, nfpm) — скрипт меняет её везде. Ничего не коммитит, не ставит тег и
-# не публикует: что сделать дальше — в конце вывода.
+# не публикует: что сделать дальше — в конце вывода. Файлы других ОС той же
+# версии в bin/release/<версия>/ остаются, SHA256SUMS считается по всем.
 # AppImage при первой сборке скачивает linuxdeploy (кэш в build/linux/appimage/build).
 set -euo pipefail
 
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
 
+usage() {
+  sed -n '8,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  exit "${1:-0}"
+}
+
+die() {
+  echo "$*" >&2
+  exit 1
+}
+
+new=""
+oses=()
+while (($#)); do
+  case "$1" in
+    --version) (($# >= 2)) || die "--version: нужна версия"; new="$2"; shift 2 ;;
+    --version=*) new="${1#*=}"; shift ;;
+    --os) (($# >= 2)) || die "--os: нужна ОС"; IFS=, read -ra list <<< "$2"; oses+=("${list[@]}"); shift 2 ;;
+    --os=*) IFS=, read -ra list <<< "${1#*=}"; oses+=("${list[@]}"); shift ;;
+    -h | --help) usage ;;
+    *) echo "Неизвестный аргумент: $1" >&2; usage 1 ;;
+  esac
+done
+((${#oses[@]})) || oses=(linux windows)
+
+want() {
+  local o
+  for o in "${oses[@]}"; do [[ "$o" == "$1" ]] && return 0; done
+  return 1
+}
+
+for o in "${oses[@]}"; do
+  case "$o" in
+    linux | windows | macos) ;;
+    *) die "--os: $o — допустимо linux, windows, macos" ;;
+  esac
+done
+host="$(uname -s)"
+want linux && [[ "$host" != Linux ]] && die "Linux-пакеты собираются только на Linux (GTK4 и WebKitGTK через CGO)"
+want macos && [[ "$host" != Darwin ]] && die "macOS собирается только на macOS (нужны Xcode и CGO)"
+
 # Файлы с версией. В MSIX она четырёхзначная (0.2.0.0), в Info.dev.plist —
-# с суффиксом -dev: замена с границей слова покрывает оба случая.
+# с суффиксом -dev: замена с границей слова покрывает оба случая. Замена —
+# perl, а не sed: у sed на macOS нет \b.
 FILES=(
   build/config.yml
   build/linux/nfpm/nfpm.yaml
@@ -28,35 +80,44 @@ FILES=(
 )
 
 old="$(sed -n 's/^  version: "\([0-9.]*\)".*/\1/p' build/config.yml)"
-[[ -n "$old" ]] || { echo "Не нашёл версию в build/config.yml" >&2; exit 1; }
-new="${1:-$old}"
-[[ "$new" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Версия — три числа через точку: 0.3.0" >&2; exit 1; }
+[[ -n "$old" ]] || die "Не нашёл версию в build/config.yml"
+new="${new:-$old}"
+[[ "$new" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "Версия — три числа через точку: 0.3.0"
 
 if [[ "$new" != "$old" ]]; then
-  pattern="\\b${old//./\\.}\\b"
   for f in "${FILES[@]}"; do
-    grep -q "$pattern" "$f" || { echo "В $f нет версии $old — список FILES устарел" >&2; exit 1; }
+    grep -qwF -- "$old" "$f" || die "В $f нет версии $old — список FILES устарел"
   done
-  sed -i "s/$pattern/$new/g" "${FILES[@]}"
+  OLD="$old" NEW="$new" perl -pi -e 's/\b\Q$ENV{OLD}\E\b/$ENV{NEW}/g' "${FILES[@]}"
   echo "Версия $old → $new"
 fi
 
-wails3 build
-wails3 task linux:generate:deb
-wails3 task linux:create:appimage
-wails3 build GOOS=windows
-
-# Проверка: пакет собран с нужной версией (nfpm добавляет ревизию: 0.3.0-1).
-deb_version="$(dpkg-deb -f bin/forktopus.deb Version)"
-[[ "${deb_version%-*}" == "$new" ]] || { echo "В .deb версия $deb_version, ожидалась $new" >&2; exit 1; }
-
 out="bin/release/$new"
-rm -rf -- "$out"
 mkdir -p -- "$out"
-cp bin/forktopus.deb "$out/forktopus_${new}_amd64.deb"
-cp bin/forktopus-x86_64.AppImage "$out/Forktopus-${new}-x86_64.AppImage"
-cp bin/forktopus.exe "$out/forktopus-${new}-windows-amd64.exe"
-(cd -- "$out" && sha256sum -- * > SHA256SUMS)
+
+if want linux; then
+  wails3 build
+  wails3 task linux:generate:deb
+  wails3 task linux:create:appimage
+  # Проверка: пакет собран с нужной версией (nfpm добавляет ревизию: 0.3.0-1).
+  deb_version="$(dpkg-deb -f bin/forktopus.deb Version)"
+  [[ "${deb_version%-*}" == "$new" ]] || die "В .deb версия $deb_version, ожидалась $new"
+  cp bin/forktopus.deb "$out/forktopus_${new}_amd64.deb"
+  cp bin/forktopus-x86_64.AppImage "$out/Forktopus-${new}-x86_64.AppImage"
+fi
+
+if want windows; then
+  wails3 build GOOS=windows
+  cp bin/forktopus.exe "$out/forktopus-${new}-windows-amd64.exe"
+fi
+
+if want macos; then
+  wails3 task darwin:package:universal
+  rm -f -- "$out/Forktopus-${new}-macos-universal.zip"
+  ditto -c -k --keepParent bin/forktopus.app "$out/Forktopus-${new}-macos-universal.zip"
+fi
+
+(cd -- "$out" && rm -f SHA256SUMS && shasum -a 256 -- * > SHA256SUMS)
 
 echo
 echo "Готово: $out"

@@ -63,12 +63,15 @@ bash scripts/install-desktop.sh --remove   # убрать
 
 Пакеты: `wails3 task linux:generate:deb` (упаковывает уже собранный `bin/forktopus`) и `wails3 task linux:create:appimage` (скачивает linuxdeploy) кладут `.deb` и `.AppImage` в `bin/`. Windows: `wails3 build GOOS=windows` собирает `bin/forktopus.exe` прямо на Linux (без CGO и Docker).
 
-Все файлы релиза разом — `.deb`, AppImage, `.exe` и `SHA256SUMS` в `bin/release/<версия>/`:
+Файлы релиза с `SHA256SUMS` — в `bin/release/<версия>/`:
 
 ```bash
-bash scripts/release.sh 0.3.0   # сменить версию во всех файлах build/ и собрать
-bash scripts/release.sh         # собрать текущую версию
+bash scripts/release.sh                                  # текущая версия: .deb, AppImage и .exe
+bash scripts/release.sh --version 0.3.0                  # сменить версию во всех файлах build/ и собрать
+bash scripts/release.sh --version 0.3.0 --os windows     # только .exe; --os можно повторять или через запятую
 ```
+
+`--os linux` собирается только на Linux, `--os macos` — только на macOS (`.app` в zip, не проверялось), `--os windows` — где угодно.
 
 Скрипт ничего не коммитит и не публикует — в конце печатает команды для коммита, тега и `gh release create`.
 
