@@ -279,21 +279,37 @@ export function RegistryView() {
   const gitFoot = (key: 'kpi.changesFoot' | 'kpi.behindFoot') => (metrics.noStatus > 0 ? t('kpi.noStatus', { count: metrics.noStatus }) : t(key))
 
   // Выбранная в другом режиме строка (переход из радара или проводника) — в центре видимой области.
-  // Сразу после монтирования таблица ещё не размечена и прокрутка ни на что не
-  // влияет — прокручиваем в следующем кадре, затем строка вспыхивает.
+  // Пока таблица не измерила строки, scrollToIndex промахивается (на длинном
+  // списке в WebKit — к началу), поэтому повторяем, пока строка не окажется
+  // под заголовком на экране; затем строка вспыхивает.
   const virtuoso = useRef<TableVirtuosoHandle>(null)
+  const tableRef = useRef<HTMLDivElement>(null)
   const revealed = useRef(false)
   const [flashId, setFlashId] = useState<string | null>(null)
   useEffect(() => {
     if (revealed.current || !selectedId) return
     const index = rows.findIndex((r) => r.repo.id === selectedId)
     if (index < 0) return
-    const frame = requestAnimationFrame(() => {
-      revealed.current = true
+    let tries = 0
+    let timer = 0
+    const visible = () => {
+      const row = tableRef.current?.querySelector(`tbody > tr[data-index="${index}"]`)
+      const head = tableRef.current?.querySelector('thead')
+      if (!row || !head) return false
+      const box = row.getBoundingClientRect()
+      return box.top >= head.getBoundingClientRect().bottom - 1 && box.bottom <= window.innerHeight + 1
+    }
+    const step = () => {
+      if (visible() || tries++ >= 20) {
+        revealed.current = true
+        setFlashId(selectedId)
+        return
+      }
       virtuoso.current?.scrollToIndex({ index, align: 'center' })
-      setFlashId(selectedId)
-    })
-    return () => cancelAnimationFrame(frame)
+      timer = window.setTimeout(step, 50)
+    }
+    timer = window.setTimeout(step, 0)
+    return () => clearTimeout(timer)
   }, [rows, selectedId])
 
   const context = useMemo<TableContext>(
@@ -340,7 +356,7 @@ export function RegistryView() {
       <FilterBar />
 
       {/* clip, а не hidden: hidden делает карточку контейнером прокрутки, и заголовок таблицы не прилипает. */}
-      <Paper sx={{ borderRadius: '15px', overflow: 'clip' }}>
+      <Paper ref={tableRef} sx={{ borderRadius: '15px', overflow: 'clip' }}>
         <TableVirtuoso
           ref={virtuoso}
           useWindowScroll
