@@ -47,6 +47,10 @@ export function createAppTheme(mode: ThemeMode): Theme {
         styleOverrides: { body: { backgroundColor: t.body } },
       },
       MuiPaper: {
+        // Без тени: размытую тень высокой карточки (таблица реестра) WebKitGTK
+        // перерисовывает на каждом кадре анимации диалога — ~0,35 с на кадр.
+        // Карточки и так с рамкой. У диалогов и меню elevation свой — тень остаётся.
+        defaultProps: { elevation: 0 },
         styleOverrides: { root: { backgroundImage: 'none', border: `1px solid ${t.line}` } },
       },
       MuiButton: {
