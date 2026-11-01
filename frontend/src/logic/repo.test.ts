@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Provider, type Repository } from '../data/model'
-import { branchOf, compareText, parentPath, tracked, remoteRef, repoHost, repoName, repoNamespace, repoProvider } from './repo'
+import { branchOf, compareText, parentPath, tracked, remoteRef, repoHost, repoName, repoNamespace, repoProvider, within } from './repo'
 
 const repo = (over: Partial<Repository>): Repository => ({ id: 'r', path: '/srv/repos/Мой проект', remotes: [], ...over }) as Repository
 
@@ -54,6 +54,10 @@ describe('repo', () => {
   })
 
   it('родительский каталог: Unix, Windows, корень', () => {
+    expect(within('/srv/repos/app', '/srv/repos')).toBe(true)
+    expect(within('/srv/repos', '/srv/repos/')).toBe(true)
+    expect(within('/srv/repos-old/app', '/srv/repos')).toBe(false)
+    expect(within('C:\\src\\app', 'C:\\src')).toBe(true)
     expect(parentPath('/srv/repos/locked/.harness')).toBe('/srv/repos/locked')
     expect(parentPath('/srv/repos/')).toBe('/srv')
     expect(parentPath('/srv')).toBe('/')

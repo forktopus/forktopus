@@ -52,6 +52,12 @@ export function tracked(repos: Repository[], hideLocal: boolean): Repository[] {
   return hideLocal ? repos.filter((r) => (r.remotes?.length ?? 0) > 0) : repos
 }
 
+/** path совпадает с dir или лежит внутри него (как within в Go); «/» и «\». */
+export function within(path: string, dir: string): boolean {
+  const d = dir.replace(/[/\\]+$/, '')
+  return path === d || path.startsWith(d + '/') || path.startsWith(d + '\\')
+}
+
 /** Родительский каталог: «/» и «\» (Windows); у корня ФС — он сам. */
 export function parentPath(path: string): string {
   const trimmed = path.replace(/[/\\]+$/, '')

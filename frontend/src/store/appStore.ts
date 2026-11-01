@@ -21,7 +21,7 @@ import { t } from '../i18n'
 import { registryFilters, sortKeys, type RegistryFilter, type SortKey } from '../logic/registry'
 import { opResultLabel } from '../logic/ops'
 import { traySummary } from '../logic/radar'
-import { remoteRef, repoName, tracked } from '../logic/repo'
+import { remoteRef, repoName, tracked, within } from '../logic/repo'
 import { clampZoom, minZoom } from '../logic/zoom'
 import type { Tone } from '../theme/theme'
 import type { ThemeMode } from '../theme/tokens'
@@ -124,7 +124,7 @@ export interface AppState {
   loadSkipDirs(): Promise<SkipList | null>
   /** сохраняет список пропусков и пересканирует; null — ошибка */
   saveSkipDirs(dirs: string[]): Promise<SkipList | null>
-  /** не сканировать каталог (окно проблемных каталогов): проблема пропадает сразу */
+  /** не сканировать каталог (проблемный или репозитория, D-071): проблемы и репозитории внутри пропадают сразу */
   skipPath(path: string): Promise<void>
   /** вернуть каталог в сканирование и пересканировать */
   unskipPath(path: string): Promise<void>
@@ -577,7 +577,18 @@ export function createAppStore(source: DataSource): AppStore {
         const next = [...get().skipPaths.filter((p) => p !== path), path].sort()
         try {
           const issues = await source.setSkipPaths(next)
-          set({ skipPaths: next, issues })
+          // Репозитории внутри исключённого каталога (D-071) пропадают сразу, как и в снимке ядра.
+          const { repos, selectedId, detailsId } = get()
+          const kept = Object.fromEntries(Object.entries(repos).filter(([, r]) => !within(r.path, path)))
+          const gone = (id: string | null) => id !== null && !kept[id]
+          set({
+            skipPaths: next,
+            issues,
+            repos: kept,
+            selectedId: gone(selectedId) ? null : selectedId,
+            detailsId: gone(detailsId) ? null : detailsId,
+          })
+          notify('good', t('notice.skipped'))
         } catch (err) {
           fail(err)
         }

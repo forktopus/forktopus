@@ -118,8 +118,15 @@ func TestSkipPaths(t *testing.T) {
 	}
 
 	gittest.Init(t, filepath.Join(root, "skipped", "repo"))
+	if res, err := s.ScanRoots(ctx); err != nil || len(res.Repositories) != 1 {
+		t.Fatalf("скан до пропуска: %+v err=%v", res.Repositories, err)
+	}
+	// Исключённый репозиторий (D-071) пропадает из снимка сразу, без скана.
 	if _, err := s.SetSkipPaths([]string{filepath.Join(root, "skipped")}); err != nil {
 		t.Fatal(err)
+	}
+	if snap := s.ListRepositories(); len(snap.Repositories) != 0 {
+		t.Fatalf("снимок после пропуска: %+v", snap.Repositories)
 	}
 	if res, err := s.ScanRoots(ctx); err != nil || len(res.Repositories) != 0 {
 		t.Fatalf("скан с пропуском: %+v err=%v", res.Repositories, err)

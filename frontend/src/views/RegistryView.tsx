@@ -57,6 +57,7 @@ function RowActions({ repo }: { repo: Repository }) {
   const requestOp = useApp((s) => s.requestOp)
   const openDetails = useApp((s) => s.openDetails)
   const copyText = useApp((s) => s.copyText)
+  const skipPath = useApp((s) => s.skipPath)
   const running = useApp((s) => s.running[repo.id])
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)
   const reason = pullBlock(repo)
@@ -104,6 +105,9 @@ function RowActions({ repo }: { repo: Repository }) {
         </MenuItem>
         <MenuItem onClick={pick(() => void copyText(repo.path))}>{t('action.copyPath')}</MenuItem>
         <MenuItem onClick={pick(() => openDetails(repo.id))}>{t('action.details')}</MenuItem>
+        <MenuItem onClick={pick(() => void skipPath(repo.path))} title={t('action.skipRepoHint')} sx={{ color: 'text.secondary' }}>
+          {t('action.skipRepo')}
+        </MenuItem>
       </Menu>
     </Box>
   )

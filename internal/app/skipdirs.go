@@ -80,8 +80,8 @@ func (s *AppService) GetSkipPaths() []string {
 }
 
 // SetSkipPaths сохраняет пути каталогов, в которые сканер не заходит (D-067),
-// и сразу убирает из списка проблем каталоги внутри них — предупреждение
-// пропадает без пересканирования. Вернувшийся путь проверится со следующего
+// и сразу убирает из снимка проблемы и репозитории внутри них (D-071) —
+// предупреждение и исключённый репозиторий пропадают без пересканирования. Вернувшийся путь проверится со следующего
 // сканирования. Возвращает оставшиеся проблемы сканирования.
 func (s *AppService) SetSkipPaths(paths []string) ([]model.ScanIssue, error) {
 	var clean []string
@@ -107,9 +107,11 @@ func (s *AppService) SetSkipPaths(paths []string) ([]model.ScanIssue, error) {
 		return nil, model.AsError(err)
 	}
 	s.cfg = next
-	s.snapshot.Issues = slices.DeleteFunc(slices.Clone(s.snapshot.Issues), func(i model.ScanIssue) bool {
-		return slices.ContainsFunc(clean, func(p string) bool { return within(i.Path, p) })
-	})
+	skipped := func(path string) bool {
+		return slices.ContainsFunc(clean, func(p string) bool { return within(path, p) })
+	}
+	s.snapshot.Issues = slices.DeleteFunc(slices.Clone(s.snapshot.Issues), func(i model.ScanIssue) bool { return skipped(i.Path) })
+	s.snapshot.Repositories = slices.DeleteFunc(slices.Clone(s.snapshot.Repositories), func(r model.Repository) bool { return skipped(r.Path) })
 	s.saveCacheLocked()
 	return slices.Clone(s.snapshot.Issues), nil
 }

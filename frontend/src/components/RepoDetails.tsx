@@ -32,7 +32,7 @@ import { availabilityTone, toolHint } from '../logic/tools'
 import { useApp } from '../store/context'
 import { monoFontFamily } from '../theme/tokens'
 import { CIIndicator, ChangesIndicator, PRIndicator, SyncIndicator } from './indicators'
-import { PathButtons } from './PathButtons'
+import { PathButtons, SkipRepoButton } from './PathButtons'
 import { BranchChip, RepoIcon, StatusText, caption } from './status'
 
 export const providerName: Record<Provider, MessageKey> = {
@@ -332,6 +332,7 @@ export function RepoDetails({ onOpenTools }: { onOpenTools(): void }) {
           </Box>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5, ml: -0.75 }}>
             <PathButtons path={repo.path} variant="text" />
+            <SkipRepoButton path={repo.path} variant="text" />
           </Box>
           {nesting && <Typography sx={{ fontSize: 13, color: 'text.secondary', mt: 0.5 }}>{t(nesting)}</Typography>}
           <AutoCheckSwitch repo={repo} />

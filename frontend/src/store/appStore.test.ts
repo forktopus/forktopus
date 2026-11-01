@@ -391,6 +391,29 @@ describe('store', () => {
     expect(s.roots.some((r) => r.id === root.id)).toBe(false)
     expect(Object.values(s.repos).some((r) => r.rootId === root.id)).toBe(false)
   })
+
+  it('исключённый каталог репозитория убирает его и вложенные сразу и после скана; возврат — обратно (D-071)', async () => {
+    const store = createAppStore(createMockSource({ delayMs: 0 }))
+    await store.getState().init()
+    const all = Object.values(store.getState().repos)
+    const parent = all.find((r) => all.some((c) => c.parentId === r.id))!
+    store.getState().select(parent.id)
+    store.getState().openDetails(parent.id)
+
+    await store.getState().skipPath(parent.path)
+    const inside = (ids: string[]) => ids.filter((id) => all.find((r) => r.id === id)!.path.startsWith(parent.path))
+    const s = store.getState()
+    expect(inside(Object.keys(s.repos))).toEqual([])
+    expect(s.selectedId).toBeNull()
+    expect(s.detailsId).toBeNull()
+    expect(s.notices.at(-1)?.tone).toBe('good')
+    await s.scan()
+    expect(inside(Object.keys(store.getState().repos))).toEqual([])
+
+    await store.getState().unskipPath(parent.path)
+    expect(store.getState().skipPaths).toEqual([])
+    await vi.waitFor(() => expect(store.getState().repos[parent.id]).toBeDefined())
+  })
 })
 
 describe('withRemote', () => {

@@ -25,7 +25,7 @@ import {
   type UI,
 } from './model'
 import type { DataSource, Snapshot } from './source'
-import { remoteRef } from '../logic/repo'
+import { remoteRef, within } from '../logic/repo'
 
 interface MockRoot {
   root: Root
@@ -390,7 +390,6 @@ const mockIssues: ScanIssue[] = [
 ]
 
 /** Как filepath.Rel в Go: путь совпадает с каталогом или лежит внутри него. */
-const within = (path: string, dir: string) => path === dir || path.startsWith(dir.endsWith('/') ? dir : dir + '/')
 
 const uiKey = 'forktopus.demo.ui'
 
@@ -449,6 +448,7 @@ export function createMockSource({ delayMs = 250, scenario = 'default' }: MockOp
   const defaultSkipDirs = ['node_modules', 'vendor', '.venv', 'venv', '__pycache__', 'dist', 'build', 'target', '.cache']
   let skipDirs: string[] = []
   let skipPaths: string[] = []
+  const skipped = (path: string) => skipPaths.some((p) => within(path, p))
   let issues = noRoots ? [] : mockIssues
   // Как будто кэш прошлого запуска: два часа назад, не подтверждён сканированием.
   let snapshot: Snapshot = { repositories: repos, issues, scannedAt: minutesAgo(120), stale: true }
@@ -577,24 +577,26 @@ export function createMockSource({ delayMs = 250, scenario = 'default' }: MockOp
       const relative = clean.find((p) => !p.startsWith('/'))
       if (relative) throw invalidInput(`нужен абсолютный путь: "${relative}"`)
       skipPaths = clean
-      issues = issues.filter((i) => !skipPaths.some((p) => within(i.path, p)))
-      snapshot = { ...snapshot, issues }
+      issues = issues.filter((i) => !skipped(i.path))
+      snapshot = { ...snapshot, issues, repositories: snapshot.repositories.filter((r) => !skipped(r.path)) }
       return reply([...issues])
     },
     pickFolder: () => reply(`/srv/repos/demo-folder-${++picked}`),
     listRepositories: () => reply(snapshot),
     async scanRoots() {
       repos = repos.filter((r) => known(r.rootId))
-      for (const repo of repos) {
+      // Исключённые каталоги (D-071) сканер обходит; сами данные демо не теряются — вернутся после «Вернуть в сканирование».
+      const shown = () => repos.filter((r) => !skipped(r.path))
+      for (const repo of shown()) {
         await sleep(delayMs / 5)
         // Как в Go: во время сканирования parentId ещё не известен.
         listeners.forEach((cb) => cb(structuredClone({ ...repo, parentId: undefined, updatedAt: new Date().toISOString() })))
       }
       const scannedAt = new Date().toISOString()
       repos = repos.map((r) => ({ ...r, updatedAt: scannedAt }))
-      issues = (noRoots ? [] : mockIssues).filter((i) => known(i.rootId) && !skipPaths.some((p) => within(i.path, p)))
-      snapshot = { repositories: repos, issues, scannedAt, stale: false }
-      return reply({ repositories: repos, issues, scannedAt })
+      issues = (noRoots ? [] : mockIssues).filter((i) => known(i.rootId) && !skipped(i.path))
+      snapshot = { repositories: shown(), issues, scannedAt, stale: false }
+      return reply({ repositories: shown(), issues, scannedAt })
     },
     async selectRemote(repoId, remote) {
       const repo = repos.find((r) => r.id === repoId)
