@@ -177,7 +177,7 @@ export function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <TopBar onOpenTools={() => setDialog('tools')} onOpenRoots={() => setDialog('roots')} />
-      <Box component="main" sx={{ maxWidth: 1550, mx: 'auto', px: 4, py: 4 }}>
+      <Box component="main" sx={{ px: { xs: 2, md: 4 }, py: 4 }}>
         <Content onOpenRoots={() => setDialog('roots')} onOpenTools={() => setDialog('tools')} />
       </Box>
       <ToolsDialog open={dialog === 'tools'} onClose={() => setDialog(null)} />

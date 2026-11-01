@@ -207,17 +207,19 @@ const tableComponents: TableComponents<Row, TableContext> = {
   ),
 }
 
-// Ширины фиксированы: при виртуализации автоширина колонок менялась бы от
-// набора строк в видимой области. Остаток ширины — у колонки репозитория.
-const columns: { key: SortKey | null; label: MessageKey; width?: number }[] = [
+// Ширины заданы заранее: при виртуализации автоширина колонок менялась бы от
+// набора строк в видимой области. Статусы — доля ширины таблицы, чтобы на
+// широком окне росли вместе с ней; действия — фиксированно; остаток — у
+// колонки репозитория.
+const columns: { key: SortKey | null; label: MessageKey; width?: string | number }[] = [
   { key: 'name', label: 'column.repo' },
-  { key: 'branch', label: 'column.localBranch', width: 160 },
-  { key: 'changes', label: 'column.worktree', width: 130 },
-  { key: 'sync', label: 'column.syncFull', width: 145 },
-  { key: 'pr', label: 'column.pr', width: 145 },
-  { key: 'ci', label: 'column.ciFull', width: 135 },
-  { key: 'host', label: 'column.server', width: 120 },
-  { key: null, label: 'column.actions', width: 115 },
+  { key: 'branch', label: 'column.localBranch', width: '14%' },
+  { key: 'changes', label: 'column.worktree', width: '10%' },
+  { key: 'sync', label: 'column.syncFull', width: '12%' },
+  { key: 'pr', label: 'column.pr', width: '11%' },
+  { key: 'ci', label: 'column.ciFull', width: '11%' },
+  { key: 'host', label: 'column.server', width: '10%' },
+  { key: null, label: 'column.actions', width: 125 },
 ]
 
 export function RegistryView() {
@@ -300,7 +302,7 @@ export function RegistryView() {
                 <TableCell
                   key={c.label}
                   align={c.key ? 'left' : 'right'}
-                  sx={{ width: c.width, fontSize: 12, fontWeight: 800, letterSpacing: '1.1px', textTransform: 'uppercase', color: 'text.secondary', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                  sx={{ width: c.width, fontSize: 12, fontWeight: 800, letterSpacing: '0.6px', textTransform: 'uppercase', color: 'text.secondary', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', '& .MuiTableSortLabel-root:not(.Mui-active) .MuiTableSortLabel-icon': { display: 'none' } }}
                 >
                   {c.key ? (
                     <TableSortLabel active={filters.sort === c.key} direction={filters.asc ? 'asc' : 'desc'} onClick={() => sortBy(c.key!)}>

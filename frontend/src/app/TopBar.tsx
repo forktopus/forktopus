@@ -35,6 +35,8 @@ export function TopBar({ onOpenTools, onOpenRoots }: Props) {
   const searchRef = useRef<HTMLInputElement>(null)
   // Окно не уже 1000 px (MinWidth в main.go); до 1200 px панель компактная.
   const compact = useMediaQuery(theme.breakpoints.down('lg'))
+  // Совсем узко (маленькое окно или крупный масштаб) — без названия и номеров вкладок, иначе шапка не помещается.
+  const narrow = useMediaQuery(theme.breakpoints.down('md'))
 
   // «/» вне полей ввода — фокус в поиск, как в макете.
   useEffect(() => {
@@ -79,7 +81,7 @@ export function TopBar({ onOpenTools, onOpenRoots }: Props) {
           alt={t('app.mascotAlt')}
           sx={{ width: 34, height: 34, filter: 'drop-shadow(0 4px 10px #685ee860)' }}
         />
-        <Box>
+        <Box sx={{ display: narrow ? 'none' : undefined }}>
           <Typography component="strong" sx={{ display: 'block', fontSize: 16, fontWeight: 760, letterSpacing: '-0.5px' }}>
             {t('app.name')}
           </Typography>
@@ -132,7 +134,7 @@ export function TopBar({ onOpenTools, onOpenRoots }: Props) {
                 '&.Mui-focusVisible': { outline: `2px solid ${app.accent}` },
               }}
             >
-              <Box component="span" sx={{ fontSize: 12, opacity: 0.6, mr: 1 }}>
+              <Box component="span" sx={{ display: narrow ? 'none' : undefined, fontSize: 12, opacity: 0.6, mr: 1 }}>
                 {String(i + 1).padStart(2, '0')}
               </Box>
               {t(modeLabel[m])}
@@ -147,7 +149,7 @@ export function TopBar({ onOpenTools, onOpenRoots }: Props) {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder={t('search.placeholder')}
-        sx={{ flex: 1, minWidth: 150, maxWidth: 360 }}
+        sx={{ flex: 1, minWidth: 120, maxWidth: 560 }}
         slotProps={{
           htmlInput: { 'aria-label': t('search.label') },
           input: {

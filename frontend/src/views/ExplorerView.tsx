@@ -403,26 +403,29 @@ function RepoMain({ repo }: { repo: Repository }) {
         </Alert>
       )}
 
-      <Section title={t('explorer.currentBranch')}>
-        <CurrentBranch repo={repo} />
-      </Section>
+      {/* На очень широком окне разделы — в две колонки, иначе строки тянутся на 2000+ px. */}
+      <Box sx={{ display: 'grid', columnGap: 4, alignItems: 'start', '@media (min-width: 2200px)': { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' } }}>
+        <Section title={t('explorer.currentBranch')}>
+          <CurrentBranch repo={repo} />
+        </Section>
 
-      <Section title={t('explorer.project')}>
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 1.25 }}>
-          <MiniCard name={t('explorer.changedFiles')} value={hasStatus(repo) ? changeCount(repo) : null} note={hasStatus(repo) ? '' : t('status.unknown')} />
-          <MiniCard name={t('column.pr')} value={pr} note={pr == null || repo.pr.last ? prLabel(repo, now).text : ''} />
-          <MiniCard name={t('explorer.activeCI')} value={ci} note={ci == null ? ciLabel(repo).text : ''} />
-        </Box>
-      </Section>
+        <Section title={t('explorer.project')}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 1.25 }}>
+            <MiniCard name={t('explorer.changedFiles')} value={hasStatus(repo) ? changeCount(repo) : null} note={hasStatus(repo) ? '' : t('status.unknown')} />
+            <MiniCard name={t('column.pr')} value={pr} note={pr == null || repo.pr.last ? prLabel(repo, now).text : ''} />
+            <MiniCard name={t('explorer.activeCI')} value={ci} note={ci == null ? ciLabel(repo).text : ''} />
+          </Box>
+        </Section>
 
-      <Section title={`${t('explorer.worktree')}${repo.worktree ? ` · ${t(changeCount(repo) + repo.worktree.conflicts > 0 ? 'explorer.wt.dirty' : 'explorer.wt.cleanShort')}` : ''}`}>
-        <Worktree repo={repo} />
-        <Typography sx={{ fontSize: 12, color: 'text.secondary', mt: 0.75 }}>{t('explorer.statusRead', { time: formatRelative(repo.updatedAt, now) })}</Typography>
-      </Section>
+        <Section title={`${t('explorer.worktree')}${repo.worktree ? ` · ${t(changeCount(repo) + repo.worktree.conflicts > 0 ? 'explorer.wt.dirty' : 'explorer.wt.cleanShort')}` : ''}`}>
+          <Worktree repo={repo} />
+          <Typography sx={{ fontSize: 12, color: 'text.secondary', mt: 0.75 }}>{t('explorer.statusRead', { time: formatRelative(repo.updatedAt, now) })}</Typography>
+        </Section>
 
-      <Section title={t('explorer.branches')}>
-        <Branches repo={repo} busy={busy} />
-      </Section>
+        <Section title={t('explorer.branches')}>
+          <Branches repo={repo} busy={busy} />
+        </Section>
+      </Box>
     </Box>
   )
 }
@@ -498,7 +501,7 @@ export function ExplorerView({ onOpenTools }: { onOpenTools(): void }) {
     <Paper
       sx={{
         display: 'grid',
-        gridTemplateColumns: { xs: '1fr', md: '260px minmax(0, 1fr)', lg: '270px minmax(0, 1fr) 290px' },
+        gridTemplateColumns: { xs: '1fr', md: '280px minmax(0, 1fr)', lg: '300px minmax(0, 1fr) 320px', xl: '360px minmax(0, 1fr) 400px' },
         minHeight: 620,
         borderRadius: '15px',
         overflow: 'hidden',
