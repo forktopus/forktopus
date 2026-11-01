@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Provider, type Repository } from '../data/model'
-import { branchOf, compareText, remoteRef, repoHost, repoName, repoNamespace, repoProvider } from './repo'
+import { branchOf, compareText, parentPath, remoteRef, repoHost, repoName, repoNamespace, repoProvider } from './repo'
 
 const repo = (over: Partial<Repository>): Repository => ({ id: 'r', path: '/srv/repos/Мой проект', remotes: [], ...over }) as Repository
 
@@ -51,5 +51,14 @@ describe('repo', () => {
 
   it('сортировка по-русски: ё рядом с е, регистр не разносит', () => {
     expect(['ж', 'ёж', 'Еда', 'а', 'Б'].sort(compareText)).toEqual(['а', 'Б', 'Еда', 'ёж', 'ж'])
+  })
+
+  it('родительский каталог: Unix, Windows, корень', () => {
+    expect(parentPath('/srv/repos/locked/.harness')).toBe('/srv/repos/locked')
+    expect(parentPath('/srv/repos/')).toBe('/srv')
+    expect(parentPath('/srv')).toBe('/')
+    expect(parentPath('/')).toBe('/')
+    expect(parentPath('C:\\Users\\me\\repo')).toBe('C:\\Users\\me')
+    expect(parentPath('C:\\Users')).toBe('C:\\')
   })
 })

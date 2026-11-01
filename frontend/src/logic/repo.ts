@@ -46,3 +46,13 @@ export function repoNamespace(r: Repository): string {
   if (!selectedRemote(r)?.path) return ''
   return segments(r).slice(0, -1).join('/')
 }
+
+/** Родительский каталог: «/» и «\» (Windows); у корня ФС — он сам. */
+export function parentPath(path: string): string {
+  const trimmed = path.replace(/[/\\]+$/, '')
+  const i = Math.max(trimmed.lastIndexOf('/'), trimmed.lastIndexOf('\\'))
+  if (i < 0) return path
+  const parent = trimmed.slice(0, i)
+  // «/srv» → «/», «C:\Users» → «C:\»
+  return parent === '' || /^[A-Za-z]:$/.test(parent) ? trimmed.slice(0, i + 1) : parent
+}

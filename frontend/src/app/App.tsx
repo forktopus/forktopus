@@ -15,6 +15,7 @@ import { createAppTheme } from '../theme/theme'
 import { ExplorerView } from '../views/ExplorerView'
 import { RadarView } from '../views/RadarView'
 import { RegistryView } from '../views/RegistryView'
+import { ProblemDirsDialog } from './ProblemDirsDialog'
 import { RootsDialog } from './RootsDialog'
 import { SettingsDialog } from './SettingsDialog'
 import { ToolsDialog } from './ToolsDialog'
@@ -36,7 +37,7 @@ function EmptyRoots({ onAdd }: { onAdd(): void }) {
   )
 }
 
-function Content({ onOpenRoots, onOpenTools }: { onOpenRoots(): void; onOpenTools(): void }) {
+function Content({ onOpenRoots, onOpenTools, onOpenProblems }: { onOpenRoots(): void; onOpenTools(): void; onOpenProblems(): void }) {
   const ready = useApp((s) => s.ready)
   const roots = useApp((s) => s.roots)
   const mode = useApp((s) => s.mode)
@@ -90,16 +91,25 @@ function Content({ onOpenRoots, onOpenTools }: { onOpenRoots(): void; onOpenTool
     )
   }
 
-  // A04 и пустые корни: остальное просканировано, детали — в диалоге корней.
+  // A04 и пустые корни: остальное просканировано; нечитаемые каталоги — в своём окне, пустые корни — в диалоге корней.
   const showEmpty = !scanning && !stale && repos.length > 0 ? empty : []
   const scanBanner = (issues.length > 0 || showEmpty.length > 0) && (
     <Alert
       severity="warning"
       sx={{ mb: 2.5 }}
       action={
-        <Button color="inherit" size="small" onClick={onOpenRoots}>
-          {t('roots.title')}
-        </Button>
+        <>
+          {issues.length > 0 && (
+            <Button color="inherit" size="small" onClick={onOpenProblems}>
+              {t('problems.title')}
+            </Button>
+          )}
+          {showEmpty.length > 0 && (
+            <Button color="inherit" size="small" onClick={onOpenRoots}>
+              {t('roots.title')}
+            </Button>
+          )}
+        </>
       }
     >
       {issues.length > 0 && <div>{t('scan.issues', { count: issues.length })}</div>}
@@ -163,7 +173,7 @@ export function App() {
   const systemDark = useMediaQuery('(prefers-color-scheme: dark)')
   const mode = choice ?? (systemDark ? 'dark' : 'light')
   const theme = useMemo(() => createAppTheme(mode), [mode])
-  const [dialog, setDialog] = useState<'tools' | 'roots' | 'settings' | null>(null)
+  const [dialog, setDialog] = useState<'tools' | 'roots' | 'settings' | 'problems' | null>(null)
   useZoomKeys()
 
   return (
@@ -171,10 +181,11 @@ export function App() {
       <CssBaseline />
       <TopBar onOpenTools={() => setDialog('tools')} onOpenRoots={() => setDialog('roots')} onOpenSettings={() => setDialog('settings')} />
       <Box component="main" sx={{ px: { xs: 2, md: 4 }, py: 4 }}>
-        <Content onOpenRoots={() => setDialog('roots')} onOpenTools={() => setDialog('tools')} />
+        <Content onOpenRoots={() => setDialog('roots')} onOpenTools={() => setDialog('tools')} onOpenProblems={() => setDialog('problems')} />
       </Box>
       <ToolsDialog open={dialog === 'tools'} onClose={() => setDialog(null)} />
       <RootsDialog open={dialog === 'roots'} onClose={() => setDialog(null)} />
+      <ProblemDirsDialog open={dialog === 'problems'} onClose={() => setDialog(null)} />
       <SettingsDialog open={dialog === 'settings'} onClose={() => setDialog(null)} />
       <RepoDetails onOpenTools={() => setDialog('tools')} />
       <OpConfirmDialog />

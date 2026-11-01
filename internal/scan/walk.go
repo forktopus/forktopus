@@ -4,8 +4,12 @@ package scan
 
 import (
 	"context"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
+
+	"github.com/forktopus/forktopus/internal/model"
 )
 
 // DefaultSkipDirs — каталоги, в которые сканер не заходит (D-024): в них
@@ -14,13 +18,17 @@ var DefaultSkipDirs = []string{"node_modules", "vendor", ".venv", "venv", "__pyc
 
 // walk обходит root и вызывает found для каждого каталога, где есть .git
 // (каталог или файл). По симлинкам не ходит (A23), внутрь .git и каталогов из
-// skip не заходит, bare-репозитории пропускает (D-026). Ошибка чтения
-// каталога передаётся в issue, обход продолжается (A04).
-func walk(ctx context.Context, root string, skip map[string]bool, found func(dir string), issue func(path string, err error)) error {
+// skip (по имени) и skipPaths (по пути) не заходит, bare-репозитории
+// пропускает (D-026). Ошибка чтения каталога передаётся в issue, обход
+// продолжается (A04).
+func walk(ctx context.Context, root string, skip, skipPaths map[string]bool, found func(dir string), issue func(path string, err error)) error {
 	var visit func(dir string) error
 	visit = func(dir string) error {
 		if err := ctx.Err(); err != nil {
 			return err
+		}
+		if skipPaths[dir] {
+			return nil
 		}
 		entries, err := os.ReadDir(dir)
 		if err != nil {
@@ -47,7 +55,18 @@ func walk(ctx context.Context, root string, skip map[string]bool, found func(dir
 		}
 		return nil
 	}
-	return visit(root)
+	return visit(filepath.Clean(root))
+}
+
+// issueReason — причина ошибки чтения каталога для окна проблемных каталогов.
+func issueReason(err error) model.IssueReason {
+	switch {
+	case errors.Is(err, fs.ErrPermission):
+		return model.IssueNoAccess
+	case errors.Is(err, fs.ErrNotExist):
+		return model.IssueNotFound
+	}
+	return model.IssueOther
 }
 
 // isBare — признаки git dir без рабочей копии: HEAD, objects/ и refs/ в одном каталоге.

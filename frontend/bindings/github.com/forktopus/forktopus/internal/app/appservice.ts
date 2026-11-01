@@ -114,6 +114,13 @@ export function GetSkipDirs(): $CancellablePromise<model$0.SkipDirs> {
 }
 
 /**
+ * GetSkipPaths возвращает пути каталогов, в которые сканер не заходит (D-067).
+ */
+export function GetSkipPaths(): $CancellablePromise<string[] | null> {
+    return $Call.ByID(3998012712);
+}
+
+/**
  * GetUI возвращает сохранённое состояние интерфейса: режим, тему, фильтры.
  */
 export function GetUI(): $CancellablePromise<settings$0.UI> {
@@ -244,6 +251,16 @@ export function SetAutostart(on: boolean): $CancellablePromise<void> {
  */
 export function SetSkipDirs(dirs: string[] | null): $CancellablePromise<model$0.SkipDirs> {
     return $Call.ByID(81368004, dirs);
+}
+
+/**
+ * SetSkipPaths сохраняет пути каталогов, в которые сканер не заходит (D-067),
+ * и сразу убирает из списка проблем каталоги внутри них — предупреждение
+ * пропадает без пересканирования. Вернувшийся путь проверится со следующего
+ * сканирования. Возвращает оставшиеся проблемы сканирования.
+ */
+export function SetSkipPaths(paths: string[] | null): $CancellablePromise<model$0.ScanIssue[] | null> {
+    return $Call.ByID(2982818756, paths);
 }
 
 /**

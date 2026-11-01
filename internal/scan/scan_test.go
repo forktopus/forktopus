@@ -82,15 +82,24 @@ func TestScanFindsRepositories(t *testing.T) {
 	if got := paths(t, root, res); !slices.Equal(got, want) {
 		t.Fatalf("найдено %v, want %v", got, want)
 	}
-	issuePaths := []string{}
+	reasons := map[string]model.IssueReason{}
 	for _, is := range res.Issues {
-		issuePaths = append(issuePaths, is.Path)
+		reasons[is.Path] = is.Reason
 	}
-	if os.Geteuid() != 0 && !slices.Contains(issuePaths, locked) {
+	if os.Geteuid() != 0 && reasons[locked] != model.IssueNoAccess {
 		t.Errorf("нет диагностики для каталога без прав: %+v", res.Issues)
 	}
-	if !slices.Contains(issuePaths, filepath.Join(root, "missing")) {
+	if reasons[filepath.Join(root, "missing")] != model.IssueNotFound {
 		t.Errorf("нет диагностики для отсутствующего корня: %+v", res.Issues)
+	}
+
+	// Каталог из SkipPaths не читается — и проблемы с ним нет (D-067).
+	res = run(t, []model.Root{{ID: "r", Path: root + "/"}}, Options{SkipPaths: []string{locked, filepath.Join(root, "github.com", "org")}})
+	if len(res.Issues) != 0 {
+		t.Errorf("пропущенный путь в диагностике: %+v", res.Issues)
+	}
+	if got := paths(t, root, res); !slices.Equal(got, want[:2]) {
+		t.Errorf("с пропуском путей найдено %v", got)
 	}
 	for _, r := range res.Repositories {
 		if r.ID != model.PathID(r.Path) || r.RootID != "r" || r.Error != nil || r.ParentID != "" {

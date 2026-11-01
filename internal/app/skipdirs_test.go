@@ -89,3 +89,45 @@ func TestSkipDirs(t *testing.T) {
 		t.Fatalf("скан после сброса: %v", got)
 	}
 }
+
+// Исключённый путь пропадает из проблем сразу, сканер в него не заходит, список можно вернуть (D-067).
+func TestSkipPaths(t *testing.T) {
+	ctx := context.Background()
+	s, cfgPath := newService(t)
+	root := t.TempDir()
+	missing := filepath.Join(root, "gone")
+	if _, err := s.AddRoot(root); err != nil {
+		t.Fatal(err)
+	}
+	s.mu.Lock()
+	s.snapshot.Issues = []model.ScanIssue{{RootID: "x", Path: filepath.Join(missing, "deep")}, {RootID: "x", Path: filepath.Join(root, "gone2")}}
+	s.mu.Unlock()
+
+	issues, err := s.SetSkipPaths([]string{missing + "/", " ", missing})
+	if err != nil || len(issues) != 1 || issues[0].Path != filepath.Join(root, "gone2") {
+		t.Fatalf("SetSkipPaths: %+v err=%v", issues, err)
+	}
+	if got := s.GetSkipPaths(); !slices.Equal(got, []string{missing}) {
+		t.Fatalf("GetSkipPaths: %v", got)
+	}
+	if cfg, _ := settings.NewStore(cfgPath).Load(); !slices.Equal(cfg.ScanSkipPaths, []string{missing}) {
+		t.Fatalf("в настройках: %v", cfg.ScanSkipPaths)
+	}
+	if _, err := s.SetSkipPaths([]string{"relative/path"}); model.CodeOf(err) != model.CodeInvalidInput {
+		t.Errorf("относительный путь: %v", err)
+	}
+
+	gittest.Init(t, filepath.Join(root, "skipped", "repo"))
+	if _, err := s.SetSkipPaths([]string{filepath.Join(root, "skipped")}); err != nil {
+		t.Fatal(err)
+	}
+	if res, err := s.ScanRoots(ctx); err != nil || len(res.Repositories) != 0 {
+		t.Fatalf("скан с пропуском: %+v err=%v", res.Repositories, err)
+	}
+	if _, err := s.SetSkipPaths(nil); err != nil {
+		t.Fatal(err)
+	}
+	if res, err := s.ScanRoots(ctx); err != nil || len(res.Repositories) != 1 {
+		t.Fatalf("скан после возврата: %+v err=%v", res.Repositories, err)
+	}
+}

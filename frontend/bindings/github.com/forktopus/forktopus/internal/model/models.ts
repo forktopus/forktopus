@@ -271,6 +271,27 @@ export enum ErrorCode {
 };
 
 /**
+ * IssueReason — почему каталог не просмотрен.
+ */
+export enum IssueReason {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    /**
+     * нет прав на чтение
+     */
+    IssueNoAccess = "no_access",
+
+    /**
+     * каталога нет (корень удалён, ссылка оборвана)
+     */
+    IssueNotFound = "not_found",
+    IssueOther = "other",
+};
+
+/**
  * LogEntry — предупреждение или ошибка из технического лога (уже замаскированные).
  */
 export interface LogEntry {
@@ -535,6 +556,11 @@ export interface Root {
 export interface ScanIssue {
     "rootId": string;
     "path": string;
+
+    /**
+     * Reason — причина для окна проблемных каталогов; в кэше старых версий пусто.
+     */
+    "reason"?: IssueReason;
     "error": Error | null;
 }
 

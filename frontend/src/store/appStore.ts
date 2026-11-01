@@ -92,6 +92,8 @@ export interface AppState {
   autostart: boolean | null
   /** Пути репозиториев без автоматической проверки (D-064). */
   noAutoCheck: string[]
+  /** Пути каталогов, в которые сканер не заходит (D-067). */
+  skipPaths: string[]
   /** Какие системные уведомления показывать (D-063). */
   notifications: Notify
   query: string
@@ -118,6 +120,10 @@ export interface AppState {
   loadSkipDirs(): Promise<SkipList | null>
   /** сохраняет список пропусков и пересканирует; null — ошибка */
   saveSkipDirs(dirs: string[]): Promise<SkipList | null>
+  /** не сканировать каталог (окно проблемных каталогов): проблема пропадает сразу */
+  skipPath(path: string): Promise<void>
+  /** вернуть каталог в сканирование и пересканировать */
+  unskipPath(path: string): Promise<void>
   /** системный диалог выбора папки + addRoot; false — диалог закрыт или ошибка */
   pickAndAddRoot(): Promise<boolean>
   removeRoot(id: string): Promise<void>
@@ -316,6 +322,7 @@ export function createAppStore(source: DataSource): AppStore {
       quitOnClose: false,
       autostart: null,
       noAutoCheck: [],
+      skipPaths: [],
       notifications: defaultNotify,
       query: '',
       selectedId: null,
@@ -332,8 +339,13 @@ export function createAppStore(source: DataSource): AppStore {
           set(fromUI(await source.getUI()))
           // Окно Wails уже открыто с сохранённым масштабом; в превью его ставит CSS.
           source.setZoom(get().zoom).catch(fail)
-          const [roots, snap, noAutoCheck] = await Promise.all([source.listRoots(), source.listRepositories(), source.getNoAutoCheck()])
-          set({ roots, noAutoCheck })
+          const [roots, snap, noAutoCheck, skipPaths] = await Promise.all([
+            source.listRoots(),
+            source.listRepositories(),
+            source.getNoAutoCheck(),
+            source.getSkipPaths(),
+          ])
+          set({ roots, noAutoCheck, skipPaths })
           applySnapshot(snap)
         } catch (err) {
           fail(err)
@@ -523,6 +535,28 @@ export function createAppStore(source: DataSource): AppStore {
         } catch (err) {
           fail(err)
         }
+      },
+
+      async skipPath(path) {
+        const next = [...get().skipPaths.filter((p) => p !== path), path].sort()
+        try {
+          const issues = await source.setSkipPaths(next)
+          set({ skipPaths: next, issues })
+        } catch (err) {
+          fail(err)
+        }
+      },
+
+      async unskipPath(path) {
+        const next = get().skipPaths.filter((p) => p !== path)
+        try {
+          const issues = await source.setSkipPaths(next)
+          set({ skipPaths: next, issues })
+        } catch (err) {
+          fail(err)
+          return
+        }
+        void get().scan()
       },
 
       async setAutoCheck(path, on) {

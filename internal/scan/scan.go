@@ -24,6 +24,8 @@ var Concurrency = 8
 type Options struct {
 	// SkipDirs — имена каталогов, в которые не заходить; пусто — DefaultSkipDirs.
 	SkipDirs []string
+	// SkipPaths — пути каталогов, в которые не заходить (D-067).
+	SkipPaths []string
 	// Remotes — выбранный пользователем remote: ID репозитория → имя remote.
 	Remotes map[string]string
 	// HostProviders — тип провайдера для self-hosted хостов.
@@ -61,6 +63,10 @@ func Run(ctx context.Context, r runner.Runner, roots []model.Root, opts Options)
 	for _, name := range skipNames {
 		skip[name] = true
 	}
+	skipPaths := map[string]bool{}
+	for _, p := range opts.SkipPaths {
+		skipPaths[filepath.Clean(p)] = true
+	}
 
 	candidates := make(chan candidate)
 	results := make(chan found)
@@ -70,7 +76,7 @@ func Run(ctx context.Context, r runner.Runner, roots []model.Root, opts Options)
 	go func() {
 		defer close(candidates)
 		for _, root := range roots {
-			err := walk(ctx, root.Path, skip,
+			err := walk(ctx, root.Path, skip, skipPaths,
 				func(dir string) {
 					select {
 					case candidates <- candidate{root.ID, dir}:
@@ -78,7 +84,7 @@ func Run(ctx context.Context, r runner.Runner, roots []model.Root, opts Options)
 					}
 				},
 				func(path string, err error) {
-					issues = append(issues, model.ScanIssue{RootID: root.ID, Path: path, Error: model.Errorf(model.CodeOther, "%v", err)})
+					issues = append(issues, model.ScanIssue{RootID: root.ID, Path: path, Reason: issueReason(err), Error: model.Errorf(model.CodeOther, "%v", err)})
 				})
 			if err != nil {
 				walkErr = err

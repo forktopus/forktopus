@@ -288,7 +288,7 @@ func (s *AppService) prevLocked(id string) *model.Repository {
 }
 
 func (s *AppService) scanOptionsLocked() scan.Options {
-	return scan.Options{SkipDirs: s.cfg.ScanSkipDirs, Remotes: s.cfg.Remotes, HostProviders: s.cfg.HostProviders}
+	return scan.Options{SkipDirs: s.cfg.ScanSkipDirs, SkipPaths: s.cfg.ScanSkipPaths, Remotes: s.cfg.Remotes, HostProviders: s.cfg.HostProviders}
 }
 
 // findLocked возвращает индекс репозитория в снимке или ошибку INVALID_INPUT.

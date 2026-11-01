@@ -176,8 +176,19 @@ type Repository struct {
 type ScanIssue struct {
 	RootID string `json:"rootId"`
 	Path   string `json:"path"`
-	Error  *Error `json:"error"`
+	// Reason — причина для окна проблемных каталогов; в кэше старых версий пусто.
+	Reason IssueReason `json:"reason,omitempty"`
+	Error  *Error      `json:"error"`
 }
+
+// IssueReason — почему каталог не просмотрен.
+type IssueReason string
+
+const (
+	IssueNoAccess IssueReason = "no_access" // нет прав на чтение
+	IssueNotFound IssueReason = "not_found" // каталога нет (корень удалён, ссылка оборвана)
+	IssueOther    IssueReason = "other"
+)
 
 // ScanResult — итог сканирования корней.
 type ScanResult struct {

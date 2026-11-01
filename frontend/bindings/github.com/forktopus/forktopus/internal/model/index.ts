@@ -4,6 +4,7 @@
 export {
     Availability,
     ErrorCode,
+    IssueReason,
     Nesting,
     Operation,
     Provider

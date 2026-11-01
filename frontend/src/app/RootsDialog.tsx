@@ -83,6 +83,7 @@ export function RootsDialog({ open, onClose }: { open: boolean; onClose(): void 
           </Button>
         </Box>
         <SkipDirsEditor />
+        <SkipPathsList />
       </DialogContent>
       <DialogActions>
         <Button onClick={() => void scan()} disabled={scanning || roots.length === 0}>
@@ -175,6 +176,31 @@ function SkipDirsEditor() {
           {t('roots.skipApply')}
         </Button>
       </Box>
+    </Box>
+  )
+}
+
+// Пути, исключённые из окна проблемных каталогов (D-067); пустой список не показывается.
+function SkipPathsList() {
+  const theme = useTheme()
+  const skipPaths = useApp((s) => s.skipPaths)
+  const unskipPath = useApp((s) => s.unskipPath)
+  const scanning = useApp((s) => s.scanning)
+  if (skipPaths.length === 0) return null
+  return (
+    <Box sx={{ mt: 4, pt: 2, borderTop: `1px solid ${theme.app.line}` }}>
+      <Typography variant="subtitle2">{t('roots.skipPathsTitle')}</Typography>
+      <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
+        {t('roots.skipPathsDescription')}
+      </Typography>
+      {skipPaths.map((p) => (
+        <Box key={p} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5 }}>
+          <Typography sx={{ flex: 1, minWidth: 0, font: `13px ${monoFontFamily}`, overflowWrap: 'anywhere' }}>{p}</Typography>
+          <Button size="small" onClick={() => void unskipPath(p)} disabled={scanning} sx={{ whiteSpace: 'nowrap' }}>
+            {t('roots.skipPathRestore')}
+          </Button>
+        </Box>
+      ))}
     </Box>
   )
 }

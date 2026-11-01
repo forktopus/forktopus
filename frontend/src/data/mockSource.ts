@@ -6,6 +6,7 @@ import {
   type BranchInfo,
   Availability,
   ErrorCode,
+  IssueReason,
   Nesting,
   Operation,
   type Error as ModelError,
@@ -383,9 +384,13 @@ const mockIssues: ScanIssue[] = [
   {
     rootId: 'r-other',
     path: '/srv/repos/git.example.org/private',
+    reason: IssueReason.IssueNoAccess,
     error: { code: ErrorCode.CodeOther, message: 'open /srv/repos/git.example.org/private: permission denied' },
   },
 ]
+
+/** Как filepath.Rel в Go: путь совпадает с каталогом или лежит внутри него. */
+const within = (path: string, dir: string) => path === dir || path.startsWith(dir.endsWith('/') ? dir : dir + '/')
 
 const uiKey = 'forktopus.demo.ui'
 
@@ -443,6 +448,7 @@ export function createMockSource({ delayMs = 250, scenario = 'default' }: MockOp
   // Как scan.DefaultSkipDirs в Go; демо-скан список не учитывает.
   const defaultSkipDirs = ['node_modules', 'vendor', '.venv', 'venv', '__pycache__', 'dist', 'build', 'target', '.cache']
   let skipDirs: string[] = []
+  let skipPaths: string[] = []
   let issues = noRoots ? [] : mockIssues
   // Как будто кэш прошлого запуска: два часа назад, не подтверждён сканированием.
   let snapshot: Snapshot = { repositories: repos, issues, scannedAt: minutesAgo(120), stale: true }
@@ -565,6 +571,16 @@ export function createMockSource({ delayMs = 250, scenario = 'default' }: MockOp
       skipDirs = same ? [] : clean
       return reply({ dirs: skipDirs.length ? skipDirs : defaultSkipDirs, defaults: defaultSkipDirs })
     },
+    getSkipPaths: () => reply([...skipPaths]),
+    async setSkipPaths(paths) {
+      const clean = [...new Set(paths.map((p) => p.trim()).filter(Boolean))].sort()
+      const relative = clean.find((p) => !p.startsWith('/'))
+      if (relative) throw invalidInput(`нужен абсолютный путь: "${relative}"`)
+      skipPaths = clean
+      issues = issues.filter((i) => !skipPaths.some((p) => within(i.path, p)))
+      snapshot = { ...snapshot, issues }
+      return reply([...issues])
+    },
     pickFolder: () => reply(`/srv/repos/demo-folder-${++picked}`),
     listRepositories: () => reply(snapshot),
     async scanRoots() {
@@ -576,7 +592,7 @@ export function createMockSource({ delayMs = 250, scenario = 'default' }: MockOp
       }
       const scannedAt = new Date().toISOString()
       repos = repos.map((r) => ({ ...r, updatedAt: scannedAt }))
-      issues = issues.filter((i) => known(i.rootId))
+      issues = (noRoots ? [] : mockIssues).filter((i) => known(i.rootId) && !skipPaths.some((p) => within(i.path, p)))
       snapshot = { repositories: repos, issues, scannedAt, stale: false }
       return reply({ repositories: repos, issues, scannedAt })
     },
