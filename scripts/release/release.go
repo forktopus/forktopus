@@ -59,7 +59,7 @@ var versionFiles = []string{
 func artifacts(version string) map[string][]string {
 	return map[string][]string{
 		"forktopus-linux":   {"forktopus_" + version + "_amd64.deb", "Forktopus-" + version + "-x86_64.AppImage"},
-		"forktopus-windows": {"forktopus-" + version + "-windows-amd64.exe"},
+		"forktopus-windows": {"forktopus-" + version + "-windows-amd64-setup.exe", "forktopus-" + version + "-windows-amd64.exe"},
 		"forktopus-macos":   {"Forktopus-" + version + "-macos-universal.zip"},
 	}
 }

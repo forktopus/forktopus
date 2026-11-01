@@ -2,7 +2,8 @@
 # Собирает файлы релиза с именами, как на странице Releases, и SHA256SUMS
 # в bin/release/<версия>/:
 #   linux   — forktopus_<v>_amd64.deb и Forktopus-<v>-x86_64.AppImage (только на Linux);
-#   windows — forktopus-<v>-windows-amd64.exe (на любой ОС: сборка без CGO);
+#   windows — forktopus-<v>-windows-amd64.exe (на любой ОС: сборка без CGO) и
+#             установщик forktopus-<v>-windows-amd64-setup.exe (NSIS, нужен makensis);
 #   macos   — Forktopus-<v>-macos-universal.zip с .app (Intel и Apple Silicon); на macOS —
 #             нативно с ad-hoc подписью, на Linux — в Docker-образе wails-cross без
 #             подписи (один раз: wails3 task setup:docker). Не проверялось.
@@ -63,6 +64,9 @@ if want macos && [[ "$host" != Darwin ]]; then
     die "Для macOS на $host нужен Docker-образ wails-cross (один раз, ~4 ГБ на диске): wails3 task setup:docker"
 fi
 
+want windows && ! command -v makensis > /dev/null &&
+  die "Для установщика Windows нужен NSIS (makensis): sudo apt install nsis, brew install makensis или choco install nsis"
+
 new="$(sed -n 's/^  version: "\([0-9.]*\)".*/\1/p' build/config.yml)"
 [[ -n "$new" ]] || die "Не нашёл версию в build/config.yml"
 
@@ -83,6 +87,13 @@ fi
 if want windows; then
   wails3 build GOOS=windows
   cp bin/forktopus.exe "$out/forktopus-${new}-windows-amd64.exe"
+  # Установщик для текущего пользователя (без прав администратора): в
+  # %LOCALAPPDATA%\Programs\Forktopus, ярлыки и запись в «Приложениях».
+  # WebView2 bootstrapper ставит среду, если её нет.
+  wails3 generate webview2bootstrapper -dir build/windows/nsis
+  (cd build/windows/nsis && makensis -V2 -DWAILS_INSTALL_SCOPE=user -DREQUEST_EXECUTION_LEVEL=user \
+    -DARG_WAILS_AMD64_BINARY=../../../bin/forktopus.exe project.nsi)
+  cp bin/forktopus-amd64-installer.exe "$out/forktopus-${new}-windows-amd64-setup.exe"
 fi
 
 if want macos; then

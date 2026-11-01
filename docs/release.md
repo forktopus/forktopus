@@ -15,7 +15,7 @@
 | Артефакт | Файлы | Где собран |
 |---|---|---|
 | `forktopus-linux` | `forktopus_<v>_amd64.deb`, `Forktopus-<v>-x86_64.AppImage` | `ubuntu-24.04` |
-| `forktopus-windows` | `forktopus-<v>-windows-amd64.exe` | `windows-latest` |
+| `forktopus-windows` | `forktopus-<v>-windows-amd64-setup.exe` (установщик NSIS), `forktopus-<v>-windows-amd64.exe` | `windows-latest` |
 | `forktopus-macos` | `Forktopus-<v>-macos-universal.zip` (`.app` с ad-hoc подписью) | `macos-latest` |
 
 CI не запускается, если коммит меняет только документацию и вспомогательные файлы: корневые `*.md`, `LICENSE`, `docs/`, `assets/`, `.claude/`, `.agents/`, `.vscode/`, `compose.dev.yaml`, `docker/` и лендинг `www/` (его публикует workflow Pages). Список — в `paths` workflow. Чтобы выпустить такой коммит, запустите CI вручную: `gh workflow run CI --ref main`.
@@ -66,7 +66,7 @@ CI не запускается, если коммит меняет только 
    - CI этого коммита (на push или вручную) успешен.
 
    Затем команда ставит локальный аннотированный тег `vX.Y.Z` на HEAD и скачивает артефакты этого запуска (`gh run download`). Каждый файл сверяется с `SHA256SUMS` своего артефакта. Комплект складывается в `bin/release/vX.Y.Z/`:
-   - четыре файла поставки;
+   - пять файлов поставки;
    - общий `SHA256SUMS`;
    - `notes.md`;
    - `release.json` с коммитом, номером запуска CI, размерами и SHA-256 файлов.

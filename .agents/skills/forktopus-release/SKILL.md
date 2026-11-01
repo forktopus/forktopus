@@ -37,7 +37,9 @@ argument-hint: "[version=X.Y.Z]"
 - Linux:
   - `forktopus_<версия>_amd64.deb` — Ubuntu 24.04+ / Debian 13+, `sudo apt install ./…`;
   - `Forktopus-<версия>-x86_64.AppImage` — другие Linux x86_64, `chmod +x` и запустить.
-- Windows: `forktopus-<версия>-windows-amd64.exe` — Windows 10/11 x64, нужен WebView2 Runtime.
+- Windows, x64, Windows 10/11:
+  - `forktopus-<версия>-windows-amd64-setup.exe` — установщик для текущего пользователя без прав администратора: ярлыки, удаление через «Приложения», при необходимости WebView2 Runtime;
+  - `forktopus-<версия>-windows-amd64.exe` — без установки, нужен WebView2 Runtime.
 - macOS: `Forktopus-<версия>-macos-universal.zip` — `.app` для Intel и Apple Silicon с ad-hoc подписью. Apple его не нотаризовала, поэтому Gatekeeper не даст открыть его двойным щелчком. Снять карантин: `xattr -cr forktopus.app`.
 - `SHA256SUMS`.
 

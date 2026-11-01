@@ -237,7 +237,7 @@ func TestReleaseFlow(t *testing.T) {
 	}
 	dir := filepath.Join(work, "bin/release/v0.2.0")
 	sums, _ := os.ReadFile(filepath.Join(dir, "SHA256SUMS"))
-	if lines := strings.Count(string(sums), "\n"); lines != 4 {
+	if lines := strings.Count(string(sums), "\n"); lines != 5 {
 		t.Fatalf("SHA256SUMS: %s", sums)
 	}
 	if res, err := tool.Prepare("0.2.0", n); err != nil || res["reused"] != true {
@@ -253,7 +253,7 @@ func TestReleaseFlow(t *testing.T) {
 	}
 	before := gh.uploads
 	res, err = tool.Publish("0.2.0")
-	if err != nil || res["published"] != true || res["assets"] != 5 {
+	if err != nil || res["published"] != true || res["assets"] != 6 {
 		t.Fatalf("publish: %v %v", res, err)
 	}
 	// .deb и AppImage уже на месте: догружаются .exe, .zip и SHA256SUMS.

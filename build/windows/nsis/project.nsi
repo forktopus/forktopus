@@ -55,6 +55,7 @@ ManifestDPIAware true
 !define MUI_UNICON "..\icon.ico"
 # !define MUI_WELCOMEFINISHPAGE_BITMAP "resources\leftimage.bmp" #Include this to add a bitmap on the left side of the Welcome Page. Must be a size of 164x314
 !define MUI_FINISHPAGE_NOAUTOCLOSE # Wait on the INSTFILES page so the user can take a look into the details of the installation steps
+!define MUI_FINISHPAGE_RUN "$INSTDIR\${PRODUCT_EXECUTABLE}" # Флажок «Запустить Forktopus» на последней странице.
 !define MUI_ABORTWARNING # This will warn the user if they exit from the installer.
 
 !insertmacro MUI_PAGE_WELCOME # Welcome to the installer page.
@@ -65,7 +66,7 @@ ManifestDPIAware true
 
 !insertmacro MUI_UNPAGE_INSTFILES # Uninstalling page
 
-!insertmacro MUI_LANGUAGE "English" # Set the Language of the installer
+!insertmacro MUI_LANGUAGE "Russian" # Set the Language of the installer
 
 ## The following two statements can be used to sign the installer and the uninstaller. The path to the binaries are provided in %1
 #!uninstfinalize 'signtool --file "%1"'
@@ -84,8 +85,15 @@ Function .onInit
    !insertmacro wails.checkArchitecture
 FunctionEnd
 
+# Forktopus живёт в трее: запущенный exe не дал бы его заменить или удалить.
+!macro forktopus.stop
+    nsExec::Exec '"$SYSDIR\taskkill.exe" /F /IM ${PRODUCT_EXECUTABLE}'
+    Pop $0
+!macroend
+
 Section
     !insertmacro wails.setShellContext
+    !insertmacro forktopus.stop
 
     !insertmacro wails.webview2runtime
 
@@ -104,6 +112,9 @@ SectionEnd
 
 Section "uninstall" 
     !insertmacro wails.setShellContext
+    !insertmacro forktopus.stop
+    # Автозапуск из «Настроек» — значение forktopus в HKCU\…\Run (Wails AutostartManager).
+    DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "forktopus"
 
     RMDir /r "$AppData\${PRODUCT_EXECUTABLE}" # Remove the WebView2 DataPath
 

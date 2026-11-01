@@ -48,7 +48,8 @@
 |---|---|---|
 | `forktopus_<версия>_amd64.deb` | Ubuntu 24.04+ / Debian 13+ | `sudo apt install ./forktopus_<версия>_amd64.deb` — подтянет GTK4 и WebKitGTK 6.0, добавит ярлык в меню |
 | `Forktopus-<версия>-x86_64.AppImage` | другие Linux x86_64 | `chmod +x` и запустить; GTK4 и WebKitGTK внутри (≈128 МБ), ярлыка в меню нет |
-| `forktopus-<версия>-windows-amd64.exe` | Windows 10/11 x64 | запустить; нужен WebView2 Runtime — в Windows 11 он есть всегда |
+| `forktopus-<версия>-windows-amd64-setup.exe` | Windows 10/11 x64 | установщик для текущего пользователя, без прав администратора: в `%LOCALAPPDATA%\Programs\Forktopus`, ярлыки в «Пуске» и на рабочем столе, удаление — через «Приложения»; при необходимости ставит WebView2 Runtime |
+| `forktopus-<версия>-windows-amd64.exe` | Windows 10/11 x64 | без установки: запустить из любой папки; нужен WebView2 Runtime — в Windows 11 он есть всегда |
 | `Forktopus-<версия>-macos-universal.zip` | macOS, Intel и Apple Silicon | распаковать и перед первым запуском снять карантин: `xattr -cr forktopus.app` |
 
 Сборки не подписаны сертификатом: Windows SmartScreen предупредит о неизвестном издателе («Подробнее» → «Выполнить в любом случае»). У `.app` только ad-hoc подпись, Apple его не нотаризовала — без `xattr -cr` Gatekeeper не даст открыть его двойным щелчком. Сборка для macOS ни разу не запускалась.
@@ -68,12 +69,12 @@ bash scripts/install-desktop.sh            # после wails3 build
 bash scripts/install-desktop.sh --remove   # убрать
 ```
 
-Пакеты: `wails3 task linux:generate:deb` (упаковывает уже собранный `bin/forktopus`) и `wails3 task linux:create:appimage` (скачивает linuxdeploy) кладут `.deb` и `.AppImage` в `bin/`. Windows: `wails3 build GOOS=windows` собирает `bin/forktopus.exe` прямо на Linux (без CGO и Docker).
+Пакеты: `wails3 task linux:generate:deb` (упаковывает уже собранный `bin/forktopus`) и `wails3 task linux:create:appimage` (скачивает linuxdeploy) кладут `.deb` и `.AppImage` в `bin/`. Windows: `wails3 build GOOS=windows` собирает `bin/forktopus.exe` прямо на Linux (без CGO и Docker); установщик из него собирает NSIS (`makensis`, на Ubuntu — `sudo apt install nsis`) по `build/windows/nsis/project.nsi`.
 
 Локальная сборка файлов релиза с `SHA256SUMS` — в `bin/release/<версия>/` (версия — из `build/config.yml`):
 
 ```bash
-bash scripts/release.sh                  # .deb, AppImage и .exe
+bash scripts/release.sh                  # .deb, AppImage, .exe и установщик (нужен makensis)
 bash scripts/release.sh --os windows     # только .exe; --os можно повторять или через запятую
 ```
 
@@ -118,7 +119,7 @@ CI (GitHub Actions) на push и PR проверяет формат, типы, �
 
 ## Известные ограничения
 
-- **Платформы.** Полностью проверено на Linux (GNOME, X11). На Windows 11 (VirtualBox, только git) проверены окно, системный диалог выбора папки, скан, Fetch / Pull / Switch, диагностика и сохранение настроек; PR/MR и CI на Windows не проверялись. Wayland и macOS не проверялись. Трей, уведомления и автозапуск проверены только на Linux (GNOME с расширением AppIndicator: без него значка нет, и крестик закрывает приложение); на Windows и macOS — нет. Сборки не подписаны.
+- **Платформы.** Полностью проверено на Linux (GNOME, X11). На Windows 11 (VirtualBox, только git) проверены окно, системный диалог выбора папки, скан, Fetch / Pull / Switch, диагностика и сохранение настроек; PR/MR и CI на Windows не проверялись. Установщик для Windows на Windows не запускался. Wayland и macOS не проверялись. Трей, уведомления и автозапуск проверены только на Linux (GNOME с расширением AppIndicator: без него значка нет, и крестик закрывает приложение); на Windows и macOS — нет. Сборки не подписаны.
 - **Тип сервера** определяется по известному хосту (github.com, gitlab.com) или по логину CLI на этот хост. Если на self-hosted хосте логины у двух CLI, тип задаётся в `config.json`: `"hostProviders": {"git.example.org": "gitea"}` (интерфейса для этого нет).
 - **Gitea (`gt` или `tea`):**
   - нужен вход на хост remote: `gt auth login --host https://HOST` (или `tea login add`); если вход есть у обоих, используется `gt`; логин по умолчанию не используется — выбирается по хосту;
