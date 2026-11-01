@@ -10,7 +10,7 @@
 
 ## Как CI собирает файлы
 
-`.github/workflows/ci.yml` на push и PR запускает проверки на Linux. Это формат, типы, тесты фронтенда, актуальность bindings, `go vet` и `go test`. На push в `main` и при ручном запуске (`gh workflow run CI --ref main`) после проверок три job собирают файлы скриптом `scripts/release.sh --os <ос>` на своей ОС:
+`.github/workflows/ci.yml` на push и PR запускает проверки на Linux. Это формат, типы, тесты фронтенда, актуальность bindings, `go vet` и `go test`. На push в `main` с изменениями приложения и при ручном запуске (`gh workflow run CI --ref main`) после проверок три job собирают файлы скриптом `scripts/release.sh --os <ос>` на своей ОС:
 
 | Артефакт | Файлы | Где собран |
 |---|---|---|
@@ -18,7 +18,7 @@
 | `forktopus-windows` | `forktopus-<v>-windows-amd64-setup.exe` (установщик NSIS), `forktopus-<v>-windows-amd64.exe` | `windows-latest` |
 | `forktopus-macos` | `Forktopus-<v>-macos-universal.zip` (`.app` с ad-hoc подписью) | `macos-latest` |
 
-CI не запускается, если коммит меняет только документацию и вспомогательные файлы: корневые `*.md`, `LICENSE`, `docs/`, `assets/`, `.claude/`, `.agents/`, `.vscode/`, `compose.dev.yaml`, `docker/` и лендинг `www/` (его публикует workflow Pages). Список — в `paths` workflow. Чтобы выпустить такой коммит, запустите CI вручную: `gh workflow run CI --ref main`.
+CI не запускается, если коммит меняет только документацию и вспомогательные файлы: корневые `*.md`, `LICENSE`, `docs/`, `assets/`, `.claude/`, `.agents/`, `.vscode/`, `compose.dev.yaml`, `docker/` и лендинг `www/` (его публикует workflow Pages). Также исключены `.github/ISSUE_TEMPLATE/` и `.github/pull_request_template.md`. Список — в `paths` workflow. Если изменены только workflow (в том числе вместе с перечисленными файлами), проверки выполняются, а сборки файлов поставки пропускаются. Для определения изменений сравнивается весь диапазон push; если сравнение невозможно, сборки выполняются. Чтобы выпустить коммит без собранных файлов, запустите CI вручную: `gh workflow run CI --ref main`. Ручной запуск всегда выполняет и проверки, и сборки; повтор обычного запуска без сборок их не добавит.
 
 В каждом артефакте есть свой `SHA256SUMS`. Артефакты хранятся 30 дней. Выпуск из более старого коммита требует перезапустить его CI: `gh run rerun <id>`.
 

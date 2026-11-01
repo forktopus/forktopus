@@ -1,5 +1,5 @@
-# Проверки на push и PR; на push в main и ручном запуске — ещё и сборки под три ОС
-# (файлы прикладываются к запуску, релиз отдельно).
+# Проверки на push и PR; сборки под три ОС — при изменении приложения или вручную.
+# Изменения только workflow проходят проверки без сборок файлов поставки.
 
 name: CI
 
@@ -47,8 +47,45 @@ jobs:
   checks:
     name: Проверки
     runs-on: ubuntu-24.04
+    outputs:
+      build: ${{ steps.changes.outputs.build }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Нужен весь диапазон push, а не только последний коммит.
+          fetch-depth: 0
+
+      - name: Нужны ли файлы поставки
+        id: changes
+        shell: bash
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          build=false
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
+            build=true
+          elif [[ "$GITHUB_EVENT_NAME" == push ]]; then
+            # Исключения повторяют paths выше; дополнительно пропускаются workflow.
+            # Первый push или ошибка сравнения сохраняют сборки, чтобы не пропустить изменение приложения.
+            if [[ "$BEFORE_SHA" =~ ^0+$ ]] || ! git diff --quiet --no-renames "$BEFORE_SHA" "$GITHUB_SHA" -- . \
+                  ':(top,exclude,glob)*.md' \
+                  ':(top,exclude,glob)LICENSE' \
+                  ':(top,exclude,glob)docs/**' \
+                  ':(top,exclude,glob)assets/**' \
+                  ':(top,exclude,glob).claude/**' \
+                  ':(top,exclude,glob).agents/**' \
+                  ':(top,exclude,glob).vscode/**' \
+                  ':(top,exclude,glob)compose.dev.yaml' \
+                  ':(top,exclude,glob)docker/**' \
+                  ':(top,exclude,glob).github/ISSUE_TEMPLATE/**' \
+                  ':(top,exclude,glob).github/pull_request_template.md' \
+                  ':(top,exclude,glob)www/**' \
+                  ':(top,exclude,glob).github/workflows/pages.yml' \
+                  ':(top,exclude,glob).github/workflows/**'; then
+              build=true
+            fi
+          fi
+          echo "build=$build" >> "$GITHUB_OUTPUT"
 
       # GTK4 и WebKitGTK нужны CGO: пакет app тянет Wails.
       - name: GTK4 и WebKitGTK
@@ -104,7 +141,7 @@ jobs:
   build:
     name: Сборка ${{ matrix.name }}
     needs: checks
-    if: github.event_name != 'pull_request'
+    if: needs.checks.outputs.build == 'true'
     strategy:
       fail-fast: false
       matrix:
