@@ -538,8 +538,9 @@ function Inspector({ repo, onOpenTools }: { repo: Repository; onOpenTools(): voi
   )
 }
 
-// Отступ липкого дерева от верха окна: шапка (73 px, app/TopBar.tsx) и зазор.
-const treeTop = 73 + 16
+// Отступы липкого дерева от краёв окна: шапка (73 px, app/TopBar.tsx) и поля main (32 px).
+const treeTop = 73 + 32
+const treeBottom = 32
 
 export function ExplorerView({ onOpenTools }: { onOpenTools(): void }) {
   const theme = useTheme()
@@ -567,12 +568,23 @@ export function ExplorerView({ onOpenTools }: { onOpenTools(): void }) {
         display: 'grid',
         gridTemplateColumns: { xs: '1fr', md: '280px minmax(0, 1fr)', lg: '300px minmax(0, 1fr) 320px', xl: '360px minmax(0, 1fr) 400px' },
         minHeight: 620,
+        // До низа окна (main — flex-колонка): без пустоты под коротким содержимым.
+        flex: '1 0 auto',
         borderRadius: '15px',
         // clip, а не hidden: hidden делает карточку контейнером прокрутки, и sticky дерева перестаёт работать.
         overflow: 'clip',
       }}
     >
-      <Box sx={{ gridRow: { md: 'span 2', lg: 'auto' }, borderRight: { md: line }, borderBottom: { xs: line, md: 'none' }, bgcolor: theme.app.panelAlt }}>
+      <Box
+        sx={{
+          gridRow: { md: 'span 2', lg: 'auto' },
+          borderRight: { md: line },
+          borderBottom: { xs: line, md: 'none' },
+          bgcolor: theme.app.panelAlt,
+          // Высота дерева не растягивает страницу: строку задают соседние колонки, дерево прокручивается само.
+          contain: { md: 'size' },
+        }}
+      >
         <Box
           ref={treeRef}
           sx={{
@@ -580,7 +592,8 @@ export function ExplorerView({ onOpenTools }: { onOpenTools(): void }) {
             display: 'flex',
             flexDirection: 'column',
             // Дерево — как боковая панель VS Code: стоит на месте при прокрутке страницы и прокручивается само.
-            maxHeight: { xs: 320, md: `calc(100vh - ${treeTop}px - 16px)` },
+            height: { md: '100%' },
+            maxHeight: { xs: 320, md: `calc(100vh - ${treeTop + treeBottom}px)` },
             position: { md: 'sticky' },
             top: { md: treeTop },
             overflowY: 'auto',

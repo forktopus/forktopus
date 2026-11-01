@@ -180,7 +180,11 @@ export function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <TopBar onOpenTools={() => setDialog('tools')} onOpenRoots={() => setDialog('roots')} onOpenSettings={() => setDialog('settings')} />
-      <Box component="main" sx={{ px: { xs: 2, md: 4 }, py: 4 }}>
+      {/* Колонка на всю высоту под шапкой (73 px): проводник растягивается до низа окна. */}
+      <Box
+        component="main"
+        sx={{ px: { xs: 2, md: 4 }, py: 4, display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 73px)', boxSizing: 'border-box' }}
+      >
         <Content onOpenRoots={() => setDialog('roots')} onOpenTools={() => setDialog('tools')} onOpenProblems={() => setDialog('problems')} />
       </Box>
       <ToolsDialog open={dialog === 'tools'} onClose={() => setDialog(null)} />
