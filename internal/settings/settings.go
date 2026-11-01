@@ -49,6 +49,24 @@ type UI struct {
 	AutoFetch bool `json:"autoFetch,omitempty"`
 	// QuitOnClose — крестик закрывает приложение, а не прячет окно в трей (D-063).
 	QuitOnClose bool `json:"quitOnClose,omitempty"`
+	// Notify — какие системные уведомления показывать; nil — все (D-063).
+	Notify *Notify `json:"notify,omitempty"`
+}
+
+// Notify — виды уведомлений: CI упал или снова проходит, ветка отстала,
+// PR/MR открыт, влит или закрыт.
+type Notify struct {
+	CI     bool `json:"ci"`
+	Behind bool `json:"behind"`
+	PR     bool `json:"pr"`
+}
+
+// Notifications — включённые виды уведомлений; по умолчанию все.
+func (u UI) Notifications() Notify {
+	if u.Notify == nil {
+		return Notify{CI: true, Behind: true, PR: true}
+	}
+	return *u.Notify
 }
 
 // Интервал фоновой проверки, минуты.

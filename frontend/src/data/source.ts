@@ -82,6 +82,8 @@ export interface DataSource {
   onRepository(cb: (repo: Repository) => void): () => void
   /** Подписка на окончание фоновой проверки; at — её время (ISO). */
   onChecked(cb: (at: string) => void): () => void
+  /** Подписка на просьбу показать репозиторий (клик по уведомлению). */
+  onReveal(cb: (repoId: string) => void): () => void
 }
 
 /** Ошибка вызова в виде model.Error: Wails кладёт её JSON в err.cause. */

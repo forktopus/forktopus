@@ -88,6 +88,7 @@ func (s *AppService) remoteStatus(ctx context.Context, id string, force bool) (s
 		repos[i] = s.withRemoteLocked(repos[i], nil)
 		s.snapshot.Repositories = repos
 		s.saveCacheLocked()
+		s.observeLocked(repos[i])
 	}
 	s.mu.Unlock()
 	emit(EventRemoteStatus, st)

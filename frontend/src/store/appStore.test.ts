@@ -296,6 +296,19 @@ describe('store', () => {
     }
   })
 
+  it('клик по уведомлению выбирает и открывает репозиторий (18.3)', async () => {
+    const source = createMockSource({ delayMs: 0 })
+    let reveal: (id: string) => void = () => {}
+    const store = createAppStore({ ...source, onReveal: (cb) => ((reveal = cb), () => {}) })
+    await store.getState().init()
+    const id = Object.keys(store.getState().repos)[0]
+    reveal('unknown')
+    expect(store.getState().detailsId).toBeNull()
+    reveal(id)
+    expect(store.getState().selectedId).toBe(id)
+    expect(store.getState().detailsId).toBe(id)
+  })
+
   it('сводка для трея: после загрузки и только при изменении списка (18.2)', async () => {
     const source = createMockSource({ delayMs: 0 })
     const sent: string[] = []
@@ -411,6 +424,7 @@ describe('fromUI / toUI', () => {
       backgroundMinutes: 5,
       autoFetch: false,
       quitOnClose: false,
+      notifications: { ci: true, behind: true, pr: true },
     })
     // Интервал — только из списка; чужое значение — по умолчанию.
     expect(fromUI({ backgroundMinutes: 7 }).backgroundMinutes).toBe(5)
@@ -427,6 +441,7 @@ describe('fromUI / toUI', () => {
       backgroundMinutes: 30,
       autoFetch: true,
       quitOnClose: true,
+      notifications: { ci: false, behind: true, pr: false },
     }
     expect(fromUI(toUI(state))).toEqual(state)
   })

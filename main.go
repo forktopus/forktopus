@@ -12,6 +12,7 @@ import (
 	"syscall"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/services/notifications"
 
 	"github.com/forktopus/forktopus/internal/app"
 	"github.com/forktopus/forktopus/internal/applog"
@@ -64,11 +65,13 @@ func main() {
 	app.AttachLog(service, logPath, recent)
 
 	var window *application.WebviewWindow
+	notifier := notifications.New()
 	wailsApp := application.New(application.Options{
 		Name:        "forktopus",
 		Description: "Все ваши Git-репозитории на одном экране",
 		Services: []application.Service{
 			application.NewService(service),
+			application.NewService(notifier),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
@@ -113,6 +116,7 @@ func main() {
 	// ssh в своей сессии пережили бы его (11.4). Закрытие окна идёт через
 	// ServiceShutdown без этого.
 	quit := desktop.SetupTray(wailsApp, window, service)
+	desktop.SetupNotifications(notifier, window, service)
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)

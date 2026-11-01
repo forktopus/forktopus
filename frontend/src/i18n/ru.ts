@@ -71,6 +71,11 @@ export const ru = {
 
   'roots.title': 'Корневые папки',
   'settings.title': 'Настройки',
+  'settings.notifyTitle': 'Уведомления',
+  'settings.notifyDescription': 'Системные уведомления о переменах, пока Forktopus работает — даже в трее. Больше трёх событий сразу — одно сводное.',
+  'settings.notifyCI': 'CI текущей ветки упал или снова проходит',
+  'settings.notifyBehind': 'Ветка отстала от upstream (нужен fetch)',
+  'settings.notifyPR': 'PR/MR по ветке открыт, влит или закрыт',
   'settings.closeToTrayTitle': 'Закрывать в трей',
   'settings.closeToTrayDescription':
     'Крестик прячет окно, проверка продолжается в фоне; выйти — через меню значка в трее. Если трея в системе нет, крестик закрывает приложение.',

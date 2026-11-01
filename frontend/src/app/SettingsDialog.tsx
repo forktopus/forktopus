@@ -28,6 +28,7 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose(): vo
       <DialogTitle>{t('settings.title')}</DialogTitle>
       <DialogContent sx={{ '& > :first-of-type': { mt: 0, pt: 0, borderTop: 'none' } }}>
         <BackgroundSetting />
+        <NotifySetting />
         <FetchPruneSetting />
         <CloseToTraySetting />
         <ZoomSetting />
@@ -93,6 +94,34 @@ function FetchPruneSetting() {
       <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
         {t('settings.pruneDescription')}
       </Typography>
+    </Box>
+  )
+}
+
+/** Виды системных уведомлений (D-063). */
+function NotifySetting() {
+  const theme = useTheme()
+  const notifications = useApp((s) => s.notifications)
+  const setNotifications = useApp((s) => s.setNotifications)
+  const kinds = [
+    ['ci', 'settings.notifyCI'],
+    ['behind', 'settings.notifyBehind'],
+    ['pr', 'settings.notifyPR'],
+  ] as const
+  return (
+    <Box sx={{ mt: 4, pt: 2, borderTop: `1px solid ${theme.app.line}` }}>
+      <Typography variant="subtitle2">{t('settings.notifyTitle')}</Typography>
+      <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5, mb: 0.5 }}>
+        {t('settings.notifyDescription')}
+      </Typography>
+      {kinds.map(([kind, label]) => (
+        <FormControlLabel
+          key={kind}
+          sx={{ display: 'flex' }}
+          control={<Switch size="small" checked={notifications[kind]} onChange={(e) => setNotifications({ [kind]: e.target.checked })} />}
+          label={<Typography variant="body2">{t(label)}</Typography>}
+        />
+      ))}
     </Box>
   )
 }

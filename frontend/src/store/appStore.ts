@@ -7,6 +7,7 @@ import {
   Operation,
   type BranchInfo,
   type Diagnostics,
+  type Notify,
   type OpResult,
   type RemoteStatus,
   type Repository,
@@ -87,6 +88,8 @@ export interface AppState {
   autoFetch: boolean
   /** Крестик закрывает приложение, а не прячет окно в трей (D-063). */
   quitOnClose: boolean
+  /** Какие системные уведомления показывать (D-063). */
+  notifications: Notify
   query: string
   selectedId: string | null
   /** операция, которая сейчас идёт над репозиторием: кнопки операций заблокированы (D-031) */
@@ -139,6 +142,7 @@ export interface AppState {
   setBackgroundMinutes(minutes: number): void
   setAutoFetch(on: boolean): void
   setQuitOnClose(on: boolean): void
+  setNotifications(patch: Partial<Notify>): void
   setFilters(patch: Partial<Filters>): void
   setQuery(query: string): void
   select(id: string | null): void
@@ -151,11 +155,13 @@ function oneOf<T extends string>(value: string | undefined, allowed: readonly T[
 }
 
 /** Состояние интерфейса из настроек; неизвестные значения — по умолчанию. */
-type SavedUI = Pick<AppState, 'mode' | 'theme' | 'filters' | 'fetchPrune' | 'zoom' | 'backgroundMinutes' | 'autoFetch' | 'quitOnClose'>
+type SavedUI = Pick<AppState, 'mode' | 'theme' | 'filters' | 'fetchPrune' | 'zoom' | 'backgroundMinutes' | 'autoFetch' | 'quitOnClose' | 'notifications'>
 
 /** Интервалы фоновой проверки на выбор, минуты; по умолчанию — 5 (как в Go). */
 export const backgroundIntervals = [1, 2, 5, 10, 15, 30, 60] as const
 export const defaultBackgroundMinutes = 5
+/** По умолчанию включены все уведомления (как в Go). */
+export const defaultNotify: Notify = { ci: true, behind: true, pr: true }
 
 export function fromUI(ui: UI): SavedUI {
   const f = ui.filters ?? {}
@@ -173,6 +179,7 @@ export function fromUI(ui: UI): SavedUI {
     backgroundMinutes: backgroundIntervals.find((m) => m === ui.backgroundMinutes) ?? defaultBackgroundMinutes,
     autoFetch: ui.autoFetch === true,
     quitOnClose: ui.quitOnClose === true,
+    notifications: ui.notify ? { ci: ui.notify.ci === true, behind: ui.notify.behind === true, pr: ui.notify.pr === true } : defaultNotify,
   }
 }
 
@@ -187,6 +194,7 @@ export function toUI(s: SavedUI): UI {
     backgroundMinutes: s.backgroundMinutes,
     autoFetch: s.autoFetch,
     quitOnClose: s.quitOnClose,
+    notify: s.notifications,
   }
 }
 
@@ -295,6 +303,7 @@ export function createAppStore(source: DataSource): AppStore {
       backgroundMinutes: defaultBackgroundMinutes,
       autoFetch: false,
       quitOnClose: false,
+      notifications: defaultNotify,
       query: '',
       selectedId: null,
       running: {},
@@ -495,6 +504,11 @@ export function createAppStore(source: DataSource): AppStore {
         persist()
       },
 
+      setNotifications(patch) {
+        set({ notifications: { ...get().notifications, ...patch } })
+        persist()
+      },
+
       setZoom(value) {
         const zoom = clampZoom(value)
         if (zoom === get().zoom) return
@@ -556,6 +570,10 @@ export function createAppStore(source: DataSource): AppStore {
   // Фоновая проверка Go (D-063): свежий статус по репозиториям и её время.
   source.onRepository(queueRepository)
   source.onChecked((lastCheckAt) => store.setState({ lastCheckAt, stale: false }))
+  // Клик по уведомлению: репозиторий выбран и открыт в деталях.
+  source.onReveal((id) => {
+    if (store.getState().repos[id]) store.setState({ selectedId: id, detailsId: id })
+  })
 
   // Сводка для значка в трее: пересчитывается, только когда меняется список.
   let summaryOf: AppState['repos'] | undefined

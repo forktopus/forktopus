@@ -135,6 +135,7 @@ func (s *AppService) storeRepo(repo model.Repository) model.Repository {
 		repos[i] = repo
 		s.snapshot.Repositories = repos
 		s.saveCacheLocked()
+		s.observeLocked(repo)
 		// Ветка сменилась (switch, переключение в терминале) — нужны PR/CI новой.
 		if s.needsRemoteLocked(repo) {
 			go s.remoteStatus(s.life, repo.ID, false) //nolint:errcheck // итог приходит событием

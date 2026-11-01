@@ -18,6 +18,7 @@ import (
 	"github.com/forktopus/forktopus/internal/gitlocal"
 	"github.com/forktopus/forktopus/internal/gitops"
 	"github.com/forktopus/forktopus/internal/model"
+	"github.com/forktopus/forktopus/internal/notify"
 	"github.com/forktopus/forktopus/internal/remote"
 	"github.com/forktopus/forktopus/internal/repocache"
 	"github.com/forktopus/forktopus/internal/runner"
@@ -67,6 +68,12 @@ type AppService struct {
 	// wake — проверить сейчас, rearm — интервал изменился (background.go).
 	wake, rearm chan struct{}
 
+	// События для уведомлений: смены состояния репозиториев (internal/notify).
+	tracker *notify.Tracker
+	batcher *notify.Batcher
+	// Notifier показывает уведомления; задаётся в main до запуска, nil — не показывать.
+	Notifier func(msgs []notify.Message)
+
 	// TraySummary получает сводку для значка в трее (SetTraySummary); задаётся
 	// в main до запуска приложения, nil — трея нет.
 	TraySummary func(text string)
@@ -79,7 +86,12 @@ func NewAppService(store *settings.Store, r runner.Runner, cachePath string) (*A
 	cfg, err := store.Load()
 	s := &AppService{store: store, runner: r, cachePath: cachePath, cfg: cfg,
 		remote: remote.New(r, remote.Options{}), remoteByRepo: map[string]model.RemoteStatus{},
-		wake: make(chan struct{}, 1), rearm: make(chan struct{}, 1)}
+		wake: make(chan struct{}, 1), rearm: make(chan struct{}, 1), tracker: notify.NewTracker()}
+	s.batcher = notify.NewBatcher(notifyDelay, func(msgs []notify.Message) {
+		if s.Notifier != nil {
+			s.Notifier(msgs)
+		}
+	})
 	s.life, s.stop = context.WithCancel(context.Background())
 	s.snapshot = model.RepositorySnapshot{Repositories: []model.Repository{}, Issues: []model.ScanIssue{}, Stale: true}
 	if cachePath != "" {
@@ -174,7 +186,12 @@ func (s *AppService) RemoveRoot(id string) error {
 		return model.AsError(err)
 	}
 	s.cfg = next
-	s.snapshot.Repositories = slices.DeleteFunc(slices.Clone(s.snapshot.Repositories), func(r model.Repository) bool { return r.RootID == id })
+	s.snapshot.Repositories = slices.DeleteFunc(slices.Clone(s.snapshot.Repositories), func(r model.Repository) bool {
+		if r.RootID == id {
+			s.tracker.Forget(r.ID)
+		}
+		return r.RootID == id
+	})
 	s.snapshot.Issues = slices.DeleteFunc(slices.Clone(s.snapshot.Issues), func(i model.ScanIssue) bool { return i.RootID == id })
 	s.saveCacheLocked()
 	return nil
@@ -250,6 +267,7 @@ func (s *AppService) ScanRoots(ctx context.Context) (model.ScanResult, error) {
 	res.Issues = slices.DeleteFunc(res.Issues, func(i model.ScanIssue) bool { return !known[i.RootID] })
 	for i, r := range res.Repositories {
 		res.Repositories[i] = s.withRemoteLocked(r, s.prevLocked(r.ID))
+		s.observeLocked(res.Repositories[i])
 	}
 	at := res.ScannedAt
 	s.snapshot = model.RepositorySnapshot{Repositories: res.Repositories, Issues: res.Issues, ScannedAt: &at}

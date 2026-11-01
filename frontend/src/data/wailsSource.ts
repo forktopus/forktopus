@@ -37,4 +37,5 @@ export const wailsSource: DataSource = {
   onRemoteStatus: (cb) => Events.On('remote:status', (event) => cb(event.data)),
   onRepository: (cb) => Events.On('repo:updated', (event) => cb(normalizeRepository(event.data))),
   onChecked: (cb) => Events.On('background:checked', (event) => cb(event.data)),
+  onReveal: (cb) => Events.On('repo:reveal', (event) => cb(event.data)),
 }

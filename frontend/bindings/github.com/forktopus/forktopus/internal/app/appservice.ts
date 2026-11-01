@@ -159,6 +159,13 @@ export function RemoveRoot(id: string): $CancellablePromise<void> {
 }
 
 /**
+ * Reveal просит UI показать репозиторий: выбрать его и открыть детали.
+ */
+export function Reveal(id: string): $CancellablePromise<void> {
+    return $Call.ByID(294858208, id);
+}
+
+/**
  * SaveUI сохраняет состояние интерфейса.
  */
 export function SaveUI(ui: settings$0.UI): $CancellablePromise<void> {

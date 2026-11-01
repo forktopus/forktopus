@@ -666,5 +666,6 @@ export function createMockSource({ delayMs = 250, scenario = 'default' }: MockOp
     // Фоновой проверки в демо нет: статус меняется только сканированием.
     onRepository: () => () => {},
     onChecked: () => () => {},
+    onReveal: () => () => {},
   }
 }

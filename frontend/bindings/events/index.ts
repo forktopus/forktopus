@@ -19,6 +19,11 @@ export const BackgroundChecked = "background:checked";
 export const RemoteStatus = "remote:status";
 
 /**
+ * Name of the custom event "repo:reveal".
+ */
+export const RepoReveal = "repo:reveal";
+
+/**
  * Name of the custom event "repo:updated".
  */
 export const RepoUpdated = "repo:updated";

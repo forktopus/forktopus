@@ -14,6 +14,7 @@ declare module "@wailsio/runtime" {
         interface CustomEvents {
             "background:checked": string;
             "remote:status": model$0.RemoteStatus;
+            "repo:reveal": string;
             "repo:updated": model$0.Repository;
             "scan:repository": model$0.Repository;
         }
