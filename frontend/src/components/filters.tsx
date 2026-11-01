@@ -95,3 +95,35 @@ export function StatusTabs() {
     </ToggleButtonGroup>
   )
 }
+
+/**
+ * Источники и вкладки статусов одной полосой, прилипающей под шапкой (73 px,
+ * app/TopBar.tsx): карточки и строки прокручиваются под ней. Фон — цвет
+ * страницы на всю ширину main (отрицательные поля = его отступы).
+ */
+export function FilterBar({ aside }: { aside?: ReactNode }) {
+  const theme = useTheme()
+  return (
+    <Box
+      sx={{
+        position: 'sticky',
+        top: 73,
+        zIndex: theme.zIndex.appBar - 1,
+        bgcolor: 'background.default',
+        mx: { xs: -2, md: -4 },
+        px: { xs: 2, md: 4 },
+        pt: 2,
+        // Отступ под вкладками — padding, а не их margin: фон полосы должен его закрывать.
+        pb: 1.5,
+        mb: 1,
+        '& .MuiToggleButtonGroup-root': { mb: 0 },
+      }}
+    >
+      <Sources />
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
+        <StatusTabs />
+        {aside}
+      </Box>
+    </Box>
+  )
+}

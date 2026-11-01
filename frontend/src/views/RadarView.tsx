@@ -6,7 +6,7 @@ import { Box, Button, CircularProgress, Paper, Tooltip, Typography, alpha, useTh
 import { useMemo, type MouseEvent } from 'react'
 import { Virtuoso } from 'react-virtuoso'
 import { useNow } from '../app/useNow'
-import { Sources, StatusTabs } from '../components/filters'
+import { FilterBar } from '../components/filters'
 import { RepoIcon } from '../components/status'
 import { Operation, type Repository } from '../data/model'
 import { t, type MessageKey } from '../i18n'
@@ -170,11 +170,9 @@ export function RadarView() {
 
   return (
     <Box>
-      <Sources />
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap', mb: 1 }}>
-        <StatusTabs />
-        <Typography sx={{ fontSize: 13, color: 'text.secondary', pt: 1 }}>{t('radar.summary', { count: notOk, total: searched.length })}</Typography>
-      </Box>
+      <FilterBar
+        aside={<Typography sx={{ fontSize: 13, color: 'text.secondary', pt: 1 }}>{t('radar.summary', { count: notOk, total: searched.length })}</Typography>}
+      />
       {groups.unknown.length > 0 && (
         <Typography sx={{ fontSize: 13, color: 'text.secondary', mb: 2 }}>{t('scan.unknownStatus', { count: groups.unknown.length })}</Typography>
       )}

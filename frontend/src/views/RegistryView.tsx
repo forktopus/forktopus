@@ -25,7 +25,7 @@ import {
 import { forwardRef, memo, useCallback, useEffect, useMemo, useRef, useState, type ComponentProps, type MouseEvent } from 'react'
 import { TableVirtuoso, type TableComponents, type TableVirtuosoHandle } from 'react-virtuoso'
 import { CIIndicator, ChangesIndicator, NoAutoCheckMark, PRIndicator, SyncIndicator } from '../components/indicators'
-import { Sources, StatusTabs } from '../components/filters'
+import { FilterBar } from '../components/filters'
 import { BranchChip, RepoIcon } from '../components/status'
 import { Nesting, Operation, type Repository } from '../data/model'
 import { formatTime, t, type MessageKey } from '../i18n'
@@ -292,7 +292,6 @@ export function RegistryView() {
 
   return (
     <Box>
-      <Sources />
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(4, minmax(0, 1fr))' }, gap: 1.6, mb: 3 }}>
         <Metric label={t('kpi.repos')} value={String(metrics.shown)} foot={t('kpi.reposFoot', { total: metrics.total })} />
         <Metric label={t('kpi.changes')} value={gitValue(metrics.withChanges)} foot={gitFoot('kpi.changesFoot')} />
@@ -304,7 +303,8 @@ export function RegistryView() {
         />
       </Box>
 
-      <StatusTabs />
+      {/* Карточки сверху и уезжают при прокрутке; источники и вкладки — прилипают. */}
+      <FilterBar />
 
       <Paper sx={{ borderRadius: '15px', overflow: 'hidden' }}>
         <TableVirtuoso
