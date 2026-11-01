@@ -9,7 +9,7 @@ import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import SubdirectoryArrowRightIcon from '@mui/icons-material/SubdirectoryArrowRight'
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
-import { Alert, Box, Button, ButtonBase, CircularProgress, IconButton, Paper, Tooltip, Typography, useTheme } from '@mui/material'
+import { Alert, Box, Button, ButtonBase, CircularProgress, IconButton, Link, Paper, Tooltip, Typography, useTheme } from '@mui/material'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNow } from '../app/useNow'
 import { CIIndicator, NoAutoCheckMark, PRIndicator } from '../components/indicators'
@@ -17,7 +17,7 @@ import { CliStatus, GuardedButton, nestingName, providerName } from '../componen
 import { ProviderIcon, RepoIcon, StatusText, caption } from '../components/status'
 import { Availability, ErrorCode, Operation, type BranchInfo, type ChangedFile, type Repository } from '../data/model'
 import { formatRelative, t } from '../i18n'
-import { buildTree, healthTone, treeRepos, type RepoNode, type RootNode } from '../logic/explorer'
+import { buildTree, crumbNodes, healthTone, hostKey, namespaceKey, treeRepos, type RepoNode, type RootNode } from '../logic/explorer'
 import { opName, opResultLabel, pullBlock, switchBlock } from '../logic/ops'
 import { branchOf, repoHost, repoName, repoNamespace, repoProvider } from '../logic/repo'
 import { changeCount, ciLabel, fileLabel, hasStatus, integrationIssue, prLabel, remoteCaption, remoteCount, syncFreshness, syncLabel } from '../logic/status'
@@ -94,13 +94,14 @@ function TreeRepo({ node, depth, selectedId }: { node: RepoNode; depth: number; 
   )
 }
 
-function Toggle({ open, onClick, indent = 0, children }: { open: boolean; onClick(): void; indent?: number; children: ReactNode }) {
+function Toggle({ open, onClick, indent = 0, node, children }: { open: boolean; onClick(): void; indent?: number; node?: string; children: ReactNode }) {
   const theme = useTheme()
   const Icon = open ? ExpandMoreIcon : ChevronRightIcon
   return (
     <ButtonBase
       onClick={onClick}
       aria-expanded={open}
+      data-node={node}
       sx={{
         display: 'flex',
         width: '100%',
@@ -133,11 +134,11 @@ function Tree({ tree, selectedId, rootsShown }: { tree: RootNode[]; selectedId: 
         <Typography sx={{ fontSize: 12, color: 'text.secondary', px: 3.5, py: 0.5 }}>{t('explorer.emptyRoot')}</Typography>
       ) : (
         hosts.map((h) => {
-          const key = `${root.id}\n${h.host}`
+          const key = hostKey(root.id, h.host)
           const open = !collapsed.has(key)
           return (
             <Box key={h.host}>
-              <Toggle open={open} onClick={() => toggle(key)}>
+              <Toggle open={open} onClick={() => toggle(key)} node={key}>
                 {h.host && <ProviderIcon provider={h.provider} size={18} />}
                 <Typography component="span" sx={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 730, overflowWrap: 'anywhere' }}>
                   {h.host || t('explorer.noRemote')}
@@ -151,12 +152,12 @@ function Tree({ tree, selectedId, rootsShown }: { tree: RootNode[]; selectedId: 
               {open &&
                 h.namespaces.map((ns) => {
                   // Без namespace (локальный путь, remote без группы) сворачивать нечего — репозитории сразу под хостом.
-                  const nsKey = `${key}\n${ns.namespace}`
+                  const nsKey = namespaceKey(root.id, h.host, ns.namespace)
                   const nsOpen = !ns.namespace || !collapsed.has(nsKey)
                   return (
                     <Box key={ns.namespace}>
                       {ns.namespace && (
-                        <Toggle open={nsOpen} onClick={() => toggle(nsKey)} indent={1.75}>
+                        <Toggle open={nsOpen} onClick={() => toggle(nsKey)} indent={1.75} node={nsKey}>
                           <Typography
                             component="span"
                             sx={{ ...caption, fontWeight: 600, letterSpacing: '1px', flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}
@@ -375,7 +376,13 @@ function Branches({ repo, busy }: { repo: Repository; busy: boolean }) {
   )
 }
 
-function RepoMain({ repo }: { repo: Repository }) {
+// Крошка хоста или namespace ведёт к узлу дерева; имя репозитория — текст (он уже открыт).
+interface Crumb {
+  label: string
+  nodes?: string[] | null
+}
+
+function RepoMain({ repo, tree, onReveal }: { repo: Repository; tree: RootNode[]; onReveal(nodes: string[]): void }) {
   const now = useNow()
   const requestOp = useApp((s) => s.requestOp)
   const refreshRepo = useApp((s) => s.refreshRepo)
@@ -390,17 +397,35 @@ function RepoMain({ repo }: { repo: Repository }) {
     await refreshRepo(repo.id)
     setRefreshing(false)
   }
-  const crumbs = [repoHost(repo) || t('explorer.noRemote'), repoNamespace(repo), repoName(repo)].filter(Boolean)
+  const nodes = crumbNodes(tree, repo)
+  const crumbs: Crumb[] = [
+    { label: repoHost(repo) || t('explorer.noRemote'), nodes: nodes.host },
+    { label: repoNamespace(repo), nodes: nodes.namespace },
+    { label: repoName(repo) },
+  ].filter((c) => c.label)
   const pr = remoteCount(repo.pr, repo.pr.open)
   const ci = remoteCount(repo.ci, repo.ci.active)
 
   return (
     <Box sx={{ p: { xs: 2.5, md: 3.5 }, minWidth: 0 }}>
       <Typography sx={{ fontSize: 12, color: 'text.secondary', overflowWrap: 'anywhere' }}>
-        {crumbs.map((c, i) => (
+        {crumbs.map(({ label, nodes }, i) => (
           <Box component="span" key={i} sx={i === crumbs.length - 1 ? { color: 'primary.main' } : undefined}>
             {i > 0 && ' › '}
-            {c}
+            {nodes ? (
+              <Link
+                component="button"
+                color="inherit"
+                underline="hover"
+                title={t('explorer.showInTree')}
+                onClick={() => onReveal(nodes)}
+                sx={{ font: 'inherit', verticalAlign: 'baseline' }}
+              >
+                {label}
+              </Link>
+            ) : (
+              label
+            )}
           </Box>
         ))}
       </Typography>
@@ -565,6 +590,20 @@ export function ExplorerView({ onOpenTools }: { onOpenTools(): void }) {
     window.scrollTo(0, 0)
   }, [])
 
+  // Переход по крошке: узел и его родители раскрываются, дерево прокручивается к узлу, узел коротко подсвечивается.
+  const expand = useApp((s) => s.expandExplorerNodes)
+  const [reveal, setReveal] = useState<{ node: string } | null>(null)
+  const revealNodes = (nodes: string[]) => {
+    expand(nodes)
+    setReveal({ node: nodes[nodes.length - 1] })
+  }
+  useEffect(() => {
+    if (!reveal) return
+    const el = treeRef.current?.querySelector<HTMLElement>(`[data-node="${CSS.escape(reveal.node)}"]`)
+    el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    el?.animate([{ backgroundColor: theme.app.tabActive }, { backgroundColor: 'transparent' }], { duration: 1600, easing: 'ease-in' })
+  }, [reveal, theme])
+
   return (
     <Paper
       sx={{
@@ -624,7 +663,7 @@ export function ExplorerView({ onOpenTools }: { onOpenTools(): void }) {
       </Box>
       {selected ? (
         <>
-          <RepoMain repo={selected} />
+          <RepoMain repo={selected} tree={tree} onReveal={revealNodes} />
           <Box sx={{ bgcolor: theme.app.panelAlt, borderLeft: { lg: line }, borderTop: { xs: line, lg: 'none' } }}>
             <Inspector repo={selected} onOpenTools={onOpenTools} />
           </Box>

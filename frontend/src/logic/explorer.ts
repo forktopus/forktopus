@@ -74,6 +74,26 @@ export function buildTree(roots: Root[], repos: Repository[]): RootNode[] {
   })
 }
 
+/** Ключ узла хоста в дереве (свёрнутые узлы сохраняются по ключу). */
+export const hostKey = (rootId: string, host: string) => `${rootId}\n${host}`
+
+/** Ключ узла namespace в дереве. */
+export const namespaceKey = (rootId: string, host: string, namespace: string) => `${hostKey(rootId, host)}\n${namespace}`
+
+/**
+ * Узлы дерева для хлебных крошек репозитория: ключи от корня до хоста и до
+ * namespace — их раскрывает клик по крошке. null — такого узла в дереве нет
+ * (вложенный показан под чужим хостом, репозиторий без namespace).
+ */
+export function crumbNodes(tree: RootNode[], r: Repository): { host: string[] | null; namespace: string[] | null } {
+  const host = tree.find((n) => n.root.id === r.rootId)?.hosts.find((h) => h.host === repoHost(r))
+  if (!host) return { host: null, namespace: null }
+  const path = [r.rootId, hostKey(r.rootId, host.host)]
+  const ns = repoNamespace(r)
+  const hasNs = ns !== '' && host.namespaces.some((n) => n.namespace === ns)
+  return { host: path, namespace: hasNs ? [...path, namespaceKey(r.rootId, host.host, ns)] : null }
+}
+
 /** Репозитории дерева в порядке показа (выбор по умолчанию — первый). */
 export function treeRepos(tree: RootNode[]): Repository[] {
   const out: Repository[] = []

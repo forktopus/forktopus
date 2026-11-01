@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { ErrorCode } from '../data/model'
 import { repo, unavailable } from '../test/fixtures'
-import { buildTree, emptyRoots, healthTone, treeRepos } from './explorer'
+import { buildTree, crumbNodes, emptyRoots, healthTone, treeRepos } from './explorer'
 
 describe('дерево проводника', () => {
   it('корень → хост → namespace → репозиторий, без remote — в конце', () => {
@@ -52,6 +52,21 @@ describe('дерево проводника', () => {
     expect(treeRepos(tree).map((r) => r.id)).toEqual(['p', 's', 'd'])
 
     expect(buildTree([root], [sub])[0].hosts.map((h) => h.host)).toEqual(['gitlab.com'])
+  })
+})
+
+describe('хлебные крошки', () => {
+  it('ключи узлов от корня; узла нет — null', () => {
+    const root = { id: 'root', path: '/srv' }
+    const a = repo({ id: 'a', rootId: 'root', remotePath: 'team/a' })
+    const local = repo({ id: 'l', rootId: 'root', remotePath: null, path: '/srv/l' })
+    const sub = { ...repo({ id: 's', rootId: 'root', host: 'gitlab.com', remotePath: 'lib/s' }), parentId: 'a' }
+    const tree = buildTree([root], [a, local, sub])
+
+    expect(crumbNodes(tree, a)).toEqual({ host: ['root', 'root\ngithub.com'], namespace: ['root', 'root\ngithub.com', 'root\ngithub.com\nteam'] })
+    expect(crumbNodes(tree, local)).toEqual({ host: ['root', 'root\n'], namespace: null })
+    // Вложенный стоит под родителем: узла gitlab.com в дереве нет.
+    expect(crumbNodes(tree, sub)).toEqual({ host: null, namespace: null })
   })
 })
 

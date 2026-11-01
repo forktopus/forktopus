@@ -156,6 +156,8 @@ export interface AppState {
   setFetchPrune(on: boolean): void
   /** Свернуть или развернуть узел дерева проводника; сохраняется между запусками. */
   toggleExplorerNode(key: string): void
+  /** Развернуть узлы дерева проводника (переход по хлебным крошкам). */
+  expandExplorerNodes(keys: string[]): void
   setZoom(zoom: number): void
   setBackgroundMinutes(minutes: number): void
   setAutoFetch(on: boolean): void
@@ -528,6 +530,13 @@ export function createAppStore(source: DataSource): AppStore {
       toggleExplorerNode(key) {
         const prev = get().explorerCollapsed
         set({ explorerCollapsed: prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key] })
+        persist()
+      },
+
+      expandExplorerNodes(keys) {
+        const prev = get().explorerCollapsed
+        if (!keys.some((k) => prev.includes(k))) return
+        set({ explorerCollapsed: prev.filter((k) => !keys.includes(k)) })
         persist()
       },
 

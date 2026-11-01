@@ -311,6 +311,7 @@ export const ru = {
     few: '{count} источника требуют настройки CLI',
     many: '{count} источников требуют настройки CLI',
   },
+  'explorer.showInTree': 'Показать в дереве',
   'explorer.openTools': 'Открыть диагностику →',
   'explorer.emptyRoot': 'Git-репозиториев не найдено',
   'explorer.pull': '↓ Обновить ветку',
