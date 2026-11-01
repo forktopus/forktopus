@@ -4,6 +4,7 @@
 
 import { Box, Button, CircularProgress, Paper, Tooltip, Typography, alpha, useTheme } from '@mui/material'
 import { useMemo, type MouseEvent } from 'react'
+import { Virtuoso } from 'react-virtuoso'
 import { useNow } from '../app/useNow'
 import { Sources, StatusTabs } from '../components/filters'
 import { RepoIcon, caption } from '../components/status'
@@ -93,7 +94,6 @@ function RadarCard({ repo, group }: { repo: Repository; group: RadarGroup }) {
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget && (e.preventDefault(), open())}
       sx={{
         p: 2.25,
-        mb: 1.5,
         borderRadius: '15px',
         cursor: 'pointer',
         borderLeft: `3px solid ${tone}`,
@@ -160,7 +160,13 @@ export function RadarView() {
             {groups[g].length === 0 ? (
               <EmptyText text={t('radar.empty')} />
             ) : (
-              groups[g].map((r) => <RadarCard key={r.id} repo={r} group={g} />)
+              // Карточки у видимой области (15.3); у каждой колонки свой список, прокрутка — общая, окна.
+              <Virtuoso useWindowScroll data={groups[g]} computeItemKey={(_, r) => r.id} increaseViewportBy={600} itemContent={(_, r) => (
+                  // Отступ — padding, не margin: виртуальный список меряет высоту обёртки.
+                  <Box sx={{ pb: 1.5 }}>
+                    <RadarCard repo={r} group={g} />
+                  </Box>
+                )} />
             )}
           </Box>
         ))}

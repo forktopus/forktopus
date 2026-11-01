@@ -69,7 +69,7 @@ export function BranchChip({ repo }: { repo: Repository }) {
       title={text}
       sx={{
         display: 'inline-block',
-        maxWidth: 180,
+        maxWidth: 'min(180px, 100%)',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',

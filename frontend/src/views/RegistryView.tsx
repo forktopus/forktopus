@@ -22,14 +22,15 @@ import {
   Typography,
   useTheme,
 } from '@mui/material'
-import { memo, useCallback, useMemo, useState, type MouseEvent } from 'react'
+import { forwardRef, memo, useCallback, useEffect, useMemo, useRef, useState, type ComponentProps, type MouseEvent } from 'react'
+import { TableVirtuoso, type TableComponents, type TableVirtuosoHandle } from 'react-virtuoso'
 import { CIIndicator, ChangesIndicator, PRIndicator, SyncIndicator } from '../components/indicators'
 import { Sources, StatusTabs } from '../components/filters'
 import { BranchChip, RepoIcon } from '../components/status'
 import { Nesting, Operation, type Repository } from '../data/model'
 import { formatTime, t, type MessageKey } from '../i18n'
 import { opName, pullBlock } from '../logic/ops'
-import { kpis, registryRows, type SortKey } from '../logic/registry'
+import { kpis, registryRows, type RegistryRow as Row, type SortKey } from '../logic/registry'
 import { repoHost, repoName, repoNamespace } from '../logic/repo'
 import { remoteCaption } from '../logic/status'
 import { useApp } from '../store/context'
@@ -145,19 +146,15 @@ interface RowProps {
   depth: number
   nested: number
   collapsed: boolean
-  selected: boolean
   onToggle(id: string): void
 }
 
-// Строка перерисовывается, только когда изменился её репозиторий: при сотнях
+// Ячейки перерисовываются, только когда изменился их репозиторий: при сотнях
 // строк перерисовка всей таблицы на каждое событие замораживала UI (11.1).
-const RegistryRow = memo(function RegistryRow({ repo: r, depth, nested, collapsed, selected, onToggle }: RowProps) {
-  const openDetails = useApp((s) => s.openDetails)
-  // Выбранная в другом режиме строка прокручивается в видимую область.
-  const reveal = useCallback((el: HTMLTableRowElement | null) => el?.scrollIntoView({ block: 'center' }), [])
+const RowCells = memo(function RowCells({ repo: r, depth, nested, collapsed, onToggle }: RowProps) {
   return (
-    <TableRow hover selected={selected} ref={selected ? reveal : undefined} onClick={() => openDetails(r.id)} sx={{ cursor: 'pointer' }}>
-      <TableCell sx={{ minWidth: 220 }}>
+    <>
+      <TableCell>
         <RepoCell repo={r} depth={depth} nested={nested} collapsed={collapsed} onToggle={() => onToggle(r.id)} />
       </TableCell>
       <TableCell>
@@ -175,23 +172,52 @@ const RegistryRow = memo(function RegistryRow({ repo: r, depth, nested, collapse
       <TableCell>
         <CIIndicator repo={r} />
       </TableCell>
-      <TableCell sx={{ fontSize: 12.5, color: 'text.secondary', whiteSpace: 'nowrap' }}>{repoHost(r) || '—'}</TableCell>
+      <TableCell title={repoHost(r)} sx={{ fontSize: 12.5, color: 'text.secondary', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {repoHost(r) || '—'}
+      </TableCell>
       <TableCell align="right">
         <RowActions repo={r} />
       </TableCell>
-    </TableRow>
+    </>
   )
 })
 
+interface TableContext {
+  selectedId: string | null
+  openDetails(id: string): void
+  sx: ComponentProps<typeof Table>['sx']
+}
+
+// Таблица рисует только строки у видимой области (15.3): на 241 репозитории
+// DOM всех строк занимал ~330 МБ в WebKit, монтирование — ~340 мс (12.4, 11.1).
+const tableComponents: TableComponents<Row, TableContext> = {
+  Scroller: forwardRef<HTMLDivElement>(function Scroller(props, ref) {
+    return <Box {...props} ref={ref} sx={{ overflowX: 'auto' }} />
+  }),
+  Table: ({ context, ...props }) => <Table {...props} size="small" sx={context?.sx} />,
+  TableHead: forwardRef<HTMLTableSectionElement>(function Head(props, ref) {
+    const theme = useTheme()
+    return <TableHead {...props} ref={ref} sx={{ bgcolor: theme.app.panelAlt }} />
+  }),
+  TableBody: forwardRef<HTMLTableSectionElement>(function Body(props, ref) {
+    return <TableBody {...props} ref={ref} />
+  }),
+  TableRow: ({ item, context, ...props }) => (
+    <TableRow {...props} hover selected={item.repo.id === context?.selectedId} onClick={() => context?.openDetails(item.repo.id)} sx={{ cursor: 'pointer' }} />
+  ),
+}
+
+// Ширины фиксированы: при виртуализации автоширина колонок менялась бы от
+// набора строк в видимой области. Остаток ширины — у колонки репозитория.
 const columns: { key: SortKey | null; label: MessageKey; width?: number }[] = [
   { key: 'name', label: 'column.repo' },
-  { key: 'branch', label: 'column.localBranch' },
-  { key: 'changes', label: 'column.worktree' },
-  { key: 'sync', label: 'column.syncFull' },
-  { key: 'pr', label: 'column.pr' },
-  { key: 'ci', label: 'column.ciFull' },
-  { key: 'host', label: 'column.server' },
-  { key: null, label: 'column.actions' },
+  { key: 'branch', label: 'column.localBranch', width: 160 },
+  { key: 'changes', label: 'column.worktree', width: 130 },
+  { key: 'sync', label: 'column.syncFull', width: 145 },
+  { key: 'pr', label: 'column.pr', width: 145 },
+  { key: 'ci', label: 'column.ciFull', width: 135 },
+  { key: 'host', label: 'column.server', width: 120 },
+  { key: null, label: 'column.actions', width: 115 },
 ]
 
 export function RegistryView() {
@@ -203,6 +229,7 @@ export function RegistryView() {
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set())
   // Выбранный в другом режиме репозиторий (переход из радара или проводника) подсвечен.
   const selectedId = useApp((s) => s.selectedId)
+  const openDetails = useApp((s) => s.openDetails)
   const metrics = useMemo(() => kpis(list, all.length), [list, all.length])
   const rows = useMemo(() => registryRows(list, collapsed), [list, collapsed])
 
@@ -210,6 +237,26 @@ export function RegistryView() {
   const gitValue = (n: number) => (metrics.shown > 0 && metrics.noStatus === metrics.shown ? t('kpi.none') : String(n))
   const gitFoot = (key: 'kpi.changesFoot' | 'kpi.behindFoot') =>
     metrics.noStatus > 0 ? t('kpi.noStatus', { count: metrics.noStatus }) : t(key)
+
+  // Выбранная в другом режиме строка (переход из радара или проводника) — в центре видимой области.
+  const virtuoso = useRef<TableVirtuosoHandle>(null)
+  const revealed = useRef(false)
+  useEffect(() => {
+    if (revealed.current || !selectedId) return
+    const index = rows.findIndex((r) => r.repo.id === selectedId)
+    if (index < 0) return
+    revealed.current = true
+    virtuoso.current?.scrollToIndex({ index, align: 'center' })
+  }, [rows, selectedId])
+
+  const context = useMemo<TableContext>(
+    () => ({
+      selectedId,
+      openDetails,
+      sx: { minWidth: 1170, tableLayout: 'fixed', '& td, & th': { borderColor: theme.app.line, py: 1.5, px: 1 }, '& td:first-of-type, & th:first-of-type': { pl: 2 }, '& td:last-of-type, & th:last-of-type': { pr: 2 } },
+    }),
+    [selectedId, openDetails, theme],
+  )
 
   const sortBy = (key: SortKey) => setFilters(filters.sort === key ? { asc: !filters.asc } : { sort: key, asc: true })
   const toggle = useCallback(
@@ -238,15 +285,22 @@ export function RegistryView() {
 
       <StatusTabs />
 
-      <Paper sx={{ borderRadius: '15px', overflowX: 'auto' }}>
-        <Table size="small" sx={{ minWidth: 1100, '& td, & th': { borderColor: theme.app.line, py: 1.5, px: 1 }, '& td:first-of-type, & th:first-of-type': { pl: 2 }, '& td:last-of-type, & th:last-of-type': { pr: 2 } }}>
-          <TableHead sx={{ bgcolor: theme.app.panelAlt }}>
+      <Paper sx={{ borderRadius: '15px', overflow: 'hidden' }}>
+        <TableVirtuoso
+          ref={virtuoso}
+          useWindowScroll
+          data={rows}
+          context={context}
+          components={tableComponents}
+          computeItemKey={(_, row) => row.repo.id}
+          increaseViewportBy={600}
+          fixedHeaderContent={() => (
             <TableRow>
               {columns.map((c) => (
                 <TableCell
                   key={c.label}
                   align={c.key ? 'left' : 'right'}
-                  sx={{ fontSize: 10, fontWeight: 800, letterSpacing: '1.1px', textTransform: 'uppercase', color: 'text.secondary', whiteSpace: 'nowrap' }}
+                  sx={{ width: c.width, fontSize: 10, fontWeight: 800, letterSpacing: '1.1px', textTransform: 'uppercase', color: 'text.secondary', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
                 >
                   {c.key ? (
                     <TableSortLabel active={filters.sort === c.key} direction={filters.asc ? 'asc' : 'desc'} onClick={() => sortBy(c.key!)}>
@@ -258,13 +312,9 @@ export function RegistryView() {
                 </TableCell>
               ))}
             </TableRow>
-          </TableHead>
-          <TableBody>
-            {rows.map(({ repo: r, depth, children }) => (
-              <RegistryRow key={r.id} repo={r} depth={depth} nested={children} collapsed={collapsed.has(r.id)} selected={r.id === selectedId} onToggle={toggle} />
-            ))}
-          </TableBody>
-        </Table>
+          )}
+          itemContent={(_, { repo: r, depth, children }) => <RowCells repo={r} depth={depth} nested={children} collapsed={collapsed.has(r.id)} onToggle={toggle} />}
+        />
         {list.length === 0 && <EmptyText text={t('empty.noMatches')} />}
       </Paper>
       <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mt: 1.5, textAlign: 'right' }}>
