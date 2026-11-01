@@ -10,7 +10,7 @@ import RefreshIcon from '@mui/icons-material/Refresh'
 import SubdirectoryArrowRightIcon from '@mui/icons-material/SubdirectoryArrowRight'
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import { Alert, Box, Button, ButtonBase, CircularProgress, IconButton, Paper, Tooltip, Typography, useTheme } from '@mui/material'
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNow } from '../app/useNow'
 import { CIIndicator, NoAutoCheckMark, PRIndicator } from '../components/indicators'
 import { CliStatus, GuardedButton, nestingName, providerName } from '../components/RepoDetails'
@@ -122,13 +122,9 @@ function Toggle({ open, onClick, indent = 0, children }: { open: boolean; onClic
 }
 
 function Tree({ tree, selectedId, rootsShown }: { tree: RootNode[]; selectedId: string | null; rootsShown: boolean }) {
-  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set())
-  const toggle = (key: string) =>
-    setCollapsed((prev) => {
-      const next = new Set(prev)
-      if (!next.delete(key)) next.add(key)
-      return next
-    })
+  const collapsedKeys = useApp((s) => s.explorerCollapsed)
+  const collapsed = useMemo(() => new Set(collapsedKeys), [collapsedKeys])
+  const toggle = useApp((s) => s.toggleExplorerNode)
 
   return tree.map(({ root, hosts }) => {
     const rootOpen = !collapsed.has(root.id)
@@ -542,6 +538,9 @@ function Inspector({ repo, onOpenTools }: { repo: Repository; onOpenTools(): voi
   )
 }
 
+// Отступ липкого дерева от верха окна: шапка (73 px, app/TopBar.tsx) и зазор.
+const treeTop = 73 + 16
+
 export function ExplorerView({ onOpenTools }: { onOpenTools(): void }) {
   const theme = useTheme()
   const roots = useApp((s) => s.roots)
@@ -554,6 +553,14 @@ export function ExplorerView({ onOpenTools }: { onOpenTools(): void }) {
   const issueHosts = new Set(tree.flatMap((n) => n.hosts.filter((h) => h.issue).map((h) => h.host))).size
   const line = `1px solid ${theme.app.line}`
 
+  // Вход в проводник (вкладка, карточка радара): выбранный репозиторий — в
+  // видимой части дерева, страница — сверху, а не на позиции прошлого режима.
+  const treeRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    treeRef.current?.querySelector('[aria-current]')?.scrollIntoView({ block: 'center' })
+    window.scrollTo(0, 0)
+  }, [])
+
   return (
     <Paper
       sx={{
@@ -561,35 +568,38 @@ export function ExplorerView({ onOpenTools }: { onOpenTools(): void }) {
         gridTemplateColumns: { xs: '1fr', md: '280px minmax(0, 1fr)', lg: '300px minmax(0, 1fr) 320px', xl: '360px minmax(0, 1fr) 400px' },
         minHeight: 620,
         borderRadius: '15px',
-        overflow: 'hidden',
+        // clip, а не hidden: hidden делает карточку контейнером прокрутки, и sticky дерева перестаёт работать.
+        overflow: 'clip',
       }}
     >
-      <Box
-        sx={{
-          gridRow: { md: 'span 2', lg: 'auto' },
-          borderRight: { md: line },
-          borderBottom: { xs: line, md: 'none' },
-          bgcolor: theme.app.panelAlt,
-          p: 1.25,
-          display: 'flex',
-          flexDirection: 'column',
-          maxHeight: { xs: 320, md: 'none' },
-          overflowY: 'auto',
-        }}
-      >
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 1.25, pt: 1, pb: 1.5 }}>
-          <Typography sx={caption}>{t('explorer.roots')}</Typography>
-          <Typography sx={{ ...caption, textTransform: 'none', letterSpacing: 0 }}>{t('explorer.rootCount', { count: roots.length })}</Typography>
-        </Box>
-        <Box sx={{ flex: 1 }}>
-          <Tree tree={tree} selectedId={selected?.id ?? null} rootsShown={roots.length > 1} />
-        </Box>
-        <Box sx={{ mt: 3, pt: 1.5, px: 1.25, borderTop: line, fontSize: 12, color: 'text.secondary' }}>
-          <div>✓ {t('explorer.repoCount', { count: repos.length })}</div>
-          {issueHosts > 0 && <div>⚠ {t('explorer.issueHosts', { count: issueHosts })}</div>}
-          <Button size="small" sx={{ px: 0, mt: 0.5, fontSize: 12 }} onClick={onOpenTools}>
-            {t('explorer.openTools')}
-          </Button>
+      <Box sx={{ gridRow: { md: 'span 2', lg: 'auto' }, borderRight: { md: line }, borderBottom: { xs: line, md: 'none' }, bgcolor: theme.app.panelAlt }}>
+        <Box
+          ref={treeRef}
+          sx={{
+            p: 1.25,
+            display: 'flex',
+            flexDirection: 'column',
+            // Дерево — как боковая панель VS Code: стоит на месте при прокрутке страницы и прокручивается само.
+            maxHeight: { xs: 320, md: `calc(100vh - ${treeTop}px - 16px)` },
+            position: { md: 'sticky' },
+            top: { md: treeTop },
+            overflowY: 'auto',
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 1.25, pt: 1, pb: 1.5 }}>
+            <Typography sx={caption}>{t('explorer.roots')}</Typography>
+            <Typography sx={{ ...caption, textTransform: 'none', letterSpacing: 0 }}>{t('explorer.rootCount', { count: roots.length })}</Typography>
+          </Box>
+          <Box sx={{ flex: 1 }}>
+            <Tree tree={tree} selectedId={selected?.id ?? null} rootsShown={roots.length > 1} />
+          </Box>
+          <Box sx={{ mt: 3, pt: 1.5, px: 1.25, borderTop: line, fontSize: 12, color: 'text.secondary' }}>
+            <div>✓ {t('explorer.repoCount', { count: repos.length })}</div>
+            {issueHosts > 0 && <div>⚠ {t('explorer.issueHosts', { count: issueHosts })}</div>}
+            <Button size="small" sx={{ px: 0, mt: 0.5, fontSize: 12 }} onClick={onOpenTools}>
+              {t('explorer.openTools')}
+            </Button>
+          </Box>
         </Box>
       </Box>
       {selected ? (

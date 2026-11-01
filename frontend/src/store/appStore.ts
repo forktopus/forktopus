@@ -94,6 +94,8 @@ export interface AppState {
   noAutoCheck: string[]
   /** Пути каталогов, в которые сканер не заходит (D-067). */
   skipPaths: string[]
+  /** Свёрнутые узлы дерева проводника: id корня, корень + хост, корень + хост + группа. */
+  explorerCollapsed: string[]
   /** Какие системные уведомления показывать (D-063). */
   notifications: Notify
   query: string
@@ -150,6 +152,8 @@ export interface AppState {
   setMode(mode: Mode): void
   setTheme(theme: ThemeMode): void
   setFetchPrune(on: boolean): void
+  /** Свернуть или развернуть узел дерева проводника; сохраняется между запусками. */
+  toggleExplorerNode(key: string): void
   setZoom(zoom: number): void
   setBackgroundMinutes(minutes: number): void
   setAutoFetch(on: boolean): void
@@ -172,7 +176,10 @@ function oneOf<T extends string>(value: string | undefined, allowed: readonly T[
 }
 
 /** Состояние интерфейса из настроек; неизвестные значения — по умолчанию. */
-type SavedUI = Pick<AppState, 'mode' | 'theme' | 'filters' | 'fetchPrune' | 'zoom' | 'backgroundMinutes' | 'autoFetch' | 'quitOnClose' | 'notifications'>
+type SavedUI = Pick<
+  AppState,
+  'mode' | 'theme' | 'filters' | 'fetchPrune' | 'zoom' | 'backgroundMinutes' | 'autoFetch' | 'quitOnClose' | 'notifications' | 'explorerCollapsed'
+>
 
 /** Интервалы фоновой проверки на выбор, минуты; по умолчанию — 5 (как в Go). */
 export const backgroundIntervals = [1, 2, 5, 10, 15, 30, 60] as const
@@ -197,6 +204,7 @@ export function fromUI(ui: UI): SavedUI {
     autoFetch: ui.autoFetch === true,
     quitOnClose: ui.quitOnClose === true,
     notifications: ui.notify ? { ci: ui.notify.ci === true, behind: ui.notify.behind === true, pr: ui.notify.pr === true } : defaultNotify,
+    explorerCollapsed: ui.explorerCollapsed ?? [],
   }
 }
 
@@ -212,6 +220,7 @@ export function toUI(s: SavedUI): UI {
     autoFetch: s.autoFetch,
     quitOnClose: s.quitOnClose,
     notify: s.notifications,
+    explorerCollapsed: s.explorerCollapsed,
   }
 }
 
@@ -323,6 +332,7 @@ export function createAppStore(source: DataSource): AppStore {
       autostart: null,
       noAutoCheck: [],
       skipPaths: [],
+      explorerCollapsed: [],
       notifications: defaultNotify,
       query: '',
       selectedId: null,
@@ -506,6 +516,12 @@ export function createAppStore(source: DataSource): AppStore {
 
       setTheme(theme) {
         set({ theme })
+        persist()
+      },
+
+      toggleExplorerNode(key) {
+        const prev = get().explorerCollapsed
+        set({ explorerCollapsed: prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key] })
         persist()
       },
 

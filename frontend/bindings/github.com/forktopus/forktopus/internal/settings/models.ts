@@ -55,4 +55,9 @@ export interface UI {
      * Notify — какие системные уведомления показывать; nil — все (D-063).
      */
     "notify"?: Notify | null;
+
+    /**
+     * ExplorerCollapsed — свёрнутые узлы дерева проводника: корень, хост, группа.
+     */
+    "explorerCollapsed"?: string[] | null;
 }

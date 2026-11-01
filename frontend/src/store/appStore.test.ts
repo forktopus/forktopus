@@ -452,6 +452,7 @@ describe('fromUI / toUI', () => {
       autoFetch: false,
       quitOnClose: false,
       notifications: { ci: true, behind: true, pr: true },
+      explorerCollapsed: [],
     })
     // Интервал — только из списка; чужое значение — по умолчанию.
     expect(fromUI({ backgroundMinutes: 7 }).backgroundMinutes).toBe(5)
@@ -469,6 +470,7 @@ describe('fromUI / toUI', () => {
       autoFetch: true,
       quitOnClose: true,
       notifications: { ci: false, behind: true, pr: false },
+      explorerCollapsed: ['root-1', 'root-1\ngithub.com\nforktopus'],
     }
     expect(fromUI(toUI(state))).toEqual(state)
   })

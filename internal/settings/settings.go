@@ -57,6 +57,8 @@ type UI struct {
 	QuitOnClose bool `json:"quitOnClose,omitempty"`
 	// Notify — какие системные уведомления показывать; nil — все (D-063).
 	Notify *Notify `json:"notify,omitempty"`
+	// ExplorerCollapsed — свёрнутые узлы дерева проводника: корень, хост, группа.
+	ExplorerCollapsed []string `json:"explorerCollapsed,omitempty"`
 }
 
 // Notify — виды уведомлений: CI упал или снова проходит, ветка отстала,
@@ -109,11 +111,11 @@ func Default() Settings {
 
 // DefaultPath — путь к файлу настроек в конфигурационном каталоге ОС.
 func DefaultPath() (string, error) {
-	dir, err := os.UserConfigDir()
+	dir, err := fsutil.AppDir(os.UserConfigDir)
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, "forktopus", "config.json"), nil
+	return filepath.Join(dir, "config.json"), nil
 }
 
 // Store читает и атомарно записывает файл настроек.
