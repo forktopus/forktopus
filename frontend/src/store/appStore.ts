@@ -21,7 +21,7 @@ import { t } from '../i18n'
 import { registryFilters, sortKeys, type RegistryFilter, type SortKey } from '../logic/registry'
 import { opResultLabel } from '../logic/ops'
 import { traySummary } from '../logic/radar'
-import { remoteRef, repoName } from '../logic/repo'
+import { remoteRef, repoName, tracked } from '../logic/repo'
 import { clampZoom, minZoom } from '../logic/zoom'
 import type { Tone } from '../theme/theme'
 import type { ThemeMode } from '../theme/tokens'
@@ -88,6 +88,8 @@ export interface AppState {
   autoFetch: boolean
   /** Крестик закрывает приложение, а не прячет окно в трей (D-063). */
   quitOnClose: boolean
+  /** Не отслеживать репозитории без remote: их нет в списках, сводке и фоне (D-070). */
+  hideLocal: boolean
   /** Запуск при входе в систему; null — не поддерживается или ещё не прочитан. */
   autostart: boolean | null
   /** Пути репозиториев без автоматической проверки (D-064). */
@@ -158,6 +160,7 @@ export interface AppState {
   setBackgroundMinutes(minutes: number): void
   setAutoFetch(on: boolean): void
   setQuitOnClose(on: boolean): void
+  setHideLocal(on: boolean): void
   /** Перечитать автозапуск из системы (открыт диалог настроек). */
   loadAutostart(): Promise<void>
   setAutostart(on: boolean): Promise<void>
@@ -178,7 +181,7 @@ function oneOf<T extends string>(value: string | undefined, allowed: readonly T[
 /** Состояние интерфейса из настроек; неизвестные значения — по умолчанию. */
 type SavedUI = Pick<
   AppState,
-  'mode' | 'theme' | 'filters' | 'fetchPrune' | 'zoom' | 'backgroundMinutes' | 'autoFetch' | 'quitOnClose' | 'notifications' | 'explorerCollapsed'
+  'mode' | 'theme' | 'filters' | 'fetchPrune' | 'zoom' | 'backgroundMinutes' | 'autoFetch' | 'quitOnClose' | 'hideLocal' | 'notifications' | 'explorerCollapsed'
 >
 
 /** Интервалы фоновой проверки на выбор, минуты; по умолчанию — 5 (как в Go). */
@@ -203,6 +206,7 @@ export function fromUI(ui: UI): SavedUI {
     backgroundMinutes: backgroundIntervals.find((m) => m === ui.backgroundMinutes) ?? defaultBackgroundMinutes,
     autoFetch: ui.autoFetch === true,
     quitOnClose: ui.quitOnClose === true,
+    hideLocal: ui.hideLocal === true,
     notifications: ui.notify ? { ci: ui.notify.ci === true, behind: ui.notify.behind === true, pr: ui.notify.pr === true } : defaultNotify,
     explorerCollapsed: ui.explorerCollapsed ?? [],
   }
@@ -219,6 +223,7 @@ export function toUI(s: SavedUI): UI {
     backgroundMinutes: s.backgroundMinutes,
     autoFetch: s.autoFetch,
     quitOnClose: s.quitOnClose,
+    hideLocal: s.hideLocal,
     notify: s.notifications,
     explorerCollapsed: s.explorerCollapsed,
   }
@@ -329,6 +334,7 @@ export function createAppStore(source: DataSource): AppStore {
       backgroundMinutes: defaultBackgroundMinutes,
       autoFetch: false,
       quitOnClose: false,
+      hideLocal: false,
       autostart: null,
       noAutoCheck: [],
       skipPaths: [],
@@ -540,6 +546,11 @@ export function createAppStore(source: DataSource): AppStore {
         persist()
       },
 
+      setHideLocal(hideLocal) {
+        set({ hideLocal })
+        persist()
+      },
+
       setQuitOnClose(quitOnClose) {
         set({ quitOnClose })
         persist()
@@ -674,10 +685,12 @@ export function createAppStore(source: DataSource): AppStore {
   // Сводка для значка в трее: пересчитывается, только когда меняется список.
   let summaryOf: AppState['repos'] | undefined
   let summary = ''
-  store.subscribe(({ ready, repos }) => {
-    if (!ready || repos === summaryOf) return
+  let hideLocalOf = false
+  store.subscribe(({ ready, repos, hideLocal }) => {
+    if (!ready || (repos === summaryOf && hideLocal === hideLocalOf)) return
     summaryOf = repos
-    const text = traySummary(Object.values(repos))
+    hideLocalOf = hideLocal
+    const text = traySummary(tracked(Object.values(repos), hideLocal))
     if (text === summary) return
     summary = text
     source.setTraySummary(text).catch(() => undefined)

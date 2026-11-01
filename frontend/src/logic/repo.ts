@@ -47,6 +47,11 @@ export function repoNamespace(r: Repository): string {
   return segments(r).slice(0, -1).join('/')
 }
 
+/** Отслеживаемые: с настройкой hideLocal — только с remote (D-070). */
+export function tracked(repos: Repository[], hideLocal: boolean): Repository[] {
+  return hideLocal ? repos.filter((r) => (r.remotes?.length ?? 0) > 0) : repos
+}
+
 /** Родительский каталог: «/» и «\» (Windows); у корня ФС — он сам. */
 export function parentPath(path: string): string {
   const trimmed = path.replace(/[/\\]+$/, '')

@@ -45,6 +45,30 @@ func TestBackgroundPassSkipsBusyRepo(t *testing.T) { // 18.1
 	}
 }
 
+// Без remote и с hideLocal — фон репозиторий не трогает; выключено — перечитывает (D-070).
+func TestBackgroundPassSkipsLocalWhenHidden(t *testing.T) {
+	repo := gittest.Clean(t) // без remote
+	s, rec, _ := opService(t, repo)
+	ui := s.GetUI()
+	ui.HideLocal = true
+	if err := s.SaveUI(ui); err != nil {
+		t.Fatal(err)
+	}
+	s.backgroundPass(context.Background())
+	if rec.ran("status") {
+		t.Fatal("локальный репозиторий перечитан, хотя скрыт")
+	}
+
+	ui.HideLocal = false
+	if err := s.SaveUI(ui); err != nil {
+		t.Fatal(err)
+	}
+	s.backgroundPass(context.Background())
+	if !rec.ran("status") {
+		t.Fatal("без настройки локальный репозиторий не перечитан")
+	}
+}
+
 func TestBackgroundFetchOnlyWhenEnabled(t *testing.T) { // 18.1
 	repo, bare := gittest.Upstream(t)
 	s, rec, id := opService(t, repo)

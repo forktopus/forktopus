@@ -1,13 +1,20 @@
 import { useMemo } from 'react'
 import type { Repository } from '../data/model'
 import { filterRepos, sortRepos } from '../logic/registry'
-import { compareText } from '../logic/repo'
+import { compareText, tracked } from '../logic/repo'
 import { useApp } from './context'
 
-/** Все репозитории в стабильном порядке (по пути). */
-export function useRepos(): Repository[] {
+/** Все найденные репозитории в стабильном порядке (по пути), включая скрытые настройкой. */
+export function useAllRepos(): Repository[] {
   const repos = useApp((s) => s.repos)
   return useMemo(() => Object.values(repos).sort((a, b) => compareText(a.path, b.path)), [repos])
+}
+
+/** Отслеживаемые репозитории — основа всех режимов и счётчиков. */
+export function useRepos(): Repository[] {
+  const all = useAllRepos()
+  const hideLocal = useApp((s) => s.hideLocal)
+  return useMemo(() => tracked(all, hideLocal), [all, hideLocal])
 }
 
 /** Репозитории с учётом глобального поиска — общая выборка всех режимов. */

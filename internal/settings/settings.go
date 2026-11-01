@@ -57,6 +57,9 @@ type UI struct {
 	QuitOnClose bool `json:"quitOnClose,omitempty"`
 	// Notify — какие системные уведомления показывать; nil — все (D-063).
 	Notify *Notify `json:"notify,omitempty"`
+	// HideLocal — не отслеживать репозитории без remote: не показывать и не
+	// проверять в фоне (D-070).
+	HideLocal bool `json:"hideLocal,omitempty"`
 	// ExplorerCollapsed — свёрнутые узлы дерева проводника: корень, хост, группа.
 	ExplorerCollapsed []string `json:"explorerCollapsed,omitempty"`
 }

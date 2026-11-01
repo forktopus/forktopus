@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Provider, type Repository } from '../data/model'
-import { branchOf, compareText, parentPath, remoteRef, repoHost, repoName, repoNamespace, repoProvider } from './repo'
+import { branchOf, compareText, parentPath, tracked, remoteRef, repoHost, repoName, repoNamespace, repoProvider } from './repo'
 
 const repo = (over: Partial<Repository>): Repository => ({ id: 'r', path: '/srv/repos/Мой проект', remotes: [], ...over }) as Repository
 
@@ -60,5 +60,12 @@ describe('repo', () => {
     expect(parentPath('/')).toBe('/')
     expect(parentPath('C:\\Users\\me\\repo')).toBe('C:\\Users\\me')
     expect(parentPath('C:\\Users')).toBe('C:\\')
+  })
+
+  it('hideLocal скрывает только репозитории без remote (D-070)', () => {
+    const local = repo({ id: 'local' })
+    const remote = repo({ id: 'remote', remotes: [{ name: 'origin', host: 'github.com', path: 'o/r' }] as Repository['remotes'] })
+    expect(tracked([local, remote], false)).toEqual([local, remote])
+    expect(tracked([local, remote], true)).toEqual([remote])
   })
 })

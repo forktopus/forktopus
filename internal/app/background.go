@@ -95,7 +95,10 @@ func (s *AppService) backgroundPass(ctx context.Context) {
 	s.scanMu.Unlock()
 
 	s.mu.Lock()
-	repos := slices.DeleteFunc(slices.Clone(s.snapshot.Repositories), func(r model.Repository) bool { return !s.autoCheckLocked(r.Path) })
+	hideLocal := s.cfg.UI.HideLocal
+	repos := slices.DeleteFunc(slices.Clone(s.snapshot.Repositories), func(r model.Repository) bool {
+		return !s.autoCheckLocked(r.Path) || hideLocal && len(r.Remotes) == 0
+	})
 	opts, fetch, prune := s.scanOptionsLocked(), s.cfg.UI.AutoFetch, s.cfg.UI.FetchPrune
 	s.mu.Unlock()
 

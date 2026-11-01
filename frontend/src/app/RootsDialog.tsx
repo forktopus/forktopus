@@ -6,7 +6,7 @@ import type { ScanIssue } from '../data/model'
 import type { SkipList } from '../data/source'
 import { t } from '../i18n'
 import { useApp } from '../store/context'
-import { useRepos } from '../store/selectors'
+import { useAllRepos } from '../store/selectors'
 import { monoFontFamily } from '../theme/tokens'
 
 // Корень добавляется системным диалогом или вводом пути (запасной вариант, и
@@ -20,7 +20,7 @@ export function RootsDialog({ open, onClose }: { open: boolean; onClose(): void 
   const scan = useApp((s) => s.scan)
   const scanning = useApp((s) => s.scanning)
   const issues = useApp((s) => s.issues)
-  const repos = useRepos()
+  const repos = useAllRepos()
   const [path, setPath] = useState('')
   const [busy, setBusy] = useState(false)
 

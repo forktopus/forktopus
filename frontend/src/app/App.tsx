@@ -10,7 +10,7 @@ import { emptyRoots } from '../logic/explorer'
 import { integrationIssueCount } from '../logic/registry'
 import { gitProblem } from '../logic/tools'
 import { useApp } from '../store/context'
-import { useRepos } from '../store/selectors'
+import { useAllRepos, useRepos } from '../store/selectors'
 import { createAppTheme } from '../theme/theme'
 import { ExplorerView } from '../views/ExplorerView'
 import { RadarView } from '../views/RadarView'
@@ -47,10 +47,12 @@ function Content({ onOpenRoots, onOpenTools, onOpenProblems }: { onOpenRoots(): 
   const filter = useApp((s) => s.filters.registry)
   const setFilters = useApp((s) => s.setFilters)
   const repos = useRepos()
+  // Пустой корень — где сканер не нашёл ничего, а не где всё скрыто настройкой (D-070).
+  const all = useAllRepos()
   const integrations = useMemo(() => integrationIssueCount(repos), [repos])
   const issues = useApp((s) => s.issues)
   const git = gitProblem(useApp((s) => s.tools))
-  const empty = useMemo(() => emptyRoots(roots, repos, issues), [roots, repos, issues])
+  const empty = useMemo(() => emptyRoots(roots, all, issues), [roots, all, issues])
 
   if (!ready) {
     return (
@@ -158,7 +160,11 @@ function Content({ onOpenRoots, onOpenTools, onOpenProblems }: { onOpenRoots(): 
             )
           }
         >
-          {scanning ? t('empty.scanning') : t('empty.noRepos', { paths: roots.map((r) => r.path).join(', ') })}
+          {scanning
+            ? t('empty.scanning')
+            : all.length > 0
+              ? t('empty.allLocal', { count: all.length })
+              : t('empty.noRepos', { paths: roots.map((r) => r.path).join(', ') })}
         </Alert>
       )}
       {repos.length > 0 && mode === 'registry' && <RegistryView />}

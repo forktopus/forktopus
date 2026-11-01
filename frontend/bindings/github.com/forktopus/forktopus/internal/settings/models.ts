@@ -57,6 +57,12 @@ export interface UI {
     "notify"?: Notify | null;
 
     /**
+     * HideLocal — не отслеживать репозитории без remote: не показывать и не
+     * проверять в фоне (D-070).
+     */
+    "hideLocal"?: boolean;
+
+    /**
      * ExplorerCollapsed — свёрнутые узлы дерева проводника: корень, хост, группа.
      */
     "explorerCollapsed"?: string[] | null;

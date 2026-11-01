@@ -28,6 +28,7 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose(): vo
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>{t('settings.title')}</DialogTitle>
       <DialogContent sx={{ '& > :first-of-type': { mt: 0, pt: 0, borderTop: 'none' } }}>
+        <HideLocalSetting />
         <BackgroundSetting />
         <NotifySetting />
         <FetchPruneSetting />
@@ -124,6 +125,24 @@ function NotifySetting() {
           label={<Typography variant="body2">{t(label)}</Typography>}
         />
       ))}
+    </Box>
+  )
+}
+
+/** Репозитории без remote не отслеживаются (D-070). */
+function HideLocalSetting() {
+  const theme = useTheme()
+  const hideLocal = useApp((s) => s.hideLocal)
+  const setHideLocal = useApp((s) => s.setHideLocal)
+  return (
+    <Box sx={{ mt: 4, pt: 2, borderTop: `1px solid ${theme.app.line}` }}>
+      <FormControlLabel
+        control={<Switch checked={hideLocal} onChange={(e) => setHideLocal(e.target.checked)} />}
+        label={<Typography variant="subtitle2">{t('settings.hideLocalTitle')}</Typography>}
+      />
+      <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+        {t('settings.hideLocalDescription')}
+      </Typography>
     </Box>
   )
 }
