@@ -296,6 +296,18 @@ describe('store', () => {
     }
   })
 
+  it('сводка для трея: после загрузки и только при изменении списка (18.2)', async () => {
+    const source = createMockSource({ delayMs: 0 })
+    const sent: string[] = []
+    const store = createAppStore({ ...source, setTraySummary: async (text) => void sent.push(text) })
+    await store.getState().init()
+    expect(sent).toHaveLength(1)
+    expect(sent[0]).toMatch(/^Требуют внимания: \d+ · в работе: \d+ · всего: \d+$/)
+    store.getState().setQuery('demo')
+    store.getState().setMode('radar')
+    expect(sent).toHaveLength(1)
+  })
+
   it('отчёт диагностики: из источника, ошибка — в уведомлениях', async () => {
     const source = createMockSource({ delayMs: 0, scenario: 'nocli' })
     const store = createAppStore(source)
@@ -398,6 +410,7 @@ describe('fromUI / toUI', () => {
       zoom: 1,
       backgroundMinutes: 5,
       autoFetch: false,
+      quitOnClose: false,
     })
     // Интервал — только из списка; чужое значение — по умолчанию.
     expect(fromUI({ backgroundMinutes: 7 }).backgroundMinutes).toBe(5)
@@ -413,6 +426,7 @@ describe('fromUI / toUI', () => {
       zoom: 1.3,
       backgroundMinutes: 30,
       autoFetch: true,
+      quitOnClose: true,
     }
     expect(fromUI(toUI(state))).toEqual(state)
   })

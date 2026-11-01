@@ -39,6 +39,12 @@ export function groupRadar(repos: Repository[]): Record<RadarGroup | 'unknown', 
   return groups
 }
 
+/** Сводка для подсказки значка в трее: те же группы, что в радаре. */
+export function traySummary(repos: Repository[]): string {
+  const g = groupRadar(repos)
+  return t('tray.summary', { attention: g.attention.length, progress: g.progress.length, total: repos.length })
+}
+
 /**
  * Метки карточки радара: почему репозиторий в своей группе, плюс серверные
  * факты (CI, PR, незавершённая настройка). Серверные метки группу не меняют.

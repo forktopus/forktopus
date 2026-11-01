@@ -19,6 +19,7 @@ import { errorOf, type DataSource, type SkipList, type Snapshot } from '../data/
 import { t } from '../i18n'
 import { registryFilters, sortKeys, type RegistryFilter, type SortKey } from '../logic/registry'
 import { opResultLabel } from '../logic/ops'
+import { traySummary } from '../logic/radar'
 import { remoteRef, repoName } from '../logic/repo'
 import { clampZoom, minZoom } from '../logic/zoom'
 import type { Tone } from '../theme/theme'
@@ -84,6 +85,8 @@ export interface AppState {
   backgroundMinutes: number
   /** Fetch перед фоновой проверкой (D-063). */
   autoFetch: boolean
+  /** Крестик закрывает приложение, а не прячет окно в трей (D-063). */
+  quitOnClose: boolean
   query: string
   selectedId: string | null
   /** операция, которая сейчас идёт над репозиторием: кнопки операций заблокированы (D-031) */
@@ -135,6 +138,7 @@ export interface AppState {
   setZoom(zoom: number): void
   setBackgroundMinutes(minutes: number): void
   setAutoFetch(on: boolean): void
+  setQuitOnClose(on: boolean): void
   setFilters(patch: Partial<Filters>): void
   setQuery(query: string): void
   select(id: string | null): void
@@ -147,7 +151,7 @@ function oneOf<T extends string>(value: string | undefined, allowed: readonly T[
 }
 
 /** Состояние интерфейса из настроек; неизвестные значения — по умолчанию. */
-type SavedUI = Pick<AppState, 'mode' | 'theme' | 'filters' | 'fetchPrune' | 'zoom' | 'backgroundMinutes' | 'autoFetch'>
+type SavedUI = Pick<AppState, 'mode' | 'theme' | 'filters' | 'fetchPrune' | 'zoom' | 'backgroundMinutes' | 'autoFetch' | 'quitOnClose'>
 
 /** Интервалы фоновой проверки на выбор, минуты; по умолчанию — 5 (как в Go). */
 export const backgroundIntervals = [1, 2, 5, 10, 15, 30, 60] as const
@@ -168,6 +172,7 @@ export function fromUI(ui: UI): SavedUI {
     zoom: clampZoom(ui.zoom),
     backgroundMinutes: backgroundIntervals.find((m) => m === ui.backgroundMinutes) ?? defaultBackgroundMinutes,
     autoFetch: ui.autoFetch === true,
+    quitOnClose: ui.quitOnClose === true,
   }
 }
 
@@ -181,6 +186,7 @@ export function toUI(s: SavedUI): UI {
     zoom: s.zoom,
     backgroundMinutes: s.backgroundMinutes,
     autoFetch: s.autoFetch,
+    quitOnClose: s.quitOnClose,
   }
 }
 
@@ -288,6 +294,7 @@ export function createAppStore(source: DataSource): AppStore {
       zoom: minZoom,
       backgroundMinutes: defaultBackgroundMinutes,
       autoFetch: false,
+      quitOnClose: false,
       query: '',
       selectedId: null,
       running: {},
@@ -483,6 +490,11 @@ export function createAppStore(source: DataSource): AppStore {
         persist()
       },
 
+      setQuitOnClose(quitOnClose) {
+        set({ quitOnClose })
+        persist()
+      },
+
       setZoom(value) {
         const zoom = clampZoom(value)
         if (zoom === get().zoom) return
@@ -544,6 +556,18 @@ export function createAppStore(source: DataSource): AppStore {
   // Фоновая проверка Go (D-063): свежий статус по репозиториям и её время.
   source.onRepository(queueRepository)
   source.onChecked((lastCheckAt) => store.setState({ lastCheckAt, stale: false }))
+
+  // Сводка для значка в трее: пересчитывается, только когда меняется список.
+  let summaryOf: AppState['repos'] | undefined
+  let summary = ''
+  store.subscribe(({ ready, repos }) => {
+    if (!ready || repos === summaryOf) return
+    summaryOf = repos
+    const text = traySummary(Object.values(repos))
+    if (text === summary) return
+    summary = text
+    source.setTraySummary(text).catch(() => undefined)
+  })
 
   return store
 }

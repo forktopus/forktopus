@@ -640,6 +640,8 @@ export function createMockSource({ delayMs = 250, scenario = 'default' }: MockOp
     },
     copyText: (text) => navigator.clipboard.writeText(text),
     getUI: () => reply(ui),
+    // Трея в браузере нет.
+    setTraySummary: () => reply(undefined),
     // В браузере без Wails нативного зума нет — CSS zoom, только для превью.
     async setZoom(zoom) {
       if (typeof document !== 'undefined') document.documentElement.style.zoom = String(zoom)

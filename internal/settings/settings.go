@@ -47,6 +47,8 @@ type UI struct {
 	BackgroundMinutes int `json:"backgroundMinutes,omitempty"`
 	// AutoFetch — fetch перед фоновой проверкой; по умолчанию выключен (D-063).
 	AutoFetch bool `json:"autoFetch,omitempty"`
+	// QuitOnClose — крестик закрывает приложение, а не прячет окно в трей (D-063).
+	QuitOnClose bool `json:"quitOnClose,omitempty"`
 }
 
 // Интервал фоновой проверки, минуты.

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/sha256"
 	"embed"
+	"fmt"
 	"log"
 	"log/slog"
 	"os"
@@ -60,6 +62,7 @@ func main() {
 	}
 	app.AttachLog(service, logPath, recent)
 
+	var window *application.WebviewWindow
 	wailsApp := application.New(application.Options{
 		Name:        "forktopus",
 		Description: "Все ваши Git-репозитории на одном экране",
@@ -72,9 +75,20 @@ func main() {
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: true,
 		},
+		// Один экземпляр на файл настроек: повторный запуск (ярлык, автозапуск)
+		// показывает уже открытое окно, а не второй процесс с тем же кэшем.
+		SingleInstance: &application.SingleInstanceOptions{
+			UniqueID: instanceID(configPath),
+			OnSecondInstanceLaunch: func(application.SecondInstanceData) {
+				if window != nil {
+					window.Show()
+					window.Focus()
+				}
+			},
+		},
 	})
 
-	wailsApp.Window.NewWithOptions(application.WebviewWindowOptions{
+	window = wailsApp.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:  "Forktopus",
 		Width:  1000,
 		Height: 618,
@@ -97,16 +111,25 @@ func main() {
 	// после остановки сервера, и приложение завершается штатно — иначе git и
 	// ssh в своей сессии пережили бы его (11.4). Закрытие окна идёт через
 	// ServiceShutdown без этого.
+	quit := setupTray(wailsApp, window, service)
+
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		sig := <-signals
 		slog.Info("получен сигнал завершения", "signal", sig.String())
 		_ = service.ServiceShutdown()
-		wailsApp.Quit()
+		quit()
 	}()
 
 	if err := wailsApp.Run(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// instanceID — имя экземпляра для SingleInstance: своё у каждого файла
+// настроек (запуск с другим XDG_CONFIG_HOME — отдельное приложение).
+func instanceID(configPath string) string {
+	sum := sha256.Sum256([]byte(configPath))
+	return fmt.Sprintf("io.github.forktopus.c%x", sum[:6])
 }

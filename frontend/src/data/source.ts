@@ -70,6 +70,8 @@ export interface DataSource {
   copyText(text: string): Promise<void>
   getUI(): Promise<UI>
   saveUI(ui: UI): Promise<void>
+  /** Сводка для подсказки значка в трее (D-063). */
+  setTraySummary(text: string): Promise<void>
   /** Масштаб интерфейса окна (1 — 100 %). */
   setZoom(zoom: number): Promise<void>
   /** Подписка на найденные во время сканирования репозитории; возвращает отписку. */

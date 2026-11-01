@@ -49,6 +49,14 @@ func (s *AppService) CheckNow() {
 	}
 }
 
+// SetTraySummary принимает сводку для подсказки значка в трее. Её считает UI
+// по тем же группам, что и радар, — чтобы правила жили в одном месте.
+func (s *AppService) SetTraySummary(text string) {
+	if s.TraySummary != nil {
+		s.TraySummary(text)
+	}
+}
+
 // rearmBackground — интервал изменился: отсчёт начинается заново.
 func (s *AppService) rearmBackground() {
 	select {

@@ -194,6 +194,14 @@ export function SetSkipDirs(dirs: string[] | null): $CancellablePromise<model$0.
 }
 
 /**
+ * SetTraySummary принимает сводку для подсказки значка в трее. Её считает UI
+ * по тем же группам, что и радар, — чтобы правила жили в одном месте.
+ */
+export function SetTraySummary(text: string): $CancellablePromise<void> {
+    return $Call.ByID(4094294777, text);
+}
+
+/**
  * SwitchBranch переключает рабочую копию на существующую локальную ветку.
  * Ветка ищется среди прочитанных с диска, а не берётся из строки UI как есть.
  */

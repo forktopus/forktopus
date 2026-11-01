@@ -66,6 +66,10 @@ type AppService struct {
 
 	// wake — проверить сейчас, rearm — интервал изменился (background.go).
 	wake, rearm chan struct{}
+
+	// TraySummary получает сводку для значка в трее (SetTraySummary); задаётся
+	// в main до запуска приложения, nil — трея нет.
+	TraySummary func(text string)
 }
 
 // NewAppService создаёт сервис, читает настройки и кэш прошлого сканирования.

@@ -35,4 +35,9 @@ export interface UI {
      * AutoFetch — fetch перед фоновой проверкой; по умолчанию выключен (D-063).
      */
     "autoFetch"?: boolean;
+
+    /**
+     * QuitOnClose — крестик закрывает приложение, а не прячет окно в трей (D-063).
+     */
+    "quitOnClose"?: boolean;
 }
