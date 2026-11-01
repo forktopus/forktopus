@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Provider, type Repository } from '../data/model'
-import { branchOf, compareText, repoHost, repoName, repoNamespace, repoProvider } from './repo'
+import { branchOf, compareText, remoteRef, repoHost, repoName, repoNamespace, repoProvider } from './repo'
 
 const repo = (over: Partial<Repository>): Repository => ({ id: 'r', path: '/srv/repos/Мой проект', remotes: [], ...over }) as Repository
 
@@ -38,6 +38,12 @@ describe('repo', () => {
     expect(branchOf(repo({ branch: { name: 'main', detached: false } as Repository['branch'] }))).toBe('main')
     expect(branchOf(repo({ branch: { name: 'main', detached: true, headSha: 'abc' } as Repository['branch'] }))).toBe('')
     expect(branchOf(repo({ branch: undefined }))).toBe('')
+  })
+
+  it('серверные данные detached HEAD относятся к коммиту (@SHA)', () => {
+    expect(remoteRef(repo({ branch: { name: 'main', detached: false, headSha: 'abc' } as Repository['branch'] }))).toBe('main')
+    expect(remoteRef(repo({ branch: { name: '', detached: true, headSha: 'abc' } as Repository['branch'] }))).toBe('@abc')
+    expect(remoteRef(repo({ branch: { name: '', detached: true } as Repository['branch'] }))).toBe('')
   })
 
   it('сортировка по-русски: ё рядом с е, регистр не разносит', () => {

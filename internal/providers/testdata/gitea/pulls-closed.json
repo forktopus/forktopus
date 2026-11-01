@@ -8,6 +8,7 @@
   "html_url": "https://git.example.org/OWNER/forktopus-pilot/pulls/3",
   "head": {
    "ref": "pilot/closed-pr",
+   "sha": "0d85cbf3a0ec477f2b2b4382940ed8ac36aecf00",
    "repo": {
     "id": 25
    }

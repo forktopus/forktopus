@@ -209,3 +209,15 @@ tea api -l LOGIN -i "/repos/OWNER/REPO/actions/runs?branch=BRANCH&limit=20"
 | Вне git-репозитория | 1 | `Error: git rev-parse --show-toplevel: …` | ошибка вызова (не должно случаться) |
 
 - **`tea api` возвращает код 0 и на 401/404** — тело `{"message":"invalid username, password or token"}` / `{"message":"not found",…}`. Статус HTTP виден только с `-i`: первая строка stderr (`HTTP/2.0 200 OK` / `HTTP/2.0 404 Not Found`), JSON — в stdout. Успех определять по статусу, а не по коду завершения.
+
+## Detached HEAD — поиск по коммиту (D-059)
+
+Ветки нет — PR/MR и CI ищутся по текущему коммиту (`SHA`). Последний закрытый PR — по тем же правилам, что для ветки (D-058). Коммит, которого нет на сервере (не отправлен), — достоверный ноль, а не ошибка.
+
+| | PR/MR | CI |
+|---|---|---|
+| `gh` | `gh pr list -R HOST/OWNER/REPO --search SHA --state open\|closed …` — поиск GitHub находит PR, где коммит **среди** коммитов; PR из форков отбрасываются | `gh run list … --commit SHA`; ссылка — страница коммита `/commit/SHA` |
+| `glab` | `glab api --hostname HOST projects/OWNER%2FREPO/repository/commits/SHA/merge_requests` — MR всех состояний, содержащие коммит, одним ответом (открытые и последний закрытый); коммита нет — `404 Commit Not Found`, код 1 | `glab ci list … --sha SHA`; ссылка — `/-/commit/SHA/pipelines` |
+| `tea` | REST `/repos/OWNER/REPO/pulls?state=open&limit=50&page=N` — PR, у которых `head.sha` == SHA (коммит в середине PR Gitea по API не находит); черновик — поле `draft` или префикс `WIP:` | `/actions/runs?head_sha=SHA&limit=20` (неизвестный SHA — `total_count: 0`) |
+
+Проверено на пилотах (2026-11-01): коммит `pilot/pr-open` — открытый PR, коммит `pilot/closed-pr` — закрытый #3, несуществующий SHA — ноль, на всех трёх серверах.

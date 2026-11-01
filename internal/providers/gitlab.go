@@ -151,11 +151,15 @@ type glMR struct {
 	WebURL          string `json:"web_url"`
 }
 
-// PullRequests — открытые MR, где ветка — источник; MR из форков
-// (source_project_id ≠ target_project_id) не считаются.
+// PullRequests — открытые MR, где ветка — источник (при detached HEAD —
+// содержащие коммит); MR из форков (source_project_id ≠ target_project_id)
+// не считаются.
 func (g GitLab) PullRequests(ctx context.Context, q Query) model.PRSummary {
-	if q.Branch == "" {
+	if q.noRef() {
 		return prFailed(noBranch())
+	}
+	if q.Branch == "" {
+		return g.commitMRs(ctx, q)
 	}
 	out, e := g.run(ctx, q.Dir, "mr", "list", "-R", glRepo(q.Target), "--source-branch", q.Branch, "--per-page", "100", "-F", "json")
 	if e != nil {
@@ -185,9 +189,11 @@ func (g GitLab) PullRequests(ctx context.Context, q Query) model.PRSummary {
 	return withLast(prOK(len(mrs), draft, link), func() *model.PRRef { return g.lastClosed(ctx, q) })
 }
 
-type glClosedMR struct {
+// glMRInfo — MR любого состояния (`--all`, REST по коммиту).
+type glMRInfo struct {
 	IID             int    `json:"iid"`
 	State           string `json:"state"`
+	Draft           bool   `json:"draft"`
 	SourceBranch    string `json:"source_branch"`
 	SourceProjectID int64  `json:"source_project_id"`
 	TargetProjectID int64  `json:"target_project_id"`
@@ -203,13 +209,23 @@ func (g GitLab) lastClosed(ctx context.Context, q Query) *model.PRRef {
 	if e != nil {
 		return nil
 	}
-	var mrs []glClosedMR
+	var mrs []glMRInfo
 	if json.Unmarshal(out, &mrs) != nil {
 		return nil
 	}
+	return glLast(q, mrs)
+}
+
+// glOwn — MR из этого проекта и, если отбор по ветке, именно из неё.
+func glOwn(q Query, m glMRInfo) bool {
+	return m.SourceProjectID == m.TargetProjectID && (q.Branch == "" || m.SourceBranch == q.Branch)
+}
+
+// glLast — последний закрытый или влитый из своих MR.
+func glLast(q Query, mrs []glMRInfo) *model.PRRef {
 	var refs []model.PRRef
 	for _, m := range mrs {
-		if m.SourceProjectID != m.TargetProjectID || m.SourceBranch != q.Branch {
+		if !glOwn(q, m) {
 			continue
 		}
 		switch m.State {
@@ -222,6 +238,44 @@ func (g GitLab) lastClosed(ctx context.Context, q Query) *model.PRRef {
 	return latestPR(refs)
 }
 
+// commitMRs — MR, содержащие коммит (detached HEAD). REST
+// `commits/SHA/merge_requests` отдаёт MR всех состояний одним ответом —
+// из него же берётся последний закрытый. Коммита нет на сервере (не
+// отправлен) — MR нет, это достоверный ноль.
+func (g GitLab) commitMRs(ctx context.Context, q Query) model.PRSummary {
+	out, e := g.run(ctx, q.Dir, "api", "--hostname", glHost(q.Target),
+		"projects/"+url.PathEscape(q.Target.Project)+"/repository/commits/"+q.SHA+"/merge_requests")
+	if e != nil {
+		if strings.Contains(e.Message, "Commit Not Found") {
+			return prOK(0, 0, "")
+		}
+		return prFailed(e)
+	}
+	var mrs []glMRInfo
+	if err := json.Unmarshal(out, &mrs); err != nil {
+		return prFailed(badOutput("glab", err))
+	}
+	open := slices.DeleteFunc(slices.Clone(mrs), func(m glMRInfo) bool { return m.State != "opened" || !glOwn(q, m) })
+	draft := 0
+	for _, m := range open {
+		if m.Draft {
+			draft++
+		}
+	}
+	link := ""
+	switch {
+	case len(open) == 1:
+		link = open[0].WebURL
+	case len(open) > 1:
+		link = webURL(q.Target, "/-/commit/"+q.SHA)
+	}
+	sum := prOK(len(open), draft, link)
+	if len(open) == 0 {
+		sum.Last = glLast(q, mrs)
+	}
+	return sum
+}
+
 type glPipeline struct {
 	Status    string `json:"status"`
 	SHA       string `json:"sha"`
@@ -232,13 +286,18 @@ type glPipeline struct {
 // или времени — не активны (docs/providers.md).
 var glActive = []string{"created", "waiting_for_resource", "preparing", "pending", "running", "canceling"}
 
-// CIRuns — pipelines ветки (20 последних): активные — по всем, итог —
-// по последнему pipeline последнего коммита (glLastResult).
+// CIRuns — pipelines ветки (при detached HEAD — коммита), 20 последних:
+// активные — по всем, итог — по последнему pipeline последнего коммита
+// (glLastResult).
 func (g GitLab) CIRuns(ctx context.Context, q Query) model.CISummary {
-	if q.Branch == "" {
+	if q.noRef() {
 		return ciFailed(noBranch())
 	}
-	out, e := g.run(ctx, q.Dir, "ci", "list", "-R", glRepo(q.Target), "--ref", q.Branch, "--per-page", "20", "-F", "json")
+	sel, link := []string{"--ref", q.Branch}, webURL(q.Target, "/-/pipelines?ref="+url.QueryEscape(q.Branch))
+	if q.Branch == "" {
+		sel, link = []string{"--sha", q.SHA}, webURL(q.Target, "/-/commit/"+q.SHA+"/pipelines")
+	}
+	out, e := g.run(ctx, q.Dir, slices.Concat([]string{"ci", "list", "-R", glRepo(q.Target)}, sel, []string{"--per-page", "20", "-F", "json"})...)
 	if e != nil {
 		return ciFailed(e)
 	}
@@ -252,9 +311,8 @@ func (g GitLab) CIRuns(ctx context.Context, q Query) model.CISummary {
 			active++
 		}
 	}
-	link := ""
-	if len(pipes) > 0 {
-		link = webURL(q.Target, "/-/pipelines?ref="+url.QueryEscape(q.Branch))
+	if len(pipes) == 0 {
+		link = ""
 	}
 	return ciOK(active, glLastResult(pipes), link)
 }

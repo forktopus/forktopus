@@ -231,7 +231,8 @@ type OpResult struct {
 // RemoteStatus — серверное состояние ветки репозитория: PR/MR и CI.
 type RemoteStatus struct {
 	RepoID string `json:"repoId"`
-	// Branch — ветка, для которой получены данные; пусто — detached HEAD.
+	// Branch — ветка, для которой получены данные; `@SHA` — коммит при
+	// detached HEAD; пусто — ни ветки, ни коммита.
 	Branch string `json:"branch"`
 	// Provider — тип сервера по резолверу (с учётом логинов CLI); у выбранного
 	// remote в списке репозиториев он заменяет определённый сканером.

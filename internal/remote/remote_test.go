@@ -132,6 +132,24 @@ func TestCacheTTLAndForce(t *testing.T) {
 	}
 }
 
+func TestDetachedBySHA(t *testing.T) { // D-059
+	ctx := context.Background()
+	f, a, _, _ := setup(t)
+	byCommit := func(sha string) Request {
+		r := req("o/r", "")
+		r.SHA = sha
+		return r
+	}
+	if res := f.Status(ctx, byCommit("abc")); res.PR.Availability != model.AvailabilityOK || res.CI.Availability != model.AvailabilityOK {
+		t.Fatalf("detached HEAD с коммитом: %+v", res)
+	}
+	f.Status(ctx, byCommit("abc"))
+	f.Status(ctx, byCommit("def")) // другой коммит — другой ключ
+	if n := a.calls.Load(); n != 2 {
+		t.Errorf("ожидалось 2 вызова CLI, было %d", n)
+	}
+}
+
 func TestSingleFlightAndPerHost(t *testing.T) {
 	ctx := context.Background()
 	f, a, _, discovered := setup(t)

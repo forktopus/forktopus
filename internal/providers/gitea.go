@@ -150,12 +150,16 @@ func teaDraft(title string) bool {
 
 // PullRequests — открытые PR, где ветка — источник. PR из форка tea не
 // отличает (`head` — только имя ветки) — ограничение (docs/providers.md).
+// При detached HEAD — PR, у которых текущий коммит — последний (commitPRs).
 func (g Gitea) PullRequests(ctx context.Context, q Query) model.PRSummary {
-	if q.Branch == "" {
+	if q.noRef() {
 		return prFailed(noBranch())
 	}
 	if q.Target.Login == "" {
 		return prFailed(noLogin(q.Target))
+	}
+	if q.Branch == "" {
+		return g.commitPRs(ctx, q)
 	}
 	var prs []teaPR
 	for page := 1; ; page++ {
@@ -199,19 +203,36 @@ func (g Gitea) PullRequests(ctx context.Context, q Query) model.PRSummary {
 
 type teaBranch struct {
 	Ref  string `json:"ref"`
+	SHA  string `json:"sha"`
 	Repo *struct {
 		ID int64 `json:"id"`
 	} `json:"repo"`
 }
 
-type teaClosedPR struct {
+// teaRESTPR — PR в ответе REST (`/pulls`); в отличие от `tea pulls list`,
+// там видны репозитории head и base, коммит head и флаг черновика.
+type teaRESTPR struct {
 	Number   int       `json:"number"`
+	Title    string    `json:"title"`
+	Draft    bool      `json:"draft"`
 	Merged   bool      `json:"merged"`
 	MergedAt string    `json:"merged_at"`
 	ClosedAt string    `json:"closed_at"`
 	HTMLURL  string    `json:"html_url"`
 	Head     teaBranch `json:"head"`
 	Base     teaBranch `json:"base"`
+}
+
+// teaOwn — PR из этого репозитория (у PR из удалённого форка head.repo — null)
+// и из ветки запроса, а при detached HEAD — с текущим коммитом на конце.
+func teaOwn(q Query, p teaRESTPR) bool {
+	if p.Head.Repo == nil || p.Base.Repo == nil || p.Head.Repo.ID != p.Base.Repo.ID {
+		return false
+	}
+	if q.Branch == "" {
+		return p.Head.SHA == q.SHA
+	}
+	return p.Head.Ref == q.Branch
 }
 
 // lastClosed — последний закрытый или влитый PR ветки через REST: в отличие
@@ -222,13 +243,13 @@ func (g Gitea) lastClosed(ctx context.Context, q Query) *model.PRRef {
 	if e != nil {
 		return nil
 	}
-	var prs []teaClosedPR
+	var prs []teaRESTPR
 	if json.Unmarshal(out, &prs) != nil {
 		return nil
 	}
 	var refs []model.PRRef
 	for _, p := range prs {
-		if p.Head.Ref != q.Branch || p.Head.Repo == nil || p.Base.Repo == nil || p.Head.Repo.ID != p.Base.Repo.ID {
+		if !teaOwn(q, p) {
 			continue
 		}
 		at := p.ClosedAt
@@ -238,6 +259,48 @@ func (g Gitea) lastClosed(ctx context.Context, q Query) *model.PRRef {
 		refs = append(refs, model.PRRef{Number: p.Number, Merged: p.Merged, URL: p.HTMLURL, ClosedAt: parseTime(at)})
 	}
 	return latestPR(refs)
+}
+
+// commitPRs — открытые PR, у которых head — текущий коммит (detached HEAD).
+// Найти PR, где коммит в середине, Gitea по API не позволяет. Страницы —
+// как у PullRequests (D-040).
+func (g Gitea) commitPRs(ctx context.Context, q Query) model.PRSummary {
+	var prs []teaRESTPR
+	for page := 1; ; page++ {
+		if page > teaMaxPages {
+			return prFailed(model.Errorf(model.CodeOther, "открытых PR больше %d: поиск по коммиту был бы неполным", teaPageSize*teaMaxPages))
+		}
+		out, e := g.api(ctx, q.Dir, q.Target, "/repos/"+q.Target.Project+"/pulls?state=open&limit="+strconv.Itoa(teaPageSize)+"&page="+strconv.Itoa(page))
+		if e != nil {
+			return prFailed(e)
+		}
+		var list []teaRESTPR
+		if err := json.Unmarshal(out, &list); err != nil {
+			return prFailed(badOutput("tea", err))
+		}
+		for _, p := range list {
+			if teaOwn(q, p) {
+				prs = append(prs, p)
+			}
+		}
+		if len(list) < teaPageSize {
+			break
+		}
+	}
+	draft := 0
+	for _, p := range prs {
+		if p.Draft || teaDraft(p.Title) {
+			draft++
+		}
+	}
+	link := ""
+	switch {
+	case len(prs) == 1:
+		link = prs[0].HTMLURL
+	case len(prs) > 1:
+		link = webURL(q.Target, "/pulls?state=open")
+	}
+	return withLast(prOK(len(prs), draft, link), func() *model.PRRef { return g.lastClosed(ctx, q) })
 }
 
 type teaRun struct {
@@ -250,16 +313,21 @@ type teaRun struct {
 	HTMLURL    string `json:"html_url"`
 }
 
-// CIRuns — запуски Actions ветки через REST (D-041): формат как у GitHub,
-// но `conclusion` нет, пока запуск не завершён. Итог — по правилам D-043.
+// CIRuns — запуски Actions ветки (при detached HEAD — коммита) через REST
+// (D-041): формат как у GitHub, но `conclusion` нет, пока запуск не
+// завершён. Итог — по правилам D-043.
 func (g Gitea) CIRuns(ctx context.Context, q Query) model.CISummary {
-	if q.Branch == "" {
+	if q.noRef() {
 		return ciFailed(noBranch())
 	}
 	if q.Target.Login == "" {
 		return ciFailed(noLogin(q.Target))
 	}
-	out, e := g.api(ctx, q.Dir, q.Target, "/repos/"+q.Target.Project+"/actions/runs?branch="+url.QueryEscape(q.Branch)+"&limit=20")
+	filter := "branch=" + url.QueryEscape(q.Branch)
+	if q.Branch == "" {
+		filter = "head_sha=" + q.SHA
+	}
+	out, e := g.api(ctx, q.Dir, q.Target, "/repos/"+q.Target.Project+"/actions/runs?"+filter+"&limit=20")
 	if e != nil {
 		return ciFailed(e)
 	}

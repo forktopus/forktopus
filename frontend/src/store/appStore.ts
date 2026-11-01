@@ -8,7 +8,7 @@ import { errorOf, type DataSource, type SkipList, type Snapshot } from '../data/
 import { t } from '../i18n'
 import { registryFilters, sortKeys, type RegistryFilter, type SortKey } from '../logic/registry'
 import { opResultLabel } from '../logic/ops'
-import { branchOf, repoName } from '../logic/repo'
+import { remoteRef, repoName } from '../logic/repo'
 import type { Tone } from '../theme/theme'
 import type { ThemeMode } from '../theme/tokens'
 
@@ -161,9 +161,9 @@ export function toUI(s: Pick<AppState, 'mode' | 'theme' | 'filters' | 'fetchPrun
 
 const byId = (repos: Repository[]) => Object.fromEntries(repos.map((r) => [r.id, r]))
 
-/** Серверные данные в репозитории, если получены для его текущей ветки (как withRemoteLocked в Go). */
+/** Серверные данные в репозитории, если получены для его текущей ветки или коммита (как withRemoteLocked в Go). */
 export function withRemote(repo: Repository, st: RemoteStatus | undefined): Repository {
-  if (!st || branchOf(repo) !== st.branch) return repo
+  if (!st || remoteRef(repo) !== st.branch) return repo
   const remotes = st.provider && repo.remotes ? repo.remotes.map((r) => (r.name === repo.remote ? { ...r, provider: st.provider } : r)) : repo.remotes
   return { ...repo, pr: st.pr, ci: st.ci, remotes }
 }

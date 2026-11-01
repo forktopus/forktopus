@@ -37,6 +37,7 @@ type Request struct {
 	Dir       string            // рабочая копия: tea работает только внутри неё
 	Remote    *model.RemoteInfo // nil — у репозитория нет выбранного remote
 	Branch    string            // пусто — detached HEAD
+	SHA       string            // текущий коммит при detached HEAD: PR/CI ищутся по нему
 	Overrides map[string]model.Provider
 	// Force — не брать из кэша и не ждать сетевую ошибку хоста (ручное обновление).
 	Force bool
@@ -115,7 +116,7 @@ func (f *Fetcher) Status(ctx context.Context, req Request) Result {
 	if req.Remote == nil {
 		return failed("", model.Errorf(model.CodeNoRemote, "нет remote: серверных данных нет"), model.AvailabilityNotSupported)
 	}
-	if req.Branch == "" {
+	if req.Branch == "" && req.SHA == "" {
 		return failed("", model.Errorf(model.CodeInvalidInput, "нет текущей ветки (detached HEAD)"), model.AvailabilityNotSupported)
 	}
 	if req.Remote.Host == "" {
@@ -131,7 +132,7 @@ func (f *Fetcher) Status(ctx context.Context, req Request) Result {
 		return failed(t.Provider, model.Errorf(model.CodeUnsupported, "для провайдера %q нет адаптера", t.Provider), model.AvailabilityNotSupported)
 	}
 
-	key := string(t.Provider) + "|" + t.Host + "|" + t.Project + "|" + t.Login + "|" + req.Branch
+	key := string(t.Provider) + "|" + t.Host + "|" + t.Project + "|" + t.Login + "|" + req.Branch + "|" + req.SHA
 	f.mu.Lock()
 	prev, cached := f.entries[key]
 	if cached && !req.Force && f.now().Sub(prev.at) < f.opts.TTL {
@@ -152,7 +153,7 @@ func (f *Fetcher) Status(ctx context.Context, req Request) Result {
 	h := f.hostLocked(t.Host)
 	f.mu.Unlock()
 
-	res := f.fetch(ctx, h, adapter, providers.Query{Dir: req.Dir, Target: t, Branch: req.Branch}, req.Force)
+	res := f.fetch(ctx, h, adapter, providers.Query{Dir: req.Dir, Target: t, Branch: req.Branch, SHA: req.SHA}, req.Force)
 	// Ошибка не стирает время последнего успеха: UI покажет, насколько данные устарели.
 	if res.PR.LastSuccessAt == nil {
 		res.PR.LastSuccessAt = prev.res.PR.LastSuccessAt

@@ -448,7 +448,8 @@ export interface RemoteStatus {
     "repoId": string;
 
     /**
-     * Branch — ветка, для которой получены данные; пусто — detached HEAD.
+     * Branch — ветка, для которой получены данные; `@SHA` — коммит при
+     * detached HEAD; пусто — ни ветки, ни коммита.
      */
     "branch": string;
 

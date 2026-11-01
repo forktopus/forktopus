@@ -329,13 +329,16 @@ describe('store', () => {
 })
 
 describe('withRemote', () => {
-  it('detached HEAD сопоставляется с пустой веткой, provider "" не трогает remote', () => {
+  it('detached HEAD сопоставляется по коммиту (@SHA), provider "" не трогает remote', () => {
     const repo = { id: 'r', remote: 'origin', remotes: [{ name: 'origin', provider: Provider.ProviderGitHub }], branch: { detached: true, headSha: 'abc' } } as Repository
-    const st = { repoId: 'r', branch: '', provider: Provider.$zero, pr: { availability: Availability.AvailabilityNotSupported }, ci: { availability: Availability.AvailabilityNotSupported } } as RemoteStatus
+    const st = { repoId: 'r', branch: '@abc', provider: Provider.$zero, pr: { availability: Availability.AvailabilityOK, open: 1 }, ci: { availability: Availability.AvailabilityOK } } as RemoteStatus
     const got = withRemote(repo, st)
-    expect(got.pr.availability).toBe(Availability.AvailabilityNotSupported)
+    expect(got.pr.open).toBe(1)
     expect(got.remotes?.[0].provider).toBe(Provider.ProviderGitHub)
     expect(withRemote(repo, undefined)).toBe(repo)
+    // Данные другого коммита или прежней ветки не подставляются.
+    expect(withRemote(repo, { ...st, branch: '@def' })).toBe(repo)
+    expect(withRemote(repo, { ...st, branch: '' })).toBe(repo)
   })
 })
 

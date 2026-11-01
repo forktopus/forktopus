@@ -124,14 +124,29 @@ type ghPR struct {
 // ghPRLimit — больше открытых PR из одной ветки не бывает на практике.
 const ghPRLimit = "100"
 
-// PullRequests — открытые PR, где ветка — источник. `--head` фильтрует только
-// по имени ветки, поэтому PR из форков с тем же именем отбрасываются.
+// ghSelect — отбор PR: по ветке-источнику или, при detached HEAD, поиском
+// по SHA (находит PR, где этот коммит есть среди коммитов).
+func ghSelect(q Query) []string {
+	if q.Branch != "" {
+		return []string{"--head", q.Branch}
+	}
+	return []string{"--search", q.SHA}
+}
+
+// ghOwn — PR из этого репозитория и, если отбор по ветке, именно из неё:
+// `--head` фильтрует только по имени, PR из форков с тем же именем отбрасываются.
+func ghOwn(q Query, crossRepo bool, head string) bool {
+	return !crossRepo && (q.Branch == "" || head == q.Branch)
+}
+
+// PullRequests — открытые PR, где ветка — источник (при detached HEAD —
+// содержащие текущий коммит).
 func (g GitHub) PullRequests(ctx context.Context, q Query) model.PRSummary {
-	if q.Branch == "" {
+	if q.noRef() {
 		return prFailed(noBranch())
 	}
-	out, e := g.run(ctx, q.Dir, "pr", "list", "-R", repoArg(q.Target), "--head", q.Branch, "--state", "open",
-		"--limit", ghPRLimit, "--json", "isDraft,url,isCrossRepository,headRefName")
+	out, e := g.run(ctx, q.Dir, slices.Concat([]string{"pr", "list", "-R", repoArg(q.Target)}, ghSelect(q),
+		[]string{"--state", "open", "--limit", ghPRLimit, "--json", "isDraft,url,isCrossRepository,headRefName"})...)
 	if e != nil {
 		return prFailed(e)
 	}
@@ -139,7 +154,7 @@ func (g GitHub) PullRequests(ctx context.Context, q Query) model.PRSummary {
 	if err := json.Unmarshal(out, &prs); err != nil {
 		return prFailed(badOutput("gh", err))
 	}
-	prs = slices.DeleteFunc(prs, func(p ghPR) bool { return p.IsCrossRepository || p.HeadRefName != q.Branch })
+	prs = slices.DeleteFunc(prs, func(p ghPR) bool { return !ghOwn(q, p.IsCrossRepository, p.HeadRefName) })
 
 	draft := 0
 	for _, p := range prs {
@@ -152,7 +167,11 @@ func (g GitHub) PullRequests(ctx context.Context, q Query) model.PRSummary {
 	case len(prs) == 1:
 		link = prs[0].URL
 	case len(prs) > 1:
-		link = webURL(q.Target, "/pulls?q="+url.QueryEscape("is:pr is:open head:"+q.Branch))
+		filter := "head:" + q.Branch
+		if q.Branch == "" {
+			filter = q.SHA
+		}
+		link = webURL(q.Target, "/pulls?q="+url.QueryEscape("is:pr is:open "+filter))
 	}
 	return withLast(prOK(len(prs), draft, link), func() *model.PRRef { return g.lastClosed(ctx, q) })
 }
@@ -170,8 +189,8 @@ type ghClosedPR struct {
 // lastClosed — последний закрытый или влитый PR ветки; `--state closed`
 // включает и влитые.
 func (g GitHub) lastClosed(ctx context.Context, q Query) *model.PRRef {
-	out, e := g.run(ctx, q.Dir, "pr", "list", "-R", repoArg(q.Target), "--head", q.Branch, "--state", "closed",
-		"--limit", "20", "--json", "number,state,url,closedAt,mergedAt,isCrossRepository,headRefName")
+	out, e := g.run(ctx, q.Dir, slices.Concat([]string{"pr", "list", "-R", repoArg(q.Target)}, ghSelect(q),
+		[]string{"--state", "closed", "--limit", "20", "--json", "number,state,url,closedAt,mergedAt,isCrossRepository,headRefName"})...)
 	if e != nil {
 		return nil
 	}
@@ -181,7 +200,7 @@ func (g GitHub) lastClosed(ctx context.Context, q Query) *model.PRRef {
 	}
 	var refs []model.PRRef
 	for _, p := range prs {
-		if p.IsCrossRepository || p.HeadRefName != q.Branch {
+		if !ghOwn(q, p.IsCrossRepository, p.HeadRefName) {
 			continue
 		}
 		merged := p.MergedAt != "" || p.State == "MERGED"
@@ -209,14 +228,18 @@ var ghActive = []string{"queued", "in_progress", "requested", "waiting", "pendin
 // ghRunLimit — сколько последних запусков ветки читать.
 const ghRunLimit = "20"
 
-// CIRuns — запуски Actions ветки: активные считаются по всем прочитанным,
-// итог — по последнему коммиту (ghLastResult).
+// CIRuns — запуски Actions ветки (при detached HEAD — коммита): активные
+// считаются по всем прочитанным, итог — по последнему коммиту (ghLastResult).
 func (g GitHub) CIRuns(ctx context.Context, q Query) model.CISummary {
-	if q.Branch == "" {
+	if q.noRef() {
 		return ciFailed(noBranch())
 	}
-	out, e := g.run(ctx, q.Dir, "run", "list", "-R", repoArg(q.Target), "--branch", q.Branch,
-		"--limit", ghRunLimit, "--json", "status,conclusion,workflowName,event,headSha,createdAt")
+	sel, link := []string{"--branch", q.Branch}, webURL(q.Target, "/actions?query="+url.QueryEscape("branch:"+q.Branch))
+	if q.Branch == "" {
+		sel, link = []string{"--commit", q.SHA}, webURL(q.Target, "/commit/"+q.SHA)
+	}
+	out, e := g.run(ctx, q.Dir, slices.Concat([]string{"run", "list", "-R", repoArg(q.Target)}, sel,
+		[]string{"--limit", ghRunLimit, "--json", "status,conclusion,workflowName,event,headSha,createdAt"})...)
 	if e != nil {
 		return ciFailed(e)
 	}
@@ -230,9 +253,8 @@ func (g GitHub) CIRuns(ctx context.Context, q Query) model.CISummary {
 			active++
 		}
 	}
-	link := ""
-	if len(runs) > 0 {
-		link = webURL(q.Target, "/actions?query="+url.QueryEscape("branch:"+q.Branch))
+	if len(runs) == 0 {
+		link = ""
 	}
 	return ciOK(active, ghLastResult(runs), link)
 }

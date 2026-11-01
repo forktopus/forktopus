@@ -1,0 +1,48 @@
+[
+ {
+  "number": 2,
+  "title": "WIP: Пилот: черновик",
+  "draft": true,
+  "state": "open",
+  "merged": false,
+  "merged_at": null,
+  "closed_at": null,
+  "html_url": "https://git.example.org/OWNER/forktopus-pilot/pulls/2",
+  "head": {
+   "ref": "pilot/pr-draft",
+   "sha": "d784e5f5eb0a7120b394f8310c19555169a5a2ea",
+   "repo": {
+    "id": 25
+   }
+  },
+  "base": {
+   "ref": "main",
+   "repo": {
+    "id": 25
+   }
+  }
+ },
+ {
+  "number": 1,
+  "title": "Пилот: открытый PR",
+  "draft": false,
+  "state": "open",
+  "merged": false,
+  "merged_at": null,
+  "closed_at": null,
+  "html_url": "https://git.example.org/OWNER/forktopus-pilot/pulls/1",
+  "head": {
+   "ref": "pilot/pr-open",
+   "sha": "1f1c85b4682c410ac412f0425daeaff0c863f7e3",
+   "repo": {
+    "id": 25
+   }
+  },
+  "base": {
+   "ref": "main",
+   "repo": {
+    "id": 25
+   }
+  }
+ }
+]

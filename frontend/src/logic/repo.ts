@@ -21,6 +21,11 @@ export function branchOf(r: Repository): string {
   return !r.branch || r.branch.detached ? '' : (r.branch.name ?? '')
 }
 
+/** К чему относятся серверные данные, как remoteRef в Go: ветка или `@SHA` при detached HEAD. */
+export function remoteRef(r: Repository): string {
+  return r.branch?.detached && r.branch.headSha ? `@${r.branch.headSha}` : branchOf(r)
+}
+
 export function repoProvider(r: Repository): Provider {
   return selectedRemote(r)?.provider || Provider.ProviderOther
 }

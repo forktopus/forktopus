@@ -161,3 +161,21 @@ func TestRemoteLastSuccessAfterRestart(t *testing.T) {
 		t.Errorf("время последнего успеха потеряно: %+v %+v", st.PR, st.CI)
 	}
 }
+
+func TestRemoteRef(t *testing.T) { // D-059
+	cases := []struct {
+		name   string
+		branch *model.BranchStatus
+		want   string
+	}{
+		{"ветка", &model.BranchStatus{Name: "main", HeadSHA: "abc"}, "main"},
+		{"detached HEAD — коммит", &model.BranchStatus{Detached: true, HeadSHA: "abc"}, "@abc"},
+		{"detached без коммита", &model.BranchStatus{Detached: true}, ""},
+		{"статус не прочитан", nil, ""},
+	}
+	for _, c := range cases {
+		if got := remoteRef(model.Repository{Branch: c.branch}); got != c.want {
+			t.Errorf("%s: %q, ожидалось %q", c.name, got, c.want)
+		}
+	}
+}

@@ -60,9 +60,9 @@ func (s *AppService) remoteStatus(ctx context.Context, id string, force bool) (s
 	overrides, fetcher := s.cfg.HostProviders, s.remote
 	s.mu.Unlock()
 
-	branch := branchOf(repo)
+	branch := remoteRef(repo)
 	st.Branch = branch
-	res := fetcher.Status(ctx, remote.Request{Dir: repo.Path, Remote: selectedRemote(repo), Branch: branch, Overrides: overrides, Force: force})
+	res := fetcher.Status(ctx, remote.Request{Dir: repo.Path, Remote: selectedRemote(repo), Branch: branchOf(repo), SHA: detachedSHA(repo), Overrides: overrides, Force: force})
 	st = model.RemoteStatus{RepoID: id, Branch: branch, Provider: res.Provider, PR: res.PR, CI: res.CI}
 	if err := ctx.Err(); err != nil {
 		return st, model.Errorf(model.CodeOpCancelled, "запрос серверных данных отменён")
@@ -73,7 +73,7 @@ func (s *AppService) remoteStatus(ctx context.Context, id string, force bool) (s
 	if found == nil {
 		// Fetcher помнит последний успех только с запуска; после перезапуска
 		// он есть лишь в кэше списка (там же ветка, к которой он относится).
-		if old := s.snapshot.Repositories[i]; branchOf(old) == branch {
+		if old := s.snapshot.Repositories[i]; remoteRef(old) == branch {
 			if st.PR.LastSuccessAt == nil {
 				st.PR.LastSuccessAt = old.PR.LastSuccessAt
 			}
@@ -112,7 +112,7 @@ func (s *AppService) refreshRemoteAll() {
 // полученные для его текущей ветки, а если их нет — прежние из prev той же
 // ветки (например, из кэша прошлого запуска; LastSuccessAt покажет их возраст).
 func (s *AppService) withRemoteLocked(repo model.Repository, prev *model.Repository) model.Repository {
-	branch := branchOf(repo)
+	branch := remoteRef(repo)
 	if st, ok := s.remoteByRepo[repo.ID]; ok && st.Branch == branch {
 		repo.PR, repo.CI = st.PR, st.CI
 		// Тип сервера по резолверу точнее, чем по хосту при сканировании
@@ -126,7 +126,7 @@ func (s *AppService) withRemoteLocked(repo model.Repository, prev *model.Reposit
 	// Пришедшие вместе с repo PR/CI (scan.Refresh копирует запись целиком)
 	// могли относиться к другой ветке — доверяем только prev той же ветки.
 	repo.PR, repo.CI = model.PRSummary{}, model.CISummary{}
-	if prev != nil && branchOf(*prev) == branch {
+	if prev != nil && remoteRef(*prev) == branch {
 		repo.PR, repo.CI = prev.PR, prev.CI
 	}
 	return repo
@@ -135,7 +135,24 @@ func (s *AppService) withRemoteLocked(repo model.Repository, prev *model.Reposit
 // needsRemote — для текущей ветки ещё нет серверных данных.
 func (s *AppService) needsRemoteLocked(repo model.Repository) bool {
 	st, ok := s.remoteByRepo[repo.ID]
-	return !ok || st.Branch != branchOf(repo)
+	return !ok || st.Branch != remoteRef(repo)
+}
+
+// remoteRef — к чему относятся серверные данные: ветка или `@SHA` при
+// detached HEAD (D-059); пусто — статус не прочитан.
+func remoteRef(r model.Repository) string {
+	if sha := detachedSHA(r); sha != "" {
+		return "@" + sha
+	}
+	return branchOf(r)
+}
+
+// detachedSHA — текущий коммит при detached HEAD, иначе пусто.
+func detachedSHA(r model.Repository) string {
+	if r.Branch == nil || !r.Branch.Detached {
+		return ""
+	}
+	return r.Branch.HeadSHA
 }
 
 // branchOf — текущая ветка; пусто — detached HEAD или статус не прочитан.

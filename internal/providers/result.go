@@ -79,7 +79,7 @@ func withLast(sum model.PRSummary, last func() *model.PRRef) model.PRSummary {
 	return sum
 }
 
-// noBranch — при detached HEAD PR/CI не запрашиваются (idea 04 §7).
+// noBranch — ни ветки, ни коммита (detached HEAD без прочитанного SHA).
 func noBranch() *model.Error {
 	return model.Errorf(model.CodeInvalidInput, "нет текущей ветки (detached HEAD)")
 }

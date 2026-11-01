@@ -24,6 +24,7 @@ import {
   type UI,
 } from './model'
 import type { DataSource, Snapshot } from './source'
+import { remoteRef } from '../logic/repo'
 
 interface MockRoot {
   root: Root
@@ -392,7 +393,7 @@ export function createMockSource({ delayMs = 250, scenario = 'default' }: MockOp
       repo.ci = { ...repo.ci, lastAttemptAt: at, lastSuccessAt: repo.ci.availability === Availability.AvailabilityOK ? at : repo.ci.lastSuccessAt }
     }
     const remote = repo.remotes?.find((r) => r.name === repo.remote)
-    const status: RemoteStatus = { repoId, branch: repo.branch?.detached ? '' : (repo.branch?.name ?? ''), provider: remote?.provider ?? Provider.$zero, pr: repo.pr, ci: repo.ci }
+    const status: RemoteStatus = { repoId, branch: remoteRef(repo), provider: remote?.provider ?? Provider.$zero, pr: repo.pr, ci: repo.ci }
     remoteListeners.forEach((cb) => cb(structuredClone(status)))
     return reply(status)
   }

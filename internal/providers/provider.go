@@ -30,7 +30,13 @@ type Query struct {
 	Target Target
 	// Branch — текущая локальная ветка; PR/MR отбираются, где она — источник.
 	Branch string
+	// SHA — текущий коммит при detached HEAD (Branch пуст): PR/MR, содержащие
+	// его, и CI этого коммита.
+	SHA string
 }
+
+// noRef — ни ветки, ни коммита: искать нечего.
+func (q Query) noRef() bool { return q.Branch == "" && q.SHA == "" }
 
 // RemoteProvider — адаптер CLI одного провайдера. Методы не возвращают
 // ошибку отдельно: недоступность, отсутствие CLI и авторизации передаются
@@ -40,9 +46,10 @@ type RemoteProvider interface {
 	// Diagnose проверяет CLI и авторизацию на сервере цели. dir — рабочая копия:
 	// tea без git-репозитория в cwd не работает.
 	Diagnose(ctx context.Context, dir string, t Target) model.ToolDiagnostic
-	// PullRequests — открытые PR/MR, где ветка запроса — источник.
+	// PullRequests — открытые PR/MR, где ветка запроса — источник (при
+	// detached HEAD — содержащие коммит запроса).
 	PullRequests(ctx context.Context, q Query) model.PRSummary
-	// CIRuns — CI-запуски ветки запроса.
+	// CIRuns — CI-запуски ветки запроса (при detached HEAD — коммита).
 	CIRuns(ctx context.Context, q Query) model.CISummary
 }
 
