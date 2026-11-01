@@ -530,9 +530,12 @@ function Inspector({ repo, onOpenTools }: { repo: Repository; onOpenTools(): voi
         }}
       >
         {issue ? t('explorer.cliIssue') : noServer ? t('explorer.noServer') : t('explorer.cliReady')}
-        <Button size="small" sx={{ display: 'block', mt: 1, px: 0 }} onClick={onOpenTools}>
-          {t('explorer.openTools')}
-        </Button>
+        {/* Диагностика — только когда есть что чинить; в остальных случаях она в шапке. */}
+        {issue && (
+          <Button size="small" sx={{ display: 'block', mt: 1, px: 0 }} onClick={onOpenTools}>
+            {t('explorer.openTools')}
+          </Button>
+        )}
       </Box>
     </Box>
   )
@@ -608,10 +611,14 @@ export function ExplorerView({ onOpenTools }: { onOpenTools(): void }) {
           </Box>
           <Box sx={{ mt: 3, pt: 1.5, px: 1.25, borderTop: line, fontSize: 12, color: 'text.secondary' }}>
             <div>✓ {t('explorer.repoCount', { count: repos.length })}</div>
-            {issueHosts > 0 && <div>⚠ {t('explorer.issueHosts', { count: issueHosts })}</div>}
-            <Button size="small" sx={{ px: 0, mt: 0.5, fontSize: 12 }} onClick={onOpenTools}>
-              {t('explorer.openTools')}
-            </Button>
+            {issueHosts > 0 && (
+              <>
+                <div>⚠ {t('explorer.issueHosts', { count: issueHosts })}</div>
+                <Button size="small" sx={{ px: 0, mt: 0.5, fontSize: 12 }} onClick={onOpenTools}>
+                  {t('explorer.openTools')}
+                </Button>
+              </>
+            )}
           </Box>
         </Box>
       </Box>
