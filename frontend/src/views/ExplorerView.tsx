@@ -99,7 +99,18 @@ function Toggle({ open, onClick, children }: { open: boolean; onClick(): void; c
     <ButtonBase
       onClick={onClick}
       aria-expanded={open}
-      sx={{ display: 'flex', width: '100%', justifyContent: 'flex-start', alignItems: 'center', gap: 0.75, px: 0.5, py: 0.9, borderRadius: '7px', textAlign: 'left', '&:hover': { bgcolor: theme.app.chip } }}
+      sx={{
+        display: 'flex',
+        width: '100%',
+        justifyContent: 'flex-start',
+        alignItems: 'center',
+        gap: 0.75,
+        px: 0.5,
+        py: 0.9,
+        borderRadius: '7px',
+        textAlign: 'left',
+        '&:hover': { bgcolor: theme.app.chip },
+      }}
     >
       <Icon sx={{ fontSize: 17, color: 'text.secondary', flexShrink: 0 }} />
       {children}
@@ -118,38 +129,43 @@ function Tree({ tree, selectedId, rootsShown }: { tree: RootNode[]; selectedId: 
 
   return tree.map(({ root, hosts }) => {
     const rootOpen = !collapsed.has(root.id)
-    const body = hosts.length === 0 ? (
-      <Typography sx={{ fontSize: 12, color: 'text.secondary', px: 3.5, py: 0.5 }}>{t('explorer.emptyRoot')}</Typography>
-    ) : (
-      hosts.map((h) => {
-        const key = `${root.id}\n${h.host}`
-        const open = !collapsed.has(key)
-        return (
-          <Box key={h.host}>
-            <Toggle open={open} onClick={() => toggle(key)}>
-              {h.host && <ProviderIcon provider={h.provider} size={18} />}
-              <Typography component="span" sx={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 730, overflowWrap: 'anywhere' }}>
-                {h.host || t('explorer.noRemote')}
-              </Typography>
-              {h.issue && (
-                <Tooltip title={t('registry.sourceIssue')}>
-                  <WarningAmberIcon sx={{ fontSize: 16, color: 'warning.main', mr: 0.75 }} />
-                </Tooltip>
-              )}
-            </Toggle>
-            {open &&
-              h.namespaces.map((ns) => (
-                <Box key={ns.namespace}>
-                  {ns.namespace && <Typography sx={{ ...caption, fontWeight: 600, letterSpacing: '1px', pl: 3.5, pr: 1, pt: 0.75, pb: 0.25, overflowWrap: 'anywhere' }}>{ns.namespace}</Typography>}
-                  {ns.repos.map((n) => (
-                    <TreeRepo key={n.repo.id} node={n} depth={0} selectedId={selectedId} />
-                  ))}
-                </Box>
-              ))}
-          </Box>
-        )
-      })
-    )
+    const body =
+      hosts.length === 0 ? (
+        <Typography sx={{ fontSize: 12, color: 'text.secondary', px: 3.5, py: 0.5 }}>{t('explorer.emptyRoot')}</Typography>
+      ) : (
+        hosts.map((h) => {
+          const key = `${root.id}\n${h.host}`
+          const open = !collapsed.has(key)
+          return (
+            <Box key={h.host}>
+              <Toggle open={open} onClick={() => toggle(key)}>
+                {h.host && <ProviderIcon provider={h.provider} size={18} />}
+                <Typography component="span" sx={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 730, overflowWrap: 'anywhere' }}>
+                  {h.host || t('explorer.noRemote')}
+                </Typography>
+                {h.issue && (
+                  <Tooltip title={t('registry.sourceIssue')}>
+                    <WarningAmberIcon sx={{ fontSize: 16, color: 'warning.main', mr: 0.75 }} />
+                  </Tooltip>
+                )}
+              </Toggle>
+              {open &&
+                h.namespaces.map((ns) => (
+                  <Box key={ns.namespace}>
+                    {ns.namespace && (
+                      <Typography sx={{ ...caption, fontWeight: 600, letterSpacing: '1px', pl: 3.5, pr: 1, pt: 0.75, pb: 0.25, overflowWrap: 'anywhere' }}>
+                        {ns.namespace}
+                      </Typography>
+                    )}
+                    {ns.repos.map((n) => (
+                      <TreeRepo key={n.repo.id} node={n} depth={0} selectedId={selectedId} />
+                    ))}
+                  </Box>
+                ))}
+            </Box>
+          )
+        })
+      )
     // Один корень — без лишнего уровня: сразу хосты.
     if (!rootsShown) return <Box key={root.id}>{body}</Box>
     return (
@@ -213,7 +229,15 @@ function Worktree({ repo }: { repo: Repository }) {
     { key: 'explorer.wt.untracked' as const, count: w.untracked, tone: 'warn' as const },
     { key: 'explorer.wt.conflicts' as const, count: w.conflicts, tone: 'bad' as const },
   ].filter((r) => r.count > 0)
-  const row = { display: 'flex', justifyContent: 'space-between', gap: 1.5, px: 1.5, py: 1.25, fontSize: 13, '& + &': { borderTop: `1px solid ${theme.app.line}` } }
+  const row = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: 1.5,
+    px: 1.5,
+    py: 1.25,
+    fontSize: 13,
+    '& + &': { borderTop: `1px solid ${theme.app.line}` },
+  }
   return (
     <Box sx={{ border: `1px solid ${theme.app.line}`, borderRadius: '10px', overflow: 'hidden' }}>
       {w.operation && (
@@ -228,9 +252,7 @@ function Worktree({ repo }: { repo: Repository }) {
           <StatusText label={{ tone: r.tone, text: String(r.count) }} />
         </Box>
       ))}
-      {rows.length === 0 && !w.operation && (
-        <Box sx={{ ...row, color: toneColor(theme, 'good') }}>{t('explorer.wt.clean')}</Box>
-      )}
+      {rows.length === 0 && !w.operation && <Box sx={{ ...row, color: toneColor(theme, 'good') }}>{t('explorer.wt.clean')}</Box>}
       {(w.files?.length ?? 0) > 0 && <ChangedFiles files={w.files!} more={w.moreFiles ?? 0} />}
     </Box>
   )
@@ -299,10 +321,25 @@ function Branches({ repo, busy }: { repo: Repository; busy: boolean }) {
         return (
           <Box
             key={b.name}
-            sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto auto', gap: 1.5, alignItems: 'center', px: 1.5, py: 1, '& + &': { borderTop: `1px solid ${theme.app.line}` } }}
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: 'minmax(0, 1fr) auto auto',
+              gap: 1.5,
+              alignItems: 'center',
+              px: 1.5,
+              py: 1,
+              '& + &': { borderTop: `1px solid ${theme.app.line}` },
+            }}
           >
             <Box sx={{ minWidth: 0 }}>
-              <Typography sx={{ font: `13px ${monoFontFamily}`, fontWeight: b.current ? 760 : 400, color: b.current ? 'primary.main' : 'text.primary', overflowWrap: 'anywhere' }}>
+              <Typography
+                sx={{
+                  font: `13px ${monoFontFamily}`,
+                  fontWeight: b.current ? 760 : 400,
+                  color: b.current ? 'primary.main' : 'text.primary',
+                  overflowWrap: 'anywhere',
+                }}
+              >
                 {b.name}
               </Typography>
               <Typography sx={{ fontSize: 12, color: 'text.secondary', overflowWrap: 'anywhere' }}>
@@ -417,9 +454,13 @@ function RepoMain({ repo }: { repo: Repository }) {
           </Box>
         </Section>
 
-        <Section title={`${t('explorer.worktree')}${repo.worktree ? ` · ${t(changeCount(repo) + repo.worktree.conflicts > 0 ? 'explorer.wt.dirty' : 'explorer.wt.cleanShort')}` : ''}`}>
+        <Section
+          title={`${t('explorer.worktree')}${repo.worktree ? ` · ${t(changeCount(repo) + repo.worktree.conflicts > 0 ? 'explorer.wt.dirty' : 'explorer.wt.cleanShort')}` : ''}`}
+        >
           <Worktree repo={repo} />
-          <Typography sx={{ fontSize: 12, color: 'text.secondary', mt: 0.75 }}>{t('explorer.statusRead', { time: formatRelative(repo.updatedAt, now) })}</Typography>
+          <Typography sx={{ fontSize: 12, color: 'text.secondary', mt: 0.75 }}>
+            {t('explorer.statusRead', { time: formatRelative(repo.updatedAt, now) })}
+          </Typography>
         </Section>
 
         <Section title={t('explorer.branches')}>
@@ -507,7 +548,19 @@ export function ExplorerView({ onOpenTools }: { onOpenTools(): void }) {
         overflow: 'hidden',
       }}
     >
-      <Box sx={{ gridRow: { md: 'span 2', lg: 'auto' }, borderRight: { md: line }, borderBottom: { xs: line, md: 'none' }, bgcolor: theme.app.panelAlt, p: 1.25, display: 'flex', flexDirection: 'column', maxHeight: { xs: 320, md: 'none' }, overflowY: 'auto' }}>
+      <Box
+        sx={{
+          gridRow: { md: 'span 2', lg: 'auto' },
+          borderRight: { md: line },
+          borderBottom: { xs: line, md: 'none' },
+          bgcolor: theme.app.panelAlt,
+          p: 1.25,
+          display: 'flex',
+          flexDirection: 'column',
+          maxHeight: { xs: 320, md: 'none' },
+          overflowY: 'auto',
+        }}
+      >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 1.25, pt: 1, pb: 1.5 }}>
           <Typography sx={caption}>{t('explorer.roots')}</Typography>
           <Typography sx={{ ...caption, textTransform: 'none', letterSpacing: 0 }}>{t('explorer.rootCount', { count: roots.length })}</Typography>

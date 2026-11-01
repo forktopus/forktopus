@@ -3,7 +3,18 @@
 // фильтры сохраняются в настройках Go через DataSource.saveUI.
 
 import { createStore, type StoreApi } from 'zustand/vanilla'
-import { Operation, type BranchInfo, type Diagnostics, type OpResult, type RemoteStatus, type Repository, type Root, type ScanIssue, type ToolDiagnostic, type UI } from '../data/model'
+import {
+  Operation,
+  type BranchInfo,
+  type Diagnostics,
+  type OpResult,
+  type RemoteStatus,
+  type Repository,
+  type Root,
+  type ScanIssue,
+  type ToolDiagnostic,
+  type UI,
+} from '../data/model'
 import { errorOf, type DataSource, type SkipList, type Snapshot } from '../data/source'
 import { t } from '../i18n'
 import { registryFilters, sortKeys, type RegistryFilter, type SortKey } from '../logic/registry'

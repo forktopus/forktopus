@@ -31,7 +31,10 @@ function Tag({ label }: { label: Label }) {
   const theme = useTheme()
   const color = toneColor(theme, label.tone)
   return (
-    <Box component="span" sx={{ fontSize: 12, lineHeight: 1.2, px: 0.875, py: 0.5, borderRadius: '6px', color, bgcolor: alpha(color, 0.13), whiteSpace: 'nowrap' }}>
+    <Box
+      component="span"
+      sx={{ fontSize: 12, lineHeight: 1.2, px: 0.875, py: 0.5, borderRadius: '6px', color, bgcolor: alpha(color, 0.13), whiteSpace: 'nowrap' }}
+    >
       {label.text}
     </Box>
   )
@@ -110,7 +113,21 @@ function RadarCard({ repo, group }: { repo: Repository; group: RadarGroup }) {
             {[repoHost(repo) || remoteCaption(repo), repoNamespace(repo)].filter(Boolean).join(' / ')}
           </Typography>
         </Box>
-        <Box component="span" sx={{ width: 22, height: 22, display: 'grid', placeItems: 'center', borderRadius: '6px', fontSize: 12, fontWeight: 800, color: tone, bgcolor: alpha(tone, 0.13), flexShrink: 0 }}>
+        <Box
+          component="span"
+          sx={{
+            width: 22,
+            height: 22,
+            display: 'grid',
+            placeItems: 'center',
+            borderRadius: '6px',
+            fontSize: 12,
+            fontWeight: 800,
+            color: tone,
+            bgcolor: alpha(tone, 0.13),
+            flexShrink: 0,
+          }}
+        >
           {groupMark[group]}
         </Box>
       </Box>
@@ -122,7 +139,18 @@ function RadarCard({ repo, group }: { repo: Repository; group: RadarGroup }) {
           <Tag key={l.text} label={l} />
         ))}
       </Box>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 1, mt: 1.75, pt: 1.5, borderTop: `1px solid ${theme.app.line}` }}>
+      <Box
+        sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 1,
+          mt: 1.75,
+          pt: 1.5,
+          borderTop: `1px solid ${theme.app.line}`,
+        }}
+      >
         <Typography sx={{ flex: '1 1 160px', fontSize: 12, color: 'text.secondary', minWidth: 0, overflowWrap: 'anywhere' }}>{radarNote(repo, now)}</Typography>
         <CardActions repo={repo} />
       </Box>
@@ -148,7 +176,16 @@ export function RadarView() {
       {groups.unknown.length > 0 && (
         <Typography sx={{ fontSize: 13, color: 'text.secondary', mb: 2 }}>{t('scan.unknownStatus', { count: groups.unknown.length })}</Typography>
       )}
-      <Box sx={{ borderTop: `1px solid ${theme.app.line}`, pt: 2.5, display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 2, alignItems: 'start' }}>
+      <Box
+        sx={{
+          borderTop: `1px solid ${theme.app.line}`,
+          pt: 2.5,
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' },
+          gap: 2,
+          alignItems: 'start',
+        }}
+      >
         {radarGroups.map((g) => (
           <Box key={g} sx={{ minWidth: 0 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5, px: 0.5 }}>
@@ -161,12 +198,18 @@ export function RadarView() {
               <EmptyText text={t('radar.empty')} />
             ) : (
               // Карточки у видимой области (15.3); у каждой колонки свой список, прокрутка — общая, окна.
-              <Virtuoso useWindowScroll data={groups[g]} computeItemKey={(_, r) => r.id} increaseViewportBy={600} itemContent={(_, r) => (
+              <Virtuoso
+                useWindowScroll
+                data={groups[g]}
+                computeItemKey={(_, r) => r.id}
+                increaseViewportBy={600}
+                itemContent={(_, r) => (
                   // Отступ — padding, не margin: виртуальный список меряет высоту обёртки.
                   <Box sx={{ pb: 1.5 }}>
                     <RadarCard repo={r} group={g} />
                   </Box>
-                )} />
+                )}
+              />
             )}
           </Box>
         ))}

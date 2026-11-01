@@ -54,7 +54,8 @@ export function TopBar({ onOpenTools, onOpenRoots }: Props) {
   const lastCheck = scanning
     ? t('lastCheck.scanning', { count: scanFound })
     : lastCheckAt
-      ? t('lastCheck.at', { when: formatRelative(lastCheckAt, now) }) : t('lastCheck.never')
+      ? t('lastCheck.at', { when: formatRelative(lastCheckAt, now) })
+      : t('lastCheck.never')
   const dark = theme.palette.mode === 'dark'
 
   return (
@@ -75,12 +76,7 @@ export function TopBar({ onOpenTools, onOpenRoots }: Props) {
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, whiteSpace: 'nowrap' }}>
-        <Box
-          component="img"
-          src="/forktopus-icon.png"
-          alt={t('app.mascotAlt')}
-          sx={{ width: 34, height: 34, filter: 'drop-shadow(0 4px 10px #685ee860)' }}
-        />
+        <Box component="img" src="/forktopus-icon.png" alt={t('app.mascotAlt')} sx={{ width: 34, height: 34, filter: 'drop-shadow(0 4px 10px #685ee860)' }} />
         <Box sx={{ display: narrow ? 'none' : undefined }}>
           <Typography component="strong" sx={{ display: 'block', fontSize: 16, fontWeight: 760, letterSpacing: '-0.5px' }}>
             {t('app.name')}
@@ -181,10 +177,7 @@ export function TopBar({ onOpenTools, onOpenRoots }: Props) {
           </IconButton>
         </Tooltip>
         <Tooltip title={dark ? t('action.themeToLight') : t('action.themeToDark')}>
-          <IconButton
-            aria-label={dark ? t('action.themeToLight') : t('action.themeToDark')}
-            onClick={() => setTheme(dark ? 'light' : 'dark')}
-          >
+          <IconButton aria-label={dark ? t('action.themeToLight') : t('action.themeToDark')} onClick={() => setTheme(dark ? 'light' : 'dark')}>
             {dark ? <LightModeIcon /> : <DarkModeIcon />}
           </IconButton>
         </Tooltip>

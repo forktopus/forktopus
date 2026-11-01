@@ -74,13 +74,24 @@ function RowActions({ repo }: { repo: Repository }) {
       ) : (
         <Tooltip title={reason ?? ''}>
           <span>
-            <Button size="small" variant="outlined" disabled={reason !== null} onClick={() => requestOp(repo.id, Operation.OperationPull)} sx={{ minWidth: 0, px: 1.25, whiteSpace: 'nowrap' }}>
+            <Button
+              size="small"
+              variant="outlined"
+              disabled={reason !== null}
+              onClick={() => requestOp(repo.id, Operation.OperationPull)}
+              sx={{ minWidth: 0, px: 1.25, whiteSpace: 'nowrap' }}
+            >
               {t('registry.pull')}
             </Button>
           </span>
         </Tooltip>
       )}
-      <IconButton size="small" aria-label={t('action.more')} onClick={(e) => setAnchor(e.currentTarget)} sx={{ border: 1, borderColor: 'divider', borderRadius: '8px' }}>
+      <IconButton
+        size="small"
+        aria-label={t('action.more')}
+        onClick={(e) => setAnchor(e.currentTarget)}
+        sx={{ border: 1, borderColor: 'divider', borderRadius: '8px' }}
+      >
         <MoreHorizIcon fontSize="small" />
       </IconButton>
       <Menu anchorEl={anchor} open={anchor !== null} onClose={() => setAnchor(null)}>
@@ -237,8 +248,7 @@ export function RegistryView() {
 
   // Пока статус не прочитан ни у одного, 0 был бы неправдой — показываем прочерк.
   const gitValue = (n: number) => (metrics.shown > 0 && metrics.noStatus === metrics.shown ? t('kpi.none') : String(n))
-  const gitFoot = (key: 'kpi.changesFoot' | 'kpi.behindFoot') =>
-    metrics.noStatus > 0 ? t('kpi.noStatus', { count: metrics.noStatus }) : t(key)
+  const gitFoot = (key: 'kpi.changesFoot' | 'kpi.behindFoot') => (metrics.noStatus > 0 ? t('kpi.noStatus', { count: metrics.noStatus }) : t(key))
 
   // Выбранная в другом режиме строка (переход из радара или проводника) — в центре видимой области.
   const virtuoso = useRef<TableVirtuosoHandle>(null)
@@ -255,7 +265,13 @@ export function RegistryView() {
     () => ({
       selectedId,
       openDetails,
-      sx: { minWidth: 1170, tableLayout: 'fixed', '& td, & th': { borderColor: theme.app.line, py: 1.5, px: 1 }, '& td:first-of-type, & th:first-of-type': { pl: 2 }, '& td:last-of-type, & th:last-of-type': { pr: 2 } },
+      sx: {
+        minWidth: 1170,
+        tableLayout: 'fixed',
+        '& td, & th': { borderColor: theme.app.line, py: 1.5, px: 1 },
+        '& td:first-of-type, & th:first-of-type': { pl: 2 },
+        '& td:last-of-type, & th:last-of-type': { pr: 2 },
+      },
     }),
     [selectedId, openDetails, theme],
   )
@@ -302,7 +318,18 @@ export function RegistryView() {
                 <TableCell
                   key={c.label}
                   align={c.key ? 'left' : 'right'}
-                  sx={{ width: c.width, fontSize: 12, fontWeight: 800, letterSpacing: '0.6px', textTransform: 'uppercase', color: 'text.secondary', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', '& .MuiTableSortLabel-root:not(.Mui-active) .MuiTableSortLabel-icon': { display: 'none' } }}
+                  sx={{
+                    width: c.width,
+                    fontSize: 12,
+                    fontWeight: 800,
+                    letterSpacing: '0.6px',
+                    textTransform: 'uppercase',
+                    color: 'text.secondary',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    '& .MuiTableSortLabel-root:not(.Mui-active) .MuiTableSortLabel-icon': { display: 'none' },
+                  }}
                 >
                   {c.key ? (
                     <TableSortLabel active={filters.sort === c.key} direction={filters.asc ? 'asc' : 'desc'} onClick={() => sortBy(c.key!)}>
@@ -315,7 +342,9 @@ export function RegistryView() {
               ))}
             </TableRow>
           )}
-          itemContent={(_, { repo: r, depth, children }) => <RowCells repo={r} depth={depth} nested={children} collapsed={collapsed.has(r.id)} onToggle={toggle} />}
+          itemContent={(_, { repo: r, depth, children }) => (
+            <RowCells repo={r} depth={depth} nested={children} collapsed={collapsed.has(r.id)} onToggle={toggle} />
+          )}
         />
         {list.length === 0 && <EmptyText text={t('empty.noMatches')} />}
       </Paper>

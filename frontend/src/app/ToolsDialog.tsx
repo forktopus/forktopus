@@ -13,7 +13,19 @@ function Command({ text }: { text: string }) {
   const theme = useTheme()
   const copyText = useApp((s) => s.copyText)
   return (
-    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5, bgcolor: theme.app.chip, border: `1px solid ${theme.app.chipLine}`, borderRadius: '8px', px: 1.25, py: 0.75, mt: 0.75 }}>
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 0.5,
+        bgcolor: theme.app.chip,
+        border: `1px solid ${theme.app.chipLine}`,
+        borderRadius: '8px',
+        px: 1.25,
+        py: 0.75,
+        mt: 0.75,
+      }}
+    >
       <Box component="pre" sx={{ flex: 1, m: 0, font: `13px ${monoFontFamily}`, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
         {text}
       </Box>
@@ -121,7 +133,10 @@ export function ToolsDialog({ open, onClose }: { open: boolean; onClose(): void 
           const details = [tool.host, tool.version && t('tools.version', { version: tool.version }), tool.path].filter(Boolean).join(' · ')
           const hint = toolHint(tool)
           return (
-            <Box key={`${tool.name}|${tool.host ?? ''}`} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, py: 1.5, borderBottom: `1px solid ${theme.app.line}` }}>
+            <Box
+              key={`${tool.name}|${tool.host ?? ''}`}
+              sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, py: 1.5, borderBottom: `1px solid ${theme.app.line}` }}
+            >
               <Box
                 component="code"
                 sx={{ font: `13px ${monoFontFamily}`, bgcolor: theme.app.chip, border: `1px solid ${theme.app.chipLine}`, borderRadius: '7px', px: 1, py: 0.5 }}

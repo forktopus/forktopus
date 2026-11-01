@@ -38,10 +38,34 @@ const offline = (host: string) => ({ code: ErrorCode.CodeNetworkError, message: 
 const authRequired = { code: ErrorCode.CodeAuthRequired, message: 'glab: нужна авторизация (glab auth login)' }
 
 const mockRoots: MockRoot[] = [
-  { root: { id: 'r-github', path: '/srv/repos/github.com' }, host: 'github.com', provider: Provider.ProviderGitHub, pr: Availability.AvailabilityOK, ci: Availability.AvailabilityOK },
-  { root: { id: 'r-gitlab', path: '/srv/repos/gitlab.com' }, host: 'gitlab.com', provider: Provider.ProviderGitLab, pr: Availability.AvailabilityUnavailable, ci: Availability.AvailabilityUnavailable },
-  { root: { id: 'r-gitea', path: '/srv/repos/git.home.test' }, host: 'git.home.test', provider: Provider.ProviderGitea, pr: Availability.AvailabilityOK, ci: Availability.AvailabilityOK },
-  { root: { id: 'r-other', path: '/srv/repos/git.example.org' }, host: 'git.example.org', provider: Provider.ProviderOther, pr: Availability.AvailabilityNotSupported, ci: Availability.AvailabilityNotSupported },
+  {
+    root: { id: 'r-github', path: '/srv/repos/github.com' },
+    host: 'github.com',
+    provider: Provider.ProviderGitHub,
+    pr: Availability.AvailabilityOK,
+    ci: Availability.AvailabilityOK,
+  },
+  {
+    root: { id: 'r-gitlab', path: '/srv/repos/gitlab.com' },
+    host: 'gitlab.com',
+    provider: Provider.ProviderGitLab,
+    pr: Availability.AvailabilityUnavailable,
+    ci: Availability.AvailabilityUnavailable,
+  },
+  {
+    root: { id: 'r-gitea', path: '/srv/repos/git.home.test' },
+    host: 'git.home.test',
+    provider: Provider.ProviderGitea,
+    pr: Availability.AvailabilityOK,
+    ci: Availability.AvailabilityOK,
+  },
+  {
+    root: { id: 'r-other', path: '/srv/repos/git.example.org' },
+    host: 'git.example.org',
+    provider: Provider.ProviderOther,
+    pr: Availability.AvailabilityNotSupported,
+    ci: Availability.AvailabilityNotSupported,
+  },
 ]
 
 interface Scenario {
@@ -78,21 +102,82 @@ interface Scenario {
 }
 
 const scenarios: Scenario[] = [
-  { root: 'r-github', ns: 'schemor', name: 'schemor', branch: 'feature/permissions', staged: 1, unstaged: 3, untracked: 1, ahead: 1, prs: 2, drafts: 1, ciActive: 1, ciResult: 'success' },
-  { root: 'r-github', ns: 'schemor', name: 'ui-kit', dir: 'schemor/schemor/libs/ui-kit', nesting: Nesting.NestingSubmodule, detached: true, prs: 0, ciResult: 'success' },
-  { root: 'r-github', ns: 'schemor', name: 'schemor-docs', dir: 'schemor/schemor/docs-site', nesting: Nesting.NestingNested, branch: 'main', untracked: 1, prs: 0, lastPR: { number: 41, merged: true, minutes: 2 * 24 * 60 } },
+  {
+    root: 'r-github',
+    ns: 'schemor',
+    name: 'schemor',
+    branch: 'feature/permissions',
+    staged: 1,
+    unstaged: 3,
+    untracked: 1,
+    ahead: 1,
+    prs: 2,
+    drafts: 1,
+    ciActive: 1,
+    ciResult: 'success',
+  },
+  {
+    root: 'r-github',
+    ns: 'schemor',
+    name: 'ui-kit',
+    dir: 'schemor/schemor/libs/ui-kit',
+    nesting: Nesting.NestingSubmodule,
+    detached: true,
+    prs: 0,
+    ciResult: 'success',
+  },
+  {
+    root: 'r-github',
+    ns: 'schemor',
+    name: 'schemor-docs',
+    dir: 'schemor/schemor/docs-site',
+    nesting: Nesting.NestingNested,
+    branch: 'main',
+    untracked: 1,
+    prs: 0,
+    lastPR: { number: 41, merged: true, minutes: 2 * 24 * 60 },
+  },
   { root: 'r-github', ns: 'ai-development-harness', name: 'ai-development-harness-template', branch: 'main', behind: 3, prs: 1, ciResult: 'success' },
-  { root: 'r-github', ns: 'ai-development-harness', name: 'ai-development-harness-client', branch: 'ui/activity-feed', ahead: 2, behind: 1, prs: 1, ciResult: 'failure' },
+  {
+    root: 'r-github',
+    ns: 'ai-development-harness',
+    name: 'ai-development-harness-client',
+    branch: 'ui/activity-feed',
+    ahead: 2,
+    behind: 1,
+    prs: 1,
+    ciResult: 'failure',
+  },
   { root: 'r-github', ns: 'ai-animation-tools', name: 'music-clip-tools', branch: 'main', ciResult: 'success' },
   { root: 'r-github', ns: 'dev', name: 'dev-scripts', branch: 'main', unstaged: 1 },
   { root: 'r-github', ns: 'forktopus', name: 'forktopus', branch: 'spike/local-only', noUpstream: true, untracked: 2 },
-  { root: 'r-github', ns: 'forktopus', name: 'forktopus-docs', branch: 'main', conflicts: 2, unstaged: 1, operation: 'merge', ahead: 1, behind: 4, prs: 0, ciResult: 'success' },
+  {
+    root: 'r-github',
+    ns: 'forktopus',
+    name: 'forktopus-docs',
+    branch: 'main',
+    conflicts: 2,
+    unstaged: 1,
+    operation: 'merge',
+    ahead: 1,
+    behind: 4,
+    prs: 0,
+    ciResult: 'success',
+  },
   { root: 'r-gitlab', ns: 'studio/payments', name: 'service-api', branch: 'feat/refund', behind: 2 },
   { root: 'r-gitlab', ns: 'studio', name: 'landing', branch: 'main' },
   { root: 'r-gitea', ns: 'homelab', name: 'infrastructure', branch: 'main', behind: 1, prs: 1, ciActive: 2, ciResult: 'success' },
   { root: 'r-gitea', ns: 'homelab', name: 'services', branch: 'release/1.2', prs: 2, ciResult: 'failure' },
   { root: 'r-gitea', ns: 'homelab', name: 'media-server', branch: 'main', offline: true },
-  { root: 'r-gitea', ns: 'homelab', name: 'dotfiles', branch: 'main', prs: 0, lastPR: { number: 7, merged: false, minutes: 5 * 60 }, ciAvailability: Availability.AvailabilityNotSupported },
+  {
+    root: 'r-gitea',
+    ns: 'homelab',
+    name: 'dotfiles',
+    branch: 'main',
+    prs: 0,
+    lastPR: { number: 7, merged: false, minutes: 5 * 60 },
+    ciAvailability: Availability.AvailabilityNotSupported,
+  },
   { root: 'r-other', ns: 'tools', name: 'shell-utils', branch: 'main', unstaged: 2 },
   { root: 'r-other', ns: 'tools', name: 'scratch', branch: 'main', unborn: true, noUpstream: true, untracked: 3 },
   { root: 'r-gitlab', ns: 'studio', name: 'promo-2025', branch: 'promo/autumn', upstreamGone: true },
@@ -138,7 +223,15 @@ function buildRepository(s: Scenario, index: number): Repository {
     error: sourceError,
     lastSuccessAt: prOk || s.offline ? lastSuccessAt : null,
     lastAttemptAt,
-    last: prOk && !s.prs && s.lastPR ? { number: s.lastPR.number, merged: s.lastPR.merged, url: `https://${r.host}/${s.ns}/${s.name}/pulls/${s.lastPR.number}`, closedAt: minutesAgo(s.lastPR.minutes) } : undefined,
+    last:
+      prOk && !s.prs && s.lastPR
+        ? {
+            number: s.lastPR.number,
+            merged: s.lastPR.merged,
+            url: `https://${r.host}/${s.ns}/${s.name}/pulls/${s.lastPR.number}`,
+            closedAt: minutesAgo(s.lastPR.minutes),
+          }
+        : undefined,
   }
   const ci: CISummary = {
     availability: ciAvailability,
@@ -170,7 +263,7 @@ function buildRepository(s: Scenario, index: number): Repository {
     branch: {
       name: s.detached ? undefined : s.branch,
       detached: Boolean(s.detached),
-      headSha: s.readError || s.unborn ? undefined : (index * 2654435761 >>> 0).toString(16).padStart(8, '0') + 'c0ffee',
+      headSha: s.readError || s.unborn ? undefined : ((index * 2654435761) >>> 0).toString(16).padStart(8, '0') + 'c0ffee',
       unborn: s.unborn,
       upstream,
       upstreamGone: s.upstreamGone,
@@ -196,7 +289,14 @@ function buildRepository(s: Scenario, index: number): Repository {
 const mockTools: ToolDiagnostic[] = [
   { name: 'git', availability: Availability.AvailabilityOK, path: '/usr/bin/git', version: '2.43.0' },
   { name: 'gh', host: 'github.com', availability: Availability.AvailabilityOK, path: '/usr/bin/gh', version: '2.103.3' },
-  { name: 'glab', host: 'gitlab.com', availability: Availability.AvailabilityUnavailable, path: '/usr/local/bin/glab', version: '1.126.0', error: authRequired },
+  {
+    name: 'glab',
+    host: 'gitlab.com',
+    availability: Availability.AvailabilityUnavailable,
+    path: '/usr/local/bin/glab',
+    version: '1.126.0',
+    error: authRequired,
+  },
   { name: 'tea', host: 'git.home.test', availability: Availability.AvailabilityOK, path: '/usr/local/bin/tea', version: '0.16.0' },
 ]
 
@@ -206,10 +306,27 @@ function mockBranches(repo: Repository, index: number): BranchInfo[] {
   if (!b || b.unborn) return []
   const list: BranchInfo[] = []
   if (b.name) {
-    list.push({ name: b.name, current: true, headSha: b.headSha ?? '', commitAt: minutesAgo(30 + index * 11), upstream: b.upstream, upstreamGone: b.upstreamGone, ahead: b.ahead, behind: b.behind })
+    list.push({
+      name: b.name,
+      current: true,
+      headSha: b.headSha ?? '',
+      commitAt: minutesAgo(30 + index * 11),
+      upstream: b.upstream,
+      upstreamGone: b.upstreamGone,
+      ahead: b.ahead,
+      behind: b.behind,
+    })
   }
   if (b.name !== 'main') {
-    list.push({ name: 'main', current: false, headSha: 'a1b2c3d4e5f6', commitAt: minutesAgo(60 * 24 * (index + 1)), upstream: 'origin/main', ahead: 0, behind: index % 2 })
+    list.push({
+      name: 'main',
+      current: false,
+      headSha: 'a1b2c3d4e5f6',
+      commitAt: minutesAgo(60 * 24 * (index + 1)),
+      upstream: 'origin/main',
+      ahead: 0,
+      behind: index % 2,
+    })
   }
   if (index % 3 === 0) {
     list.push({ name: 'wip/experiment', current: false, headSha: '0badc0de1234', commitAt: minutesAgo(60 * 5), worktreePath: `${repo.path}-wip` })
@@ -257,15 +374,17 @@ function invalidInput(message: string): Error {
 function linkParents(repos: Repository[]): Repository[] {
   return repos.map((r) => {
     if (!r.nesting) return r
-    const parent = repos
-      .filter((p) => r.path.startsWith(p.path + '/'))
-      .sort((a, b) => b.path.length - a.path.length)[0]
+    const parent = repos.filter((p) => r.path.startsWith(p.path + '/')).sort((a, b) => b.path.length - a.path.length)[0]
     return { ...r, parentId: parent?.id }
   })
 }
 
 const mockIssues: ScanIssue[] = [
-  { rootId: 'r-other', path: '/srv/repos/git.example.org/private', error: { code: ErrorCode.CodeOther, message: 'open /srv/repos/git.example.org/private: permission denied' } },
+  {
+    rootId: 'r-other',
+    path: '/srv/repos/git.example.org/private',
+    error: { code: ErrorCode.CodeOther, message: 'open /srv/repos/git.example.org/private: permission denied' },
+  },
 ]
 
 const uiKey = 'forktopus.demo.ui'
@@ -352,7 +471,13 @@ export function createMockSource({ delayMs = 250, scenario = 'default' }: MockOp
     if (index < 0) throw invalidInput(`репозиторий "${repoId}" не найден`)
     const repo = repos[index]
     const start = Date.now()
-    const record: OpRecord = { repoId, op, target: op === Operation.OperationFetch ? repo.remote : branch || undefined, at: new Date(start).toISOString(), durationMs: 0 }
+    const record: OpRecord = {
+      repoId,
+      op,
+      target: op === Operation.OperationFetch ? repo.remote : branch || undefined,
+      at: new Date(start).toISOString(),
+      durationMs: 0,
+    }
     const finish = (error: ModelError | null) => {
       repo.updatedAt = new Date().toISOString()
       const done = { ...record, durationMs: Date.now() - start, error }
@@ -373,7 +498,14 @@ export function createMockSource({ delayMs = 250, scenario = 'default' }: MockOp
       if (op === Operation.OperationFetch) b.lastFetchAt = new Date().toISOString()
       if (op === Operation.OperationPull) b.behind = 0
       if (op === Operation.OperationSwitch && target) {
-        Object.assign(b, { name: target.name, headSha: target.headSha, upstream: target.upstream, upstreamGone: target.upstreamGone, ahead: target.ahead, behind: target.behind })
+        Object.assign(b, {
+          name: target.name,
+          headSha: target.headSha,
+          upstream: target.upstream,
+          upstreamGone: target.upstreamGone,
+          ahead: target.ahead,
+          behind: target.behind,
+        })
       }
       return finish(null)
     } finally {
@@ -488,7 +620,12 @@ export function createMockSource({ delayMs = 250, scenario = 'default' }: MockOp
         ...(errors.length ? errors.map((e) => `- ${e.level} ${e.message}`) : ['- нет']),
         '',
         'Последние операции:',
-        ...(opLog.length ? [...opLog].reverse().slice(0, 10).map((o) => `- ${o.op} ${o.target ?? ''} — ${o.error ? o.error.code : 'готово'}`) : ['- нет']),
+        ...(opLog.length
+          ? [...opLog]
+              .reverse()
+              .slice(0, 10)
+              .map((o) => `- ${o.op} ${o.target ?? ''} — ${o.error ? o.error.code : 'готово'}`)
+          : ['- нет']),
       ]
       return reply({
         os: 'браузер, демо-режим',

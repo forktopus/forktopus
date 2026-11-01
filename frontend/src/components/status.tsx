@@ -18,7 +18,14 @@ export function StatusText({ label, wrap = false }: { label: Label; wrap?: boole
   return (
     <Box
       component="span"
-      sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, fontSize: 13, color, ...(wrap === true ? { minWidth: 0, overflowWrap: 'anywhere' } : wrap ? {} : { whiteSpace: 'nowrap' }) }}
+      sx={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 0.75,
+        fontSize: 13,
+        color,
+        ...(wrap === true ? { minWidth: 0, overflowWrap: 'anywhere' } : wrap ? {} : { whiteSpace: 'nowrap' }),
+      }}
     >
       <Box component="i" sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: color, flexShrink: 0 }} />
       {label.text}

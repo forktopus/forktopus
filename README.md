@@ -171,6 +171,7 @@ docker compose --env-file .env.dev -f compose.dev.yaml build toolbox
 | Сборка фронтенда | Docker | `docker compose --env-file .env.dev -f compose.dev.yaml run --rm toolbox sh -lc 'cd frontend && npm run build'` |
 | Go-тесты | Docker | `docker compose --env-file .env.dev -f compose.dev.yaml run --rm toolbox sh -lc 'go test -tags server ./...'` |
 | Go-тесты | хост | `go test ./...` |
+| Форматирование фронтенда (перед коммитом) | хост | `npm --prefix frontend run format`; проверка — `npm --prefix frontend run format:check` |
 | Vite-превью (моки) | Docker | `docker compose --env-file .env.dev -f compose.dev.yaml up ui` → http://127.0.0.1:5173 |
 | Git-фикстуры | хост | `bash scripts/create-demo-repos.sh` → `.local/git-fixtures/` |
 | Иконка из маскота | хост | `bash scripts/make-icon.sh && wails3 task common:generate:icons` |

@@ -2,7 +2,22 @@ import AddIcon from '@mui/icons-material/Add'
 import CloseIcon from '@mui/icons-material/Close'
 import FolderOpenIcon from '@mui/icons-material/FolderOpen'
 import RemoveIcon from '@mui/icons-material/Remove'
-import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, Switch, TextField, Tooltip, Typography, useTheme } from '@mui/material'
+import {
+  Box,
+  Button,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControlLabel,
+  IconButton,
+  Switch,
+  TextField,
+  Tooltip,
+  Typography,
+  useTheme,
+} from '@mui/material'
 import { useEffect, useState, type FormEvent } from 'react'
 import type { ScanIssue } from '../data/model'
 import type { SkipList } from '../data/source'

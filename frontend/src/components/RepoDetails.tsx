@@ -5,20 +5,7 @@
 import CloseIcon from '@mui/icons-material/Close'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import RefreshIcon from '@mui/icons-material/Refresh'
-import {
-  Alert,
-  Box,
-  Button,
-  CircularProgress,
-  Divider,
-  Drawer,
-  IconButton,
-  MenuItem,
-  Select,
-  Tooltip,
-  Typography,
-  useTheme,
-} from '@mui/material'
+import { Alert, Box, Button, CircularProgress, Divider, Drawer, IconButton, MenuItem, Select, Tooltip, Typography, useTheme } from '@mui/material'
 import { useEffect, useState, type ReactNode } from 'react'
 import { useNow } from '../app/useNow'
 import { Nesting, Operation, Provider, type BranchInfo, type Repository } from '../data/model'
@@ -111,7 +98,13 @@ function SwitchControl({ repo, busy }: { repo: Repository; busy: boolean }) {
   const reason = switchBlock(repo) ?? (chosen?.worktreePath ? t('explorer.branchBusy', { path: chosen.worktreePath }) : null)
   return (
     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-      <Select size="small" value={target} displayEmpty onChange={(e) => setTarget(e.target.value)} sx={{ flex: 1, minWidth: 0, font: `13px ${monoFontFamily}` }}>
+      <Select
+        size="small"
+        value={target}
+        displayEmpty
+        onChange={(e) => setTarget(e.target.value)}
+        sx={{ flex: 1, minWidth: 0, font: `13px ${monoFontFamily}` }}
+      >
         <MenuItem value="" disabled>
           {t('details.pickBranch')}
         </MenuItem>
@@ -210,12 +203,17 @@ export function CliStatus({ repo }: { repo: Repository }) {
   const hint = toolHint(tool)
   return (
     <>
-      <StatusText label={{ tone: availabilityTone[tool.availability] ?? 'muted', text: `${tool.name} · ${t(`availability.${tool.availability || 'unavailable'}`)}` }} />
+      <StatusText
+        label={{ tone: availabilityTone[tool.availability] ?? 'muted', text: `${tool.name} · ${t(`availability.${tool.availability || 'unavailable'}`)}` }}
+      />
       {hint && (
         <Typography variant="caption" component="div" sx={{ color: 'text.secondary', mt: 0.5 }}>
           {hint.text}
           {hint.command && (
-            <Box component="code" sx={{ display: 'block', font: `12px ${monoFontFamily}`, bgcolor: theme.app.chip, borderRadius: '6px', px: 1, py: 0.5, mt: 0.5 }}>
+            <Box
+              component="code"
+              sx={{ display: 'block', font: `12px ${monoFontFamily}`, bgcolor: theme.app.chip, borderRadius: '6px', px: 1, py: 0.5, mt: 0.5 }}
+            >
               {hint.command}
             </Box>
           )}
@@ -271,7 +269,12 @@ export function RepoDetails({ onOpenTools }: { onOpenTools(): void }) {
   const nesting = repo?.nesting ? nestingName[repo.nesting] : undefined
 
   return (
-    <Drawer anchor="right" open={detailsId !== null && repo !== undefined} onClose={close} slotProps={{ paper: { sx: { width: 460, maxWidth: '100vw', bgcolor: theme.app.panel } } }}>
+    <Drawer
+      anchor="right"
+      open={detailsId !== null && repo !== undefined}
+      onClose={close}
+      slotProps={{ paper: { sx: { width: 460, maxWidth: '100vw', bgcolor: theme.app.panel } } }}
+    >
       {repo && (
         <Box sx={{ p: 3 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>

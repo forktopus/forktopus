@@ -1,7 +1,22 @@
 import { describe, expect, it } from 'vitest'
 import { Availability, ErrorCode } from '../data/model'
 import { repo, unavailable } from '../test/fixtures'
-import { changesDetail, changesLabel, ciLabel, fileLabel, hasChanges, integrationIssue, isBehind, prLabel, remoteCaption, remoteCount, remoteDetail, syncFreshness, syncLabel, syncState } from './status'
+import {
+  changesDetail,
+  changesLabel,
+  ciLabel,
+  fileLabel,
+  hasChanges,
+  integrationIssue,
+  isBehind,
+  prLabel,
+  remoteCaption,
+  remoteCount,
+  remoteDetail,
+  syncFreshness,
+  syncLabel,
+  syncState,
+} from './status'
 
 describe('unavailable не отображается как 0', () => {
   it('PR/CI без данных — «нет данных», а не 0', () => {

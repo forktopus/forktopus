@@ -20,10 +20,7 @@ export interface RegistryQuery {
 export function matchesQuery(r: Repository, query: string): boolean {
   const q = query.trim().toLocaleLowerCase('ru')
   if (!q) return true
-  return [repoName(r), repoNamespace(r), r.branch?.name ?? '', repoHost(r), r.path]
-    .join(' ')
-    .toLocaleLowerCase('ru')
-    .includes(q)
+  return [repoName(r), repoNamespace(r), r.branch?.name ?? '', repoHost(r), r.path].join(' ').toLocaleLowerCase('ru').includes(q)
 }
 
 export function matchesFilter(r: Repository, filter: RegistryFilter): boolean {
@@ -44,9 +41,7 @@ export function matchesFilter(r: Repository, filter: RegistryFilter): boolean {
 }
 
 export function filterRepos(repos: Repository[], q: RegistryQuery): Repository[] {
-  return repos.filter(
-    (r) => (!q.host || repoHost(r) === q.host) && matchesFilter(r, q.filter) && matchesQuery(r, q.query),
-  )
+  return repos.filter((r) => (!q.host || repoHost(r) === q.host) && matchesFilter(r, q.filter) && matchesQuery(r, q.query))
 }
 
 // Нет данных сортируется как -1: ниже любого достоверного значения.

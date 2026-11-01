@@ -23,9 +23,7 @@ describe('группировка радара', () => {
 
   it('отсутствие CLI не красит репозиторий в «Требует внимания»', () => {
     expect(radarGroup(repo({ pr: unavailable, ci: unavailable }))).toBe('ok')
-    expect(
-      radarGroup(repo({ ci: { availability: Availability.AvailabilityError, error: { code: ErrorCode.CodeAuthRequired, message: '' } } })),
-    ).toBe('ok')
+    expect(radarGroup(repo({ ci: { availability: Availability.AvailabilityError, error: { code: ErrorCode.CodeAuthRequired, message: '' } } }))).toBe('ok')
   })
 
   it('упавший CI — серверное состояние, не «требует внимания»', () => {
@@ -52,7 +50,9 @@ describe('метки и пояснение карточки', () => {
 
   it('чистый и синхронизированный — «всё в порядке»', () => {
     expect(texts(repo())).toEqual(['✓ Всё в порядке'])
-    expect(radarNote({ ...repo(), branch: { ...repo().branch!, lastFetchAt: '2026-10-31T12:00:00Z' } }, now)).toMatch(/^Совпадает с upstream · по fetch 10\sмин/)
+    expect(radarNote({ ...repo(), branch: { ...repo().branch!, lastFetchAt: '2026-10-31T12:00:00Z' } }, now)).toMatch(
+      /^Совпадает с upstream · по fetch 10\sмин/,
+    )
   })
 
   it('изменения, отставание и серверные факты', () => {
@@ -76,4 +76,3 @@ describe('метки и пояснение карточки', () => {
     expect(radarNote(repo({ branch: { behind: 1 } }))).toMatch(/^В upstream 1 новый коммит · /)
   })
 })
-

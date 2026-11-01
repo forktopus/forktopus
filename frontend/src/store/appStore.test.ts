@@ -274,7 +274,12 @@ describe('store', () => {
 
     store.setState({ running: { [busy.id]: Operation.OperationFetch } })
     await store.getState().pollRemote()
-    expect(asked.sort()).toEqual(repos.filter((r) => r.remote && r.id !== busy.id).map((r) => r.id).sort())
+    expect(asked.sort()).toEqual(
+      repos
+        .filter((r) => r.remote && r.id !== busy.id)
+        .map((r) => r.id)
+        .sort(),
+    )
     expect(asked.length).toBeLessThan(repos.length)
 
     asked.length = 0
@@ -330,8 +335,19 @@ describe('store', () => {
 
 describe('withRemote', () => {
   it('detached HEAD сопоставляется по коммиту (@SHA), provider "" не трогает remote', () => {
-    const repo = { id: 'r', remote: 'origin', remotes: [{ name: 'origin', provider: Provider.ProviderGitHub }], branch: { detached: true, headSha: 'abc' } } as Repository
-    const st = { repoId: 'r', branch: '@abc', provider: Provider.$zero, pr: { availability: Availability.AvailabilityOK, open: 1 }, ci: { availability: Availability.AvailabilityOK } } as RemoteStatus
+    const repo = {
+      id: 'r',
+      remote: 'origin',
+      remotes: [{ name: 'origin', provider: Provider.ProviderGitHub }],
+      branch: { detached: true, headSha: 'abc' },
+    } as Repository
+    const st = {
+      repoId: 'r',
+      branch: '@abc',
+      provider: Provider.$zero,
+      pr: { availability: Availability.AvailabilityOK, open: 1 },
+      ci: { availability: Availability.AvailabilityOK },
+    } as RemoteStatus
     const got = withRemote(repo, st)
     expect(got.pr.open).toBe(1)
     expect(got.remotes?.[0].provider).toBe(Provider.ProviderGitHub)
@@ -376,7 +392,13 @@ describe('fromUI / toUI', () => {
   })
 
   it('туда и обратно без потерь', () => {
-    const state = { mode: 'radar' as const, theme: 'dark' as const, filters: { registry: 'ci' as const, host: 'gitlab.com', sort: 'pr' as const, asc: false }, fetchPrune: true, zoom: 1.3 }
+    const state = {
+      mode: 'radar' as const,
+      theme: 'dark' as const,
+      filters: { registry: 'ci' as const, host: 'gitlab.com', sort: 'pr' as const, asc: false },
+      fetchPrune: true,
+      zoom: 1.3,
+    }
     expect(fromUI(toUI(state))).toEqual(state)
   })
 })

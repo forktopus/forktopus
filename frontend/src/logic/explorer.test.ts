@@ -77,4 +77,3 @@ describe('пустые корни', () => {
     expect(emptyRoots(roots, [repo({ rootId: 'a' })], [{ ...gone, path: '/srv/b/private' }]).map((r) => r.id)).toEqual(['b'])
   })
 })
-

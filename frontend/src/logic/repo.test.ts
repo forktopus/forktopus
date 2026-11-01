@@ -29,7 +29,10 @@ describe('repo', () => {
   })
 
   it('выбранный remote, которого нет в списке, не подменяется первым', () => {
-    const r = repo({ remote: 'upstream', remotes: [{ name: 'origin', host: 'github.com', path: 'o/r', provider: Provider.ProviderGitHub }] as Repository['remotes'] })
+    const r = repo({
+      remote: 'upstream',
+      remotes: [{ name: 'origin', host: 'github.com', path: 'o/r', provider: Provider.ProviderGitHub }] as Repository['remotes'],
+    })
     expect(repoHost(r)).toBe('')
     expect(repoName(r)).toBe('Мой проект')
   })
