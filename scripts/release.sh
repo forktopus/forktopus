@@ -90,9 +90,13 @@ if want windows; then
   # Установщик для текущего пользователя (без прав администратора): в
   # %LOCALAPPDATA%\Programs\Forktopus, ярлыки и запись в «Приложениях».
   # WebView2 bootstrapper ставит среду, если её нет.
+  # Путь к exe — абсолютный: makensis на Windows не нашёл относительный. В Git
+  # Bash он нужен в виде Windows (D:\...), makensis — не программа MSYS.
+  exe="$PWD/bin/forktopus.exe"
+  command -v cygpath > /dev/null && exe="$(cygpath -w "$exe")"
   wails3 generate webview2bootstrapper -dir build/windows/nsis
   (cd build/windows/nsis && makensis -V2 -DWAILS_INSTALL_SCOPE=user -DREQUEST_EXECUTION_LEVEL=user \
-    -DARG_WAILS_AMD64_BINARY=../../../bin/forktopus.exe project.nsi)
+    "-DARG_WAILS_AMD64_BINARY=$exe" project.nsi)
   cp bin/forktopus-amd64-installer.exe "$out/forktopus-${new}-windows-amd64-setup.exe"
 fi
 
