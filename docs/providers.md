@@ -233,6 +233,7 @@ tea api -l LOGIN -i "/repos/OWNER/REPO/actions/runs?branch=BRANCH&limit=20"
   - Нет аккаунта для хоста: код 4, `Error: no account for https://HOST; run gt auth login --host …`.
   - Нет репозитория: код 1, `Error: repository OWNER/REPO not found`.
   - `gt api` на ответ вне 2xx — код 1, тело в stdout, `Error: not found (HTTP 404 GET /api/v1/…)` в stderr (у `tea api` — код 0).
+  - 403 (нет прав на раздел, например Actions) — код 1, **без статуса HTTP**: `Error: permission denied by the Gitea instance: user should have specific read permission …` → `ACCESS_DENIED` (D-068).
 - `gt --version` → `gt version 0.2.0 (2026-10-26)` без ANSI-кодов.
 - Подсказка `more results available; use --page 2` — в stderr, JSON в stdout чистый.
 - В бинарнике есть проверка `gitea server at … is older than …`: часть команд требует новой Gitea, на версии старше 1.26 не проверялось.
@@ -272,6 +273,6 @@ gt run list --host https://HOST -R OWNER/REPO --branch BRANCH -L 20 \
 |---|---|---|
 | `gh` | `gh pr list -R HOST/OWNER/REPO --search SHA --state open\|closed …` — поиск GitHub находит PR, где коммит **среди** коммитов; PR из форков отбрасываются | `gh run list … --commit SHA`; ссылка — страница коммита `/commit/SHA` |
 | `glab` | `glab api --hostname HOST projects/OWNER%2FREPO/repository/commits/SHA/merge_requests` — MR всех состояний, содержащие коммит, одним ответом (открытые и последний закрытый); коммита нет — `404 Commit Not Found`, код 1 | `glab ci list … --sha SHA`; ссылка — `/-/commit/SHA/pipelines` |
-| `tea` | REST `/repos/OWNER/REPO/pulls?state=open&limit=50&page=N` — PR, у которых `head.sha` == SHA (коммит в середине PR Gitea по API не находит); черновик — поле `draft` или префикс `WIP:` | `/actions/runs?head_sha=SHA&limit=20` (неизвестный SHA — `total_count: 0`) |
+| `tea`, `gt` | REST (`tea api` / `gt api`) `/repos/OWNER/REPO/pulls?state=open&limit=50&page=N` — PR, у которых `head.sha` == SHA (коммит в середине PR Gitea по API не находит); черновик — поле `draft` или префикс `WIP:` | `/actions/runs?head_sha=SHA&limit=20` (неизвестный SHA — `total_count: 0`) |
 
 Проверено на пилотах (2026-11-01): коммит `pilot/pr-open` — открытый PR, коммит `pilot/closed-pr` — закрытый #3, несуществующий SHA — ноль, на всех трёх серверах.
