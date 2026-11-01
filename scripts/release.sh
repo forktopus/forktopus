@@ -3,7 +3,9 @@
 # в bin/release/<версия>/:
 #   linux   — forktopus_<v>_amd64.deb и Forktopus-<v>-x86_64.AppImage (только на Linux);
 #   windows — forktopus-<v>-windows-amd64.exe (на любой ОС: сборка без CGO);
-#   macos   — Forktopus-<v>-macos-universal.zip с .app (только на macOS; не проверялось).
+#   macos   — Forktopus-<v>-macos-universal.zip с .app (Intel и Apple Silicon); на macOS —
+#             нативно с ad-hoc подписью, на Linux — в Docker-образе wails-cross без
+#             подписи (один раз: wails3 task setup:docker). Не проверялось.
 #
 #   bash scripts/release.sh [--version X.Y.Z] [--os linux|windows|macos ...]
 #
@@ -23,7 +25,7 @@ set -euo pipefail
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
 
 usage() {
-  sed -n '8,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '10,16p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
   exit "${1:-0}"
 }
 
@@ -60,7 +62,11 @@ for o in "${oses[@]}"; do
 done
 host="$(uname -s)"
 want linux && [[ "$host" != Linux ]] && die "Linux-пакеты собираются только на Linux (GTK4 и WebKitGTK через CGO)"
-want macos && [[ "$host" != Darwin ]] && die "macOS собирается только на macOS (нужны Xcode и CGO)"
+if want macos && [[ "$host" != Darwin ]]; then
+  # Не на Mac Wails собирает macOS в Docker: Zig и macOS SDK внутри образа.
+  docker image inspect wails-cross > /dev/null 2>&1 ||
+    die "Для macOS на $host нужен Docker-образ wails-cross (~800 МБ, один раз): wails3 task setup:docker"
+fi
 
 # Файлы с версией. В MSIX она четырёхзначная (0.2.0.0), в Info.dev.plist —
 # с суффиксом -dev: замена с границей слова покрывает оба случая. Замена —
@@ -113,8 +119,14 @@ fi
 
 if want macos; then
   wails3 task darwin:package:universal
-  rm -f -- "$out/Forktopus-${new}-macos-universal.zip"
-  ditto -c -k --keepParent bin/forktopus.app "$out/Forktopus-${new}-macos-universal.zip"
+  zip_name="$out/Forktopus-${new}-macos-universal.zip"
+  rm -f -- "$zip_name"
+  if [[ "$host" == Darwin ]]; then
+    ditto -c -k --keepParent bin/forktopus.app "$zip_name"
+  else
+    # zip сохраняет права на запуск и симлинки внутри .app.
+    (cd bin && zip -qry "../$zip_name" forktopus.app)
+  fi
 fi
 
 (cd -- "$out" && rm -f SHA256SUMS && shasum -a 256 -- * > SHA256SUMS)
@@ -129,3 +141,10 @@ cat <<EOF
   git tag -a v$new -m "Forktopus $new" && git push origin main v$new
   gh release create v$new $out/* --title "Forktopus $new" --notes "…"
 EOF
+if want macos && [[ "$host" != Darwin ]]; then
+  cat <<'EOF'
+
+.app не подписан (на Linux подписать нечем). На Mac после распаковки:
+  xattr -cr Forktopus.app && codesign --force --deep --sign - Forktopus.app
+EOF
+fi
