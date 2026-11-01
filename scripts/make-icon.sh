@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Собирает build/appicon.png из маскота: 1024×1024, белый фон → прозрачность.
+# Собирает build/appicon.png из маскота: 1024×1024, белый фон → прозрачность,
+# и логотип интерфейса frontend/public/forktopus-icon.png (256×256) из него же.
 # Исходник assets/branding/forktopus-mascot.png не меняется (D-052).
 #   bash scripts/make-icon.sh && wails3 task common:generate:icons
 # Фон — области, близкие к белому и связанные с углами, плюс три замкнутых
@@ -11,6 +12,7 @@ set -euo pipefail
 PROJECT_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 SRC="$PROJECT_ROOT/assets/branding/forktopus-mascot.png"
 OUT="$PROJECT_ROOT/build/appicon.png"
+UI="$PROJECT_ROOT/frontend/public/forktopus-icon.png"
 FUZZ=25%
 command -v convert >/dev/null || { echo "Нужен ImageMagick (convert)" >&2; exit 1; }
 
@@ -30,4 +32,5 @@ convert "$T/a.png" -fx 'u<0.02 ? 0 : u' "$T/a2.png"
 convert "$T/a2.png" "$T/inner.png" -compose Lighten -composite "$T/alpha.png"
 convert "$T/col.png" "$T/src.png" "$T/inner.png" -composite "$T/rgb.png"
 convert "$T/rgb.png" "$T/alpha.png" -alpha off -compose CopyOpacity -composite -strip "$OUT"
-echo "Готово: build/appicon.png"
+convert "$OUT" -filter Lanczos -resize 256x256 -strip "$UI"
+echo "Готово: build/appicon.png, frontend/public/forktopus-icon.png"

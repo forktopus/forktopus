@@ -77,7 +77,7 @@ export function TopBar({ onOpenTools, onOpenRoots }: Props) {
           component="img"
           src="/forktopus-icon.png"
           alt={t('app.mascotAlt')}
-          sx={{ width: 34, height: 34, borderRadius: '11px', boxShadow: '0 8px 22px #685ee850' }}
+          sx={{ width: 34, height: 34, filter: 'drop-shadow(0 4px 10px #685ee860)' }}
         />
         <Box>
           <Typography component="strong" sx={{ display: 'block', fontSize: 15, fontWeight: 760, letterSpacing: '-0.5px' }}>

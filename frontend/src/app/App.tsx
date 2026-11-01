@@ -23,7 +23,7 @@ import { TopBar } from './TopBar'
 function EmptyRoots({ onAdd }: { onAdd(): void }) {
   return (
     <Box sx={{ maxWidth: 560, mx: 'auto', mt: 10, textAlign: 'center' }}>
-      <Box component="img" src="/forktopus-icon.png" alt={t('app.mascotAlt')} sx={{ width: 96, height: 96, borderRadius: '24px', mb: 3 }} />
+      <Box component="img" src="/forktopus-icon.png" alt={t('app.mascotAlt')} sx={{ width: 96, height: 96, mb: 3 }} />
       <Typography variant="h1" sx={{ mb: 1.5 }}>
         {t('empty.noRoots.title')}
       </Typography>
