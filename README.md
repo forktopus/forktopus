@@ -73,7 +73,7 @@ bash scripts/release.sh --version 0.3.0 --os windows     # только .exe; --
 
 `--os linux` собирается только на Linux, `--os windows` — где угодно, `--os macos` — `.app` (Intel и Apple Silicon) в zip, не проверялось:
 
-- на Linux — в Docker-образе `wails-cross` (Zig и macOS SDK внутри; один раз `wails3 task setup:docker`, ~800 МБ). SDK образ скачивает из стороннего репозитория, а не у Apple. `.app` получается без подписи — на Mac перед первым запуском: `xattr -cr Forktopus.app && codesign --force --deep --sign - Forktopus.app`;
+- на Linux — в Docker-образе `wails-cross` (Zig и macOS SDK внутри; один раз `wails3 task setup:docker`, образ ~4 ГБ на диске). SDK образ скачивает из стороннего репозитория, а не у Apple. `.app` получается без подписи — на Mac перед первым запуском: `xattr -cr forktopus.app && codesign --force --deep --sign - forktopus.app`;
 - на macOS — нативно (нужен Xcode), с ad-hoc подписью.
 
 Скрипт ничего не коммитит и не публикует — в конце печатает команды для коммита, тега и `gh release create`.

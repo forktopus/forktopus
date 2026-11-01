@@ -65,7 +65,7 @@ want linux && [[ "$host" != Linux ]] && die "Linux-пакеты собирают
 if want macos && [[ "$host" != Darwin ]]; then
   # Не на Mac Wails собирает macOS в Docker: Zig и macOS SDK внутри образа.
   docker image inspect wails-cross > /dev/null 2>&1 ||
-    die "Для macOS на $host нужен Docker-образ wails-cross (~800 МБ, один раз): wails3 task setup:docker"
+    die "Для macOS на $host нужен Docker-образ wails-cross (один раз, ~4 ГБ на диске): wails3 task setup:docker"
 fi
 
 # Файлы с версией. В MSIX она четырёхзначная (0.2.0.0), в Info.dev.plist —
@@ -124,6 +124,9 @@ if want macos; then
   if [[ "$host" == Darwin ]]; then
     ditto -c -k --keepParent bin/forktopus.app "$zip_name"
   else
+    # Сборка в контейнере оставляет в корне пустой -.o от root (Wails после
+    # сборки возвращает владельца только bin/); каталог наш — удалить можно.
+    rm -f -- ./-.o
     # zip сохраняет права на запуск и симлинки внутри .app.
     (cd bin && zip -qry "../$zip_name" forktopus.app)
   fi
@@ -134,10 +137,10 @@ fi
 echo
 echo "Готово: $out"
 ls -lh -- "$out"
+echo
+echo "Дальше (вручную):"
+[[ "$new" != "$old" ]] && echo "  git add build && git commit -m \"build: версия $new\""
 cat <<EOF
-
-Дальше (вручную):
-  git add build && git commit -m "build: версия $new"
   git tag -a v$new -m "Forktopus $new" && git push origin main v$new
   gh release create v$new $out/* --title "Forktopus $new" --notes "…"
 EOF
@@ -145,6 +148,6 @@ if want macos && [[ "$host" != Darwin ]]; then
   cat <<'EOF'
 
 .app не подписан (на Linux подписать нечем). На Mac после распаковки:
-  xattr -cr Forktopus.app && codesign --force --deep --sign - Forktopus.app
+  xattr -cr forktopus.app && codesign --force --deep --sign - forktopus.app
 EOF
 fi
