@@ -27,7 +27,8 @@ export function repoProvider(r: Repository): Provider {
 
 function segments(r: Repository): string[] {
   const remotePath = selectedRemote(r)?.path
-  return (remotePath || r.path).split('/').filter(Boolean)
+  // Локальный путь на Windows — с обратными слэшами.
+  return (remotePath || r.path).split(/[\\/]/).filter(Boolean)
 }
 
 /** Имя проекта: последний сегмент пути на сервере, иначе имя каталога. */

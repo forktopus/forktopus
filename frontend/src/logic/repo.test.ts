@@ -24,6 +24,10 @@ describe('repo', () => {
     expect(repoProvider(r)).toBe(Provider.ProviderOther)
   })
 
+  it('путь Windows — имя каталога без диска и родителей', () => {
+    expect(repoName(repo({ path: 'C:\\fk\\.local\\git-fixtures\\gitlab.com\\team\\demo-ahead' }))).toBe('demo-ahead')
+  })
+
   it('выбранный remote, которого нет в списке, не подменяется первым', () => {
     const r = repo({ remote: 'upstream', remotes: [{ name: 'origin', host: 'github.com', path: 'o/r', provider: Provider.ProviderGitHub }] as Repository['remotes'] })
     expect(repoHost(r)).toBe('')
