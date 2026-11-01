@@ -2,7 +2,7 @@
 
 <img src="assets/branding/forktopus-icon-256.png" alt="Forktopus" width="128" align="right">
 
-Локальное десктопное приложение для обзора множества Git-репозиториев: текущие ветки, локальные изменения, отставание от upstream, открытые PR/MR и CI-запуски на GitHub, GitLab и Gitea. Позволяет безопасно выполнять `fetch`, fast-forward `pull` и переключение веток.
+Локальное десктопное приложение для обзора Git-репозиториев: текущие ветки, локальные изменения, отставание от upstream, открытые PR/MR и CI-запуски на GitHub, GitLab и Gitea. Позволяет безопасно выполнять `fetch`, fast-forward `pull` и переключение веток.
 
 Сайт: [forktopus.ru](https://forktopus.ru)
 

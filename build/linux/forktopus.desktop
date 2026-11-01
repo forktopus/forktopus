@@ -2,7 +2,7 @@
 Version=1.0
 Type=Application
 Name=Forktopus
-Comment=Обзор состояния множества Git-репозиториев
+Comment=Все ваши Git-репозитории на одном экране
 Exec=forktopus
 Icon=forktopus
 Terminal=false

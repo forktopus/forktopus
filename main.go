@@ -62,7 +62,7 @@ func main() {
 
 	wailsApp := application.New(application.Options{
 		Name:        "forktopus",
-		Description: "Обзор состояния множества Git-репозиториев",
+		Description: "Все ваши Git-репозитории на одном экране",
 		Services: []application.Service{
 			application.NewService(service),
 		},

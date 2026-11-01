@@ -18,7 +18,7 @@
         PublisherName="CN=Forktopus"
         PublisherDisplayName="Forktopus"
         Version="0.1.1.0"
-        PackageDescription="Обзор состояния множества Git-репозиториев">
+        PackageDescription="Все ваши Git-репозитории на одном экране">
         <Capabilities>
             <Capability Name="runFullTrust" />
             
@@ -26,7 +26,7 @@
         <Applications>
             <Application
                 Id="ru.forktopus.app"
-                Description="Обзор состояния множества Git-репозиториев"
+                Description="Все ваши Git-репозитории на одном экране"
                 DisplayName="Forktopus"
                 ExecutableName="forktopus"
                 EntryPoint="Windows.FullTrustApplication">
@@ -43,7 +43,7 @@
             <Framework>false</Framework>
             <DisplayName>Forktopus</DisplayName>
             <PublisherDisplayName>Forktopus</PublisherDisplayName>
-            <Description>Обзор состояния множества Git-репозиториев</Description>
+            <Description>Все ваши Git-репозитории на одном экране</Description>
             <Logo>Assets\AppIcon.png</Logo>
         </Properties>
     </PackageInformation>
