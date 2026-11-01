@@ -10,11 +10,11 @@
         <key>CFBundleIdentifier</key>
             <string>ru.forktopus.app</string>
         <key>CFBundleVersion</key>
-            <string>0.3.0</string>
+            <string>0.3.1</string>
         <key>CFBundleGetInfoString</key>
             <string>Forktopus — https://forktopus.ru</string>
         <key>CFBundleShortVersionString</key>
-            <string>0.3.0</string>
+            <string>0.3.1</string>
         <key>CFBundleIconFile</key>
             <string>icons</string>
         <key>CFBundleIconName</key>
