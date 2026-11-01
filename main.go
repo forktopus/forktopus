@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"slices"
 	"syscall"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -65,6 +66,7 @@ func main() {
 	app.AttachLog(service, logPath, recent)
 
 	var window *application.WebviewWindow
+	hidden := desktop.StartHidden(os.Args[1:])
 	notifier := notifications.New()
 	wailsApp := application.New(application.Options{
 		Name:        "forktopus",
@@ -83,8 +85,8 @@ func main() {
 		// показывает уже открытое окно, а не второй процесс с тем же кэшем.
 		SingleInstance: &application.SingleInstanceOptions{
 			UniqueID: instanceID(configPath),
-			OnSecondInstanceLaunch: func(application.SecondInstanceData) {
-				if window != nil {
+			OnSecondInstanceLaunch: func(d application.SecondInstanceData) {
+				if window != nil && !slices.Contains(d.Args, desktop.HiddenFlag) {
 					window.Show()
 					window.Focus()
 				}
@@ -107,6 +109,8 @@ func main() {
 		},
 		BackgroundColour: application.NewRGB(6, 7, 15),
 		URL:              "/",
+		// Автозапуск (--hidden) — сразу в трей, без окна.
+		Hidden: hidden,
 		// Сохранённый масштаб — сразу, без мигания при старте; дальше его меняет фронтенд.
 		Zoom: service.GetUI().ZoomLevel(),
 	})
@@ -117,6 +121,7 @@ func main() {
 	// ServiceShutdown без этого.
 	quit := desktop.SetupTray(wailsApp, window, service)
 	desktop.SetupNotifications(notifier, window, service)
+	service.Autostart = desktop.NewAutostart(wailsApp)
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)

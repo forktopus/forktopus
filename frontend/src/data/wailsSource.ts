@@ -33,6 +33,8 @@ export const wailsSource: DataSource = {
   // Нативный зум WebView: масштабируется всё, включая размеры в px.
   setZoom: (zoom) => Window.SetZoom(zoom),
   setTraySummary: (text) => AppService.SetTraySummary(text),
+  getAutostart: () => AppService.GetAutostart(),
+  setAutostart: (on) => AppService.SetAutostart(on),
   onScanRepository: (cb) => Events.On('scan:repository', (event) => cb(normalizeRepository(event.data))),
   onRemoteStatus: (cb) => Events.On('remote:status', (event) => cb(event.data)),
   onRepository: (cb) => Events.On('repo:updated', (event) => cb(normalizeRepository(event.data))),

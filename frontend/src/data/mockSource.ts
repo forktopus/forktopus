@@ -452,6 +452,7 @@ export function createMockSource({ delayMs = 250, scenario = 'default' }: MockOp
   const listeners = new Set<(repo: Repository) => void>()
   const remoteListeners = new Set<(status: RemoteStatus) => void>()
   let ui: UI = {}
+  let autostart = false
   try {
     ui = JSON.parse(localStorage.getItem(uiKey) ?? '{}') as UI
   } catch {
@@ -642,6 +643,12 @@ export function createMockSource({ delayMs = 250, scenario = 'default' }: MockOp
     getUI: () => reply(ui),
     // Трея в браузере нет.
     setTraySummary: () => reply(undefined),
+    // Автозапуск в превью — только в памяти.
+    getAutostart: () => reply(autostart),
+    async setAutostart(on) {
+      autostart = on
+      return reply(undefined)
+    },
     // В браузере без Wails нативного зума нет — CSS zoom, только для превью.
     async setZoom(zoom) {
       if (typeof document !== 'undefined') document.documentElement.style.zoom = String(zoom)

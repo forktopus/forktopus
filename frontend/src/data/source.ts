@@ -70,6 +70,9 @@ export interface DataSource {
   copyText(text: string): Promise<void>
   getUI(): Promise<UI>
   saveUI(ui: UI): Promise<void>
+  /** Запуск при входе в систему: состояние из системы; null — не поддерживается (D-063). */
+  getAutostart(): Promise<boolean | null>
+  setAutostart(on: boolean): Promise<void>
   /** Сводка для подсказки значка в трее (D-063). */
   setTraySummary(text: string): Promise<void>
   /** Масштаб интерфейса окна (1 — 100 %). */

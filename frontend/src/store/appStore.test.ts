@@ -296,6 +296,21 @@ describe('store', () => {
     }
   })
 
+  it('автозапуск читается из системы, ошибка — уведомлением (18.4)', async () => {
+    const source = createMockSource({ delayMs: 0 })
+    const store = createAppStore(source)
+    expect(store.getState().autostart).toBeNull()
+    await store.getState().loadAutostart()
+    expect(store.getState().autostart).toBe(false)
+    await store.getState().setAutostart(true)
+    expect(store.getState().autostart).toBe(true)
+
+    const failing = createAppStore({ ...source, setAutostart: () => Promise.reject(new Error('нет доступа')) })
+    await failing.getState().setAutostart(false)
+    expect(failing.getState().autostart).toBe(true)
+    expect(failing.getState().notices.map((n) => n.text)).toContain('нет доступа')
+  })
+
   it('клик по уведомлению выбирает и открывает репозиторий (18.3)', async () => {
     const source = createMockSource({ delayMs: 0 })
     let reveal: (id: string) => void = () => {}

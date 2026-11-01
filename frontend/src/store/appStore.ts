@@ -88,6 +88,8 @@ export interface AppState {
   autoFetch: boolean
   /** Крестик закрывает приложение, а не прячет окно в трей (D-063). */
   quitOnClose: boolean
+  /** Запуск при входе в систему; null — не поддерживается или ещё не прочитан. */
+  autostart: boolean | null
   /** Какие системные уведомления показывать (D-063). */
   notifications: Notify
   query: string
@@ -142,6 +144,9 @@ export interface AppState {
   setBackgroundMinutes(minutes: number): void
   setAutoFetch(on: boolean): void
   setQuitOnClose(on: boolean): void
+  /** Перечитать автозапуск из системы (открыт диалог настроек). */
+  loadAutostart(): Promise<void>
+  setAutostart(on: boolean): Promise<void>
   setNotifications(patch: Partial<Notify>): void
   setFilters(patch: Partial<Filters>): void
   setQuery(query: string): void
@@ -303,6 +308,7 @@ export function createAppStore(source: DataSource): AppStore {
       backgroundMinutes: defaultBackgroundMinutes,
       autoFetch: false,
       quitOnClose: false,
+      autostart: null,
       notifications: defaultNotify,
       query: '',
       selectedId: null,
@@ -502,6 +508,23 @@ export function createAppStore(source: DataSource): AppStore {
       setQuitOnClose(quitOnClose) {
         set({ quitOnClose })
         persist()
+      },
+
+      async loadAutostart() {
+        try {
+          set({ autostart: await source.getAutostart() })
+        } catch (err) {
+          fail(err)
+        }
+      },
+
+      async setAutostart(on) {
+        try {
+          await source.setAutostart(on)
+        } catch (err) {
+          fail(err)
+        }
+        await get().loadAutostart()
       },
 
       setNotifications(patch) {

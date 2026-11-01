@@ -77,6 +77,8 @@ type AppService struct {
 	// TraySummary получает сводку для значка в трее (SetTraySummary); задаётся
 	// в main до запуска приложения, nil — трея нет.
 	TraySummary func(text string)
+	// Autostart — запуск при входе в систему; задаётся в main, nil — не поддерживается.
+	Autostart Autostart
 }
 
 // NewAppService создаёт сервис, читает настройки и кэш прошлого сканирования.

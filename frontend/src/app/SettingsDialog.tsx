@@ -16,6 +16,7 @@ import {
   Typography,
   useTheme,
 } from '@mui/material'
+import { useEffect } from 'react'
 import { t } from '../i18n'
 import { maxZoom, minZoom, zoomStep } from '../logic/zoom'
 import { backgroundIntervals } from '../store/appStore'
@@ -31,6 +32,7 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose(): vo
         <NotifySetting />
         <FetchPruneSetting />
         <CloseToTraySetting />
+        <AutostartSetting />
         <ZoomSetting />
       </DialogContent>
       <DialogActions>
@@ -139,6 +141,29 @@ function CloseToTraySetting() {
       />
       <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
         {t('settings.closeToTrayDescription')}
+      </Typography>
+    </Box>
+  )
+}
+
+/** Запуск при входе в систему (D-063): состояние читается из системы при открытии. */
+function AutostartSetting() {
+  const theme = useTheme()
+  const autostart = useApp((s) => s.autostart)
+  const loadAutostart = useApp((s) => s.loadAutostart)
+  const setAutostart = useApp((s) => s.setAutostart)
+  useEffect(() => {
+    loadAutostart()
+  }, [loadAutostart])
+  if (autostart === null) return null
+  return (
+    <Box sx={{ mt: 4, pt: 2, borderTop: `1px solid ${theme.app.line}` }}>
+      <FormControlLabel
+        control={<Switch checked={autostart} onChange={(e) => setAutostart(e.target.checked)} />}
+        label={<Typography variant="subtitle2">{t('settings.autostartTitle')}</Typography>}
+      />
+      <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+        {t('settings.autostartDescription')}
       </Typography>
     </Box>
   )

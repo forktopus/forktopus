@@ -76,6 +76,8 @@ export const ru = {
   'settings.notifyCI': 'CI текущей ветки упал или снова проходит',
   'settings.notifyBehind': 'Ветка отстала от upstream (нужен fetch)',
   'settings.notifyPR': 'PR/MR по ветке открыт, влит или закрыт',
+  'settings.autostartTitle': 'Запускать при входе в систему',
+  'settings.autostartDescription': 'Forktopus стартует свёрнутым в трей и следит за репозиториями в фоне.',
   'settings.closeToTrayTitle': 'Закрывать в трей',
   'settings.closeToTrayDescription':
     'Крестик прячет окно, проверка продолжается в фоне; выйти — через меню значка в трее. Если трея в системе нет, крестик закрывает приложение.',

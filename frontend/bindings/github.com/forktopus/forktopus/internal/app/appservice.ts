@@ -58,6 +58,13 @@ export function FetchRepo(id: string, expect: model$0.OpExpect): $CancellablePro
 }
 
 /**
+ * GetAutostart — включён ли запуск при входе; nil — не поддерживается.
+ */
+export function GetAutostart(): $CancellablePromise<boolean | null> {
+    return $Call.ByID(1018256072);
+}
+
+/**
  * GetBranches читает локальные ветки репозитория: upstream, ahead/behind и
  * ветки, занятые другими рабочими копиями.
  */
@@ -189,6 +196,13 @@ export function ScanRoots(): $CancellablePromise<model$0.ScanResult> {
  */
 export function SelectRemote(repoID: string, remote: string): $CancellablePromise<void> {
     return $Call.ByID(2837537355, repoID, remote);
+}
+
+/**
+ * SetAutostart включает или выключает запуск при входе (сразу в трей, без окна).
+ */
+export function SetAutostart(on: boolean): $CancellablePromise<void> {
+    return $Call.ByID(2598365556, on);
 }
 
 /**
