@@ -3,7 +3,7 @@
 
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import { Box, ButtonBase, ToggleButton, ToggleButtonGroup, Tooltip, Typography, useTheme } from '@mui/material'
-import { useMemo, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { t, type MessageKey } from '../i18n'
 import { hostSources, registryFilters, type RegistryFilter } from '../logic/registry'
 import { useApp } from '../store/context'
@@ -96,6 +96,9 @@ export function StatusTabs() {
   )
 }
 
+/** CSS-переменная: нижний край липкой полосы фильтров от верха окна. */
+export const filterBarBottom = '--filter-bar-bottom'
+
 /**
  * Источники и вкладки статусов одной полосой, прилипающей под шапкой (73 px,
  * app/TopBar.tsx): карточки и строки прокручиваются под ней. Фон — цвет
@@ -103,8 +106,23 @@ export function StatusTabs() {
  */
 export function FilterBar({ aside }: { aside?: ReactNode }) {
   const theme = useTheme()
+  // Нижний край полосы — в CSS-переменную: под ним прилипает заголовок таблицы
+  // реестра. Высота меняется, когда источники переносятся на вторую строку.
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const root = document.documentElement.style
+    const observer = new ResizeObserver(() => root.setProperty(filterBarBottom, `${73 + el.offsetHeight}px`))
+    observer.observe(el)
+    return () => {
+      observer.disconnect()
+      root.removeProperty(filterBarBottom)
+    }
+  }, [])
   return (
     <Box
+      ref={ref}
       sx={{
         position: 'sticky',
         top: 73,

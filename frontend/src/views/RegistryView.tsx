@@ -22,10 +22,10 @@ import {
   Typography,
   useTheme,
 } from '@mui/material'
-import { forwardRef, memo, useCallback, useEffect, useMemo, useRef, useState, type ComponentProps, type MouseEvent } from 'react'
+import { forwardRef, memo, useCallback, useEffect, useMemo, useRef, useState, type ComponentProps, type CSSProperties, type MouseEvent } from 'react'
 import { TableVirtuoso, type TableComponents, type TableVirtuosoHandle } from 'react-virtuoso'
 import { CIIndicator, ChangesIndicator, NoAutoCheckMark, PRIndicator, SyncIndicator } from '../components/indicators'
-import { FilterBar } from '../components/filters'
+import { FilterBar, filterBarBottom } from '../components/filters'
 import { BranchChip, RepoIcon } from '../components/status'
 import { Nesting, Operation, type Repository } from '../data/model'
 import { formatTime, t, type MessageKey } from '../i18n'
@@ -205,13 +205,17 @@ interface TableContext {
 // Таблица рисует только строки у видимой области (15.3): на 241 репозитории
 // DOM всех строк занимал ~330 МБ в WebKit, монтирование — ~340 мс (12.4, 11.1).
 const tableComponents: TableComponents<Row, TableContext> = {
+  // Горизонтальная прокрутка нужна, только когда таблица (minWidth 1170) не
+  // помещается. auto делает обёртку контейнером прокрутки, и заголовок перестаёт
+  // прилипать к окну, поэтому на широком окне — clip.
   Scroller: forwardRef<HTMLDivElement>(function Scroller(props, ref) {
-    return <Box {...props} ref={ref} sx={{ overflowX: 'auto' }} />
+    return <Box {...props} ref={ref} sx={{ overflowX: 'auto', '@media (min-width: 1240px)': { overflowX: 'clip' } }} />
   }),
   Table: ({ context, ...props }) => <Table {...props} size="small" sx={context?.sx} />,
-  TableHead: forwardRef<HTMLTableSectionElement>(function Head(props, ref) {
+  TableHead: forwardRef<HTMLTableSectionElement, { style?: CSSProperties }>(function Head(props, ref) {
     const theme = useTheme()
-    return <TableHead {...props} ref={ref} sx={{ bgcolor: theme.app.panelAlt }} />
+    // Virtuoso делает заголовок sticky с top: 0 — под шапкой; ставим его под полосу фильтров.
+    return <TableHead {...props} ref={ref} style={{ ...props.style, top: `var(${filterBarBottom}, 73px)` }} sx={{ bgcolor: theme.app.panelAlt }} />
   }),
   TableBody: forwardRef<HTMLTableSectionElement>(function Body(props, ref) {
     return <TableBody {...props} ref={ref} />
@@ -306,7 +310,8 @@ export function RegistryView() {
       {/* Карточки сверху и уезжают при прокрутке; источники и вкладки — прилипают. */}
       <FilterBar />
 
-      <Paper sx={{ borderRadius: '15px', overflow: 'hidden' }}>
+      {/* clip, а не hidden: hidden делает карточку контейнером прокрутки, и заголовок таблицы не прилипает. */}
+      <Paper sx={{ borderRadius: '15px', overflow: 'clip' }}>
         <TableVirtuoso
           ref={virtuoso}
           useWindowScroll
