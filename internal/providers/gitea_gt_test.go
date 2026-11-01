@@ -86,6 +86,8 @@ func TestGtErrors(t *testing.T) {
 		{"код 4 без знакомого текста", stderr(4, "Error: что-то с учёткой\n"), model.CodeAuthRequired, model.AvailabilityUnavailable},
 		{"токен отклонён", gtHTTP(401, "GET", "repos/OWNER/forktopus-pilot", `{"message":"invalid username, password or token"}`), model.CodeAuthRequired, model.AvailabilityUnavailable},
 		{"нет прав", gtHTTP(403, "GET", "repos/OWNER/forktopus-pilot", `{"message":"forbidden"}`), model.CodeAccessDenied, model.AvailabilityNotSupported},
+		// Так gt 0.2.0 сообщает о 403 на запуски Actions без прав на раздел (D-068).
+		{"нет прав, текст gt", stderr(1, "Error: permission denied by the Gitea instance: user should have specific read permission or be a repo admin or a site admin\n"), model.CodeAccessDenied, model.AvailabilityNotSupported},
 		{"лимит", gtHTTP(429, "GET", "repos/OWNER/forktopus-pilot", `{"message":"too many requests"}`), model.CodeRateLimit, model.AvailabilityError},
 		{"нет репозитория", gtHTTP(404, "GET", "repos/OWNER/forktopus-pilot", `{"errors":null,"message":"not found","url":"https://git.example.org/api/swagger"}`), model.CodeRepoUnresolved, model.AvailabilityError},
 		{"нет сети", stderr(1, "Error: cannot reach https://git.example.org (dial tcp: lookup git.example.org: no such host); check --host or your network\n"), model.CodeNetworkError, model.AvailabilityError},

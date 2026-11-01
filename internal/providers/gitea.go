@@ -51,6 +51,9 @@ var gtMarkers = []marker{
 	{model.CodeAuthRequired, "is not logged in"},
 	{model.CodeAuthRequired, "log in again"},
 	{model.CodeAuthRequired, "run gt auth login"},
+	// 403 gt печатает без статуса HTTP: вход есть, но роли не хватает прав на
+	// раздел, например Actions (D-068).
+	{model.CodeAccessDenied, "permission denied by the gitea instance"},
 	{model.CodeRepoUnresolved, "not found"},
 	{model.CodeUnsupported, "is older than"},
 }
