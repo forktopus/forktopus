@@ -90,6 +90,8 @@ export interface AppState {
   quitOnClose: boolean
   /** Запуск при входе в систему; null — не поддерживается или ещё не прочитан. */
   autostart: boolean | null
+  /** Пути репозиториев без автоматической проверки (D-064). */
+  noAutoCheck: string[]
   /** Какие системные уведомления показывать (D-063). */
   notifications: Notify
   query: string
@@ -147,6 +149,8 @@ export interface AppState {
   /** Перечитать автозапуск из системы (открыт диалог настроек). */
   loadAutostart(): Promise<void>
   setAutostart(on: boolean): Promise<void>
+  /** Автоматическая проверка репозитория: фон и уведомления (D-064). */
+  setAutoCheck(path: string, on: boolean): Promise<void>
   setNotifications(patch: Partial<Notify>): void
   setFilters(patch: Partial<Filters>): void
   setQuery(query: string): void
@@ -309,6 +313,7 @@ export function createAppStore(source: DataSource): AppStore {
       autoFetch: false,
       quitOnClose: false,
       autostart: null,
+      noAutoCheck: [],
       notifications: defaultNotify,
       query: '',
       selectedId: null,
@@ -325,8 +330,8 @@ export function createAppStore(source: DataSource): AppStore {
           set(fromUI(await source.getUI()))
           // Окно Wails уже открыто с сохранённым масштабом; в превью его ставит CSS.
           source.setZoom(get().zoom).catch(fail)
-          const [roots, snap] = await Promise.all([source.listRoots(), source.listRepositories()])
-          set({ roots })
+          const [roots, snap, noAutoCheck] = await Promise.all([source.listRoots(), source.listRepositories(), source.getNoAutoCheck()])
+          set({ roots, noAutoCheck })
           applySnapshot(snap)
         } catch (err) {
           fail(err)
@@ -513,6 +518,14 @@ export function createAppStore(source: DataSource): AppStore {
       async loadAutostart() {
         try {
           set({ autostart: await source.getAutostart() })
+        } catch (err) {
+          fail(err)
+        }
+      },
+
+      async setAutoCheck(path, on) {
+        try {
+          set({ noAutoCheck: await source.setAutoCheck(path, on) })
         } catch (err) {
           fail(err)
         }

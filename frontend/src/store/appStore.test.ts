@@ -296,6 +296,18 @@ describe('store', () => {
     }
   })
 
+  it('автоматическая проверка выключается у репозитория (18.5)', async () => {
+    const source = createMockSource({ delayMs: 0 })
+    const store = createAppStore(source)
+    await store.getState().init()
+    const path = Object.values(store.getState().repos)[0].path
+    expect(store.getState().noAutoCheck).toEqual([])
+    await store.getState().setAutoCheck(path, false)
+    expect(store.getState().noAutoCheck).toEqual([path])
+    await store.getState().setAutoCheck(path, true)
+    expect(store.getState().noAutoCheck).toEqual([])
+  })
+
   it('автозапуск читается из системы, ошибка — уведомлением (18.4)', async () => {
     const source = createMockSource({ delayMs: 0 })
     const store = createAppStore(source)

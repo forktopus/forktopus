@@ -95,7 +95,7 @@ func (s *AppService) backgroundPass(ctx context.Context) {
 	s.scanMu.Unlock()
 
 	s.mu.Lock()
-	repos := slices.Clone(s.snapshot.Repositories)
+	repos := slices.DeleteFunc(slices.Clone(s.snapshot.Repositories), func(r model.Repository) bool { return !s.autoCheckLocked(r.Path) })
 	opts, fetch, prune := s.scanOptionsLocked(), s.cfg.UI.AutoFetch, s.cfg.UI.FetchPrune
 	s.mu.Unlock()
 
@@ -129,7 +129,7 @@ func (s *AppService) backgroundPass(ctx context.Context) {
 	}
 	s.mu.Unlock()
 	emit(EventChecked, at)
-	s.refreshRemoteAll()
+	s.refreshRemoteAll(true)
 }
 
 // backgroundRepo перечитывает один репозиторий. Над ним идёт операция —

@@ -23,6 +23,11 @@ const notifyDelay = 2 * time.Second
 // observeLocked сравнивает свежее состояние репозитория с прежним и ставит
 // в очередь уведомления включённых в настройках видов; вызывается под s.mu.
 func (s *AppService) observeLocked(repo model.Repository) {
+	if !s.autoCheckLocked(repo.Path) {
+		// Включат снова — первое чтение станет новой точкой отсчёта.
+		s.tracker.Forget(repo.ID)
+		return
+	}
 	events := s.tracker.Observe(repo)
 	if len(events) == 0 {
 		return

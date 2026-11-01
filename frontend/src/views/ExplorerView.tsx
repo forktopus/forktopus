@@ -12,7 +12,7 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import { Alert, Box, Button, ButtonBase, CircularProgress, IconButton, Paper, Tooltip, Typography, useTheme } from '@mui/material'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNow } from '../app/useNow'
-import { CIIndicator, PRIndicator } from '../components/indicators'
+import { CIIndicator, NoAutoCheckMark, PRIndicator } from '../components/indicators'
 import { CliStatus, GuardedButton, nestingName, providerName } from '../components/RepoDetails'
 import { ProviderIcon, RepoIcon, StatusText, caption } from '../components/status'
 import { Availability, Operation, type BranchInfo, type ChangedFile, type Repository } from '../data/model'
@@ -83,6 +83,7 @@ function TreeRepo({ node, depth, selectedId }: { node: RepoNode; depth: number; 
         <Box component="span" sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {repoName(r)}
         </Box>
+        <NoAutoCheckMark repo={r} size={13} />
         <Dot repo={r} />
       </ButtonBase>
       {node.children.map((c) => (
@@ -401,6 +402,7 @@ function RepoMain({ repo }: { repo: Repository }) {
         <RepoIcon repo={repo} size={36} />
         <Typography variant="h1" sx={{ overflowWrap: 'anywhere', minWidth: 0 }}>
           {repoName(repo)}
+          <NoAutoCheckMark repo={repo} size={22} />
         </Typography>
       </Box>
       <Typography sx={{ font: `12px ${monoFontFamily}`, color: 'text.secondary', mt: 1, overflowWrap: 'anywhere' }}>{repo.path}</Typography>

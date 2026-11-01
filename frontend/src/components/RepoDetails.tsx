@@ -5,7 +5,22 @@
 import CloseIcon from '@mui/icons-material/Close'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import RefreshIcon from '@mui/icons-material/Refresh'
-import { Alert, Box, Button, CircularProgress, Divider, Drawer, IconButton, MenuItem, Select, Tooltip, Typography, useTheme } from '@mui/material'
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Divider,
+  Drawer,
+  FormControlLabel,
+  IconButton,
+  MenuItem,
+  Select,
+  Switch,
+  Tooltip,
+  Typography,
+  useTheme,
+} from '@mui/material'
 import { useEffect, useState, type ReactNode } from 'react'
 import { useNow } from '../app/useNow'
 import { Nesting, Operation, Provider, type BranchInfo, type Repository } from '../data/model'
@@ -223,6 +238,23 @@ export function CliStatus({ repo }: { repo: Repository }) {
   )
 }
 
+/** Автоматическая проверка репозитория: фон и уведомления (D-064). */
+function AutoCheckSwitch({ repo }: { repo: Repository }) {
+  const on = useApp((s) => !s.noAutoCheck.includes(repo.path))
+  const setAutoCheck = useApp((s) => s.setAutoCheck)
+  return (
+    <Box sx={{ mt: 1.5 }}>
+      <FormControlLabel
+        control={<Switch size="small" checked={on} onChange={(e) => void setAutoCheck(repo.path, e.target.checked)} />}
+        label={<Typography variant="body2">{t('details.autoCheck')}</Typography>}
+      />
+      <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
+        {t('details.autoCheckDescription')}
+      </Typography>
+    </Box>
+  )
+}
+
 function RemoteSection({ repo, onOpenTools }: { repo: Repository; onOpenTools(): void }) {
   const tools = useApp((s) => s.tools)
   const host = repoHost(repo)
@@ -298,6 +330,7 @@ export function RepoDetails({ onOpenTools }: { onOpenTools(): void }) {
             </Tooltip>
           </Box>
           {nesting && <Typography sx={{ fontSize: 13, color: 'text.secondary', mt: 0.5 }}>{t(nesting)}</Typography>}
+          <AutoCheckSwitch repo={repo} />
           <LocalSection repo={repo} />
           <RemoteSection repo={repo} onOpenTools={onOpenTools} />
           <Divider sx={{ my: 2 }} />

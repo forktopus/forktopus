@@ -239,6 +239,7 @@ export const ru = {
   'ci.none': 'нет запусков',
 
   'repo.noRemote': 'без remote',
+  'repo.noAutoCheck': 'Не проверяется автоматически: фоновая проверка и уведомления выключены',
   'repo.localRemote': 'remote — локальный путь',
   'repo.readError': 'Ошибка чтения репозитория',
 
@@ -353,6 +354,9 @@ export const ru = {
   'details.noOtherBranches': 'Других локальных веток нет.',
   'details.noRemote': 'у репозитория нет remote',
   'details.zeroNote': '«Нет данных» — не ноль: число PR/CI неизвестно, пока CLI не настроен или сервер недоступен. Локальные функции Git работают.',
+  'details.autoCheck': 'Проверять автоматически',
+  'details.autoCheckDescription':
+    'Фоновая проверка перечитывает статус и PR/CI, делает fetch (если он включён в настройках) и присылает уведомления. Выключите для репозиториев, за которыми не нужно следить: статус обновится при сканировании и по кнопке ↻.',
   'details.safety': 'Pull — только fast-forward на чистой ветке. Forktopus не делает reset, stash и не перезаписывает ваши изменения.',
 
   'confirm.pullTitle': 'Подтянуть изменения?',

@@ -73,6 +73,10 @@ export interface DataSource {
   /** Запуск при входе в систему: состояние из системы; null — не поддерживается (D-063). */
   getAutostart(): Promise<boolean | null>
   setAutostart(on: boolean): Promise<void>
+  /** Пути репозиториев без автоматической проверки (D-064). */
+  getNoAutoCheck(): Promise<string[]>
+  /** Включить или выключить автоматическую проверку; возвращает новый список путей. */
+  setAutoCheck(path: string, on: boolean): Promise<string[]>
   /** Сводка для подсказки значка в трее (D-063). */
   setTraySummary(text: string): Promise<void>
   /** Масштаб интерфейса окна (1 — 100 %). */

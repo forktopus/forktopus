@@ -83,6 +83,13 @@ export function GetDiagnostics(): $CancellablePromise<model$0.Diagnostics> {
 }
 
 /**
+ * GetNoAutoCheck — пути репозиториев без автоматической проверки (D-064).
+ */
+export function GetNoAutoCheck(): $CancellablePromise<string[] | null> {
+    return $Call.ByID(3669285197);
+}
+
+/**
  * GetRemoteStatus возвращает PR/MR и CI текущей ветки: из кэша, если данные
  * свежие (D-046), иначе от CLI провайдера. Итог также приходит событием
  * EventRemoteStatus и попадает в список репозиториев.
@@ -196,6 +203,15 @@ export function ScanRoots(): $CancellablePromise<model$0.ScanResult> {
  */
 export function SelectRemote(repoID: string, remote: string): $CancellablePromise<void> {
     return $Call.ByID(2837537355, repoID, remote);
+}
+
+/**
+ * SetAutoCheck включает или выключает автоматическую проверку репозитория:
+ * выключенный фон не перечитывает (status, fetch, PR/CI), уведомлений по нему
+ * нет. Возвращает новый список путей без проверки.
+ */
+export function SetAutoCheck(path: string, on: boolean): $CancellablePromise<string[] | null> {
+    return $Call.ByID(243654608, path, on);
 }
 
 /**

@@ -24,7 +24,7 @@ import {
 } from '@mui/material'
 import { forwardRef, memo, useCallback, useEffect, useMemo, useRef, useState, type ComponentProps, type MouseEvent } from 'react'
 import { TableVirtuoso, type TableComponents, type TableVirtuosoHandle } from 'react-virtuoso'
-import { CIIndicator, ChangesIndicator, PRIndicator, SyncIndicator } from '../components/indicators'
+import { CIIndicator, ChangesIndicator, NoAutoCheckMark, PRIndicator, SyncIndicator } from '../components/indicators'
 import { Sources, StatusTabs } from '../components/filters'
 import { BranchChip, RepoIcon } from '../components/status'
 import { Nesting, Operation, type Repository } from '../data/model'
@@ -137,7 +137,10 @@ function RepoCell({ repo, depth, nested, collapsed, onToggle }: { repo: Reposito
       </Box>
       <RepoIcon repo={repo} />
       <Box sx={{ minWidth: 0 }}>
-        <Typography sx={{ fontSize: 14, fontWeight: 700, overflowWrap: 'anywhere' }}>{repoName(repo)}</Typography>
+        <Typography sx={{ fontSize: 14, fontWeight: 700, overflowWrap: 'anywhere' }}>
+          {repoName(repo)}
+          <NoAutoCheckMark repo={repo} />
+        </Typography>
         <Typography sx={{ fontSize: 12, color: 'text.secondary', overflowWrap: 'anywhere' }}>
           {[nesting && t(nesting), repoNamespace(repo) || remoteCaption(repo), collapsed && t('registry.hidden', { count: nested })]
             .filter(Boolean)

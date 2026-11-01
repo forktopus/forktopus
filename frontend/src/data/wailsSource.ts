@@ -35,6 +35,8 @@ export const wailsSource: DataSource = {
   setTraySummary: (text) => AppService.SetTraySummary(text),
   getAutostart: () => AppService.GetAutostart(),
   setAutostart: (on) => AppService.SetAutostart(on),
+  getNoAutoCheck: async () => (await AppService.GetNoAutoCheck()) ?? [],
+  setAutoCheck: async (path, on) => (await AppService.SetAutoCheck(path, on)) ?? [],
   onScanRepository: (cb) => Events.On('scan:repository', (event) => cb(normalizeRepository(event.data))),
   onRemoteStatus: (cb) => Events.On('remote:status', (event) => cb(event.data)),
   onRepository: (cb) => Events.On('repo:updated', (event) => cb(normalizeRepository(event.data))),

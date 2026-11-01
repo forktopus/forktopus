@@ -3,6 +3,7 @@
 // показывается строкой ниже или подсказкой при наведении.
 
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
+import SyncDisabledIcon from '@mui/icons-material/SyncDisabled'
 import { Box, IconButton, Tooltip, Typography } from '@mui/material'
 import type { ReactNode } from 'react'
 import { useNow } from '../app/useNow'
@@ -46,6 +47,17 @@ function Indicator({ label, detail, mode, action }: { label: Label; detail: stri
 }
 
 /** Изменения рабочей копии с детализацией staged / unstaged / untracked. */
+/** Приглушённый значок «не проверяется автоматически» (D-064); у остальных — ничего. */
+export function NoAutoCheckMark({ repo, size = 15 }: { repo: Repository; size?: number }) {
+  const off = useApp((s) => s.noAutoCheck.includes(repo.path))
+  if (!off) return null
+  return (
+    <Tooltip title={t('repo.noAutoCheck')}>
+      <SyncDisabledIcon aria-label={t('repo.noAutoCheck')} sx={{ fontSize: size, color: 'text.disabled', verticalAlign: 'middle', ml: 0.75, flexShrink: 0 }} />
+    </Tooltip>
+  )
+}
+
 export function ChangesIndicator({ repo, mode = 'tooltip' }: { repo: Repository; mode?: DetailMode }) {
   if (repo.error) return <StatusText wrap label={{ tone: 'bad', text: t('repo.readError') }} />
   return <Indicator label={changesLabel(repo)} detail={changesDetail(repo)} mode={mode} />

@@ -15,6 +15,7 @@ import { groupRadar, radarGroups, radarNote, radarTags, type RadarGroup } from '
 import { repoHost, repoName, repoNamespace } from '../logic/repo'
 import type { Label } from '../logic/status'
 import { remoteCaption } from '../logic/status'
+import { NoAutoCheckMark } from '../components/indicators'
 import { useApp } from '../store/context'
 import { useFilteredRepos, useSearchedRepos } from '../store/selectors'
 import type { Tone } from '../theme/theme'
@@ -108,6 +109,7 @@ function RadarCard({ repo, group }: { repo: Repository; group: RadarGroup }) {
         <Box sx={{ minWidth: 0, flex: 1 }}>
           <Typography noWrap sx={{ fontSize: 14, fontWeight: 700 }}>
             {repoName(repo)}
+            <NoAutoCheckMark repo={repo} />
           </Typography>
           <Typography noWrap sx={{ fontSize: 12, color: 'text.secondary' }}>
             {[repoHost(repo) || remoteCaption(repo), repoNamespace(repo)].filter(Boolean).join(' / ')}

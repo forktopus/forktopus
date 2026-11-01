@@ -31,7 +31,10 @@ type Settings struct {
 	// ScanSkipDirs — имена каталогов, в которые сканер не заходит; пусто —
 	// scan.DefaultSkipDirs.
 	ScanSkipDirs []string `json:"scanSkipDirs,omitempty"`
-	UI           UI       `json:"ui"`
+	// NoAutoCheck — пути репозиториев, которые фоновая проверка не трогает и
+	// по которым нет уведомлений (D-064).
+	NoAutoCheck []string `json:"noAutoCheck,omitempty"`
+	UI          UI       `json:"ui"`
 }
 
 // UI — состояние интерфейса, которое переживает перезапуск.

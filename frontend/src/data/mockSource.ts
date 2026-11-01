@@ -453,6 +453,7 @@ export function createMockSource({ delayMs = 250, scenario = 'default' }: MockOp
   const remoteListeners = new Set<(status: RemoteStatus) => void>()
   let ui: UI = {}
   let autostart = false
+  let noAutoCheck: string[] = []
   try {
     ui = JSON.parse(localStorage.getItem(uiKey) ?? '{}') as UI
   } catch {
@@ -648,6 +649,12 @@ export function createMockSource({ delayMs = 250, scenario = 'default' }: MockOp
     async setAutostart(on) {
       autostart = on
       return reply(undefined)
+    },
+    getNoAutoCheck: () => reply([...noAutoCheck]),
+    async setAutoCheck(path, on) {
+      noAutoCheck = noAutoCheck.filter((p) => p !== path)
+      if (!on) noAutoCheck = [...noAutoCheck, path].sort()
+      return reply([...noAutoCheck])
     },
     // В браузере без Wails нативного зума нет — CSS zoom, только для превью.
     async setZoom(zoom) {

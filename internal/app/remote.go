@@ -97,11 +97,13 @@ func (s *AppService) remoteStatus(ctx context.Context, id string, force bool) (s
 
 // refreshRemoteAll запрашивает серверные данные всех репозиториев в фоне;
 // ограничения по хостам и кэш — в remote.Fetcher.
-func (s *AppService) refreshRemoteAll() {
+func (s *AppService) refreshRemoteAll(background bool) {
 	s.mu.Lock()
-	ids := make([]string, len(s.snapshot.Repositories))
-	for i, r := range s.snapshot.Repositories {
-		ids[i] = r.ID
+	var ids []string
+	for _, r := range s.snapshot.Repositories {
+		if !background || s.autoCheckLocked(r.Path) {
+			ids = append(ids, r.ID)
+		}
 	}
 	s.mu.Unlock()
 	for _, id := range ids {

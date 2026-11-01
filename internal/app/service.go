@@ -274,7 +274,7 @@ func (s *AppService) ScanRoots(ctx context.Context) (model.ScanResult, error) {
 	at := res.ScannedAt
 	s.snapshot = model.RepositorySnapshot{Repositories: res.Repositories, Issues: res.Issues, ScannedAt: &at}
 	s.saveCacheLocked()
-	go s.refreshRemoteAll()
+	go s.refreshRemoteAll(false)
 	return res, nil
 }
 
