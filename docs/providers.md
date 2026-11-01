@@ -2,7 +2,7 @@
 
 Что фактически отдают `gh`, `glab` и `tea` для PR/MR и CI по ветке. По этим находкам пишутся адаптеры (этап 08); при обновлении CLI — перепроверить.
 
-Пилотные репозитории — `OWNER/forktopus-pilot` на каждом сервере: workflow `ok` (успех), `fail` (падает, только ветка `pilot/fail`), `slow` (долгий, только `pilot/slow`); ветки `pilot/pr-open` (открытый PR), `pilot/pr-draft` (черновик), `pilot/closed-pr` (закрытый PR), `pilot/no-pr`.
+Ответы записаны на пилотных репозиториях `OWNER/forktopus-pilot` на каждом сервере (после проверок удалены; чтобы перепроверить CLI, их нужно создать заново с тем же набором): workflow `ok` (успех), `fail` (падает, только ветка `pilot/fail`), `slow` (долгий, только `pilot/slow`); ветки `pilot/pr-open` (открытый PR), `pilot/pr-draft` (черновик), `pilot/closed-pr` (закрытый PR), `pilot/no-pr`.
 
 ## GitHub — `gh`
 
