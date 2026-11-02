@@ -1,7 +1,6 @@
 ---
 name: forktopus-release
 description: "Подготовка и выпуск релиза Forktopus через go run ./scripts/release bump/plan/prepare/publish: версия, описание по diff, файлы из артефактов CI, публикация на GitHub с проверкой SHA-256. Использовать, когда просят спланировать, подготовить или выпустить релиз Forktopus."
-argument-hint: "[version=X.Y.Z]"
 ---
 
 # Релиз Forktopus
@@ -9,6 +8,8 @@ argument-hint: "[version=X.Y.Z]"
 Работай в корне репозитория Forktopus. Механику выполняет `go run ./scripts/release`. Порядок, требования и состав выпуска описаны в `docs/release.md`. Если эта памятка с ним расходится, верен документ. Другие репозитории не меняй.
 
 ## Версия и описание
+
+Необязательный параметр вызова — `version=X.Y.Z`, например `version=0.3.2`. Если версия не указана, выбери её по изменениям ниже.
 
 1. Выполни `go run ./scripts/release plan`. Если пользователь назвал версию — `go run ./scripts/release plan --version <версия>`. Команда только читает Git и GitHub. Незакоммиченные изменения ей не мешают, но в выпуск они не войдут: план относится к HEAD.
 2. Возьми из результата `previousTag`, `previousRevision`, `revision`, `commits` и `changes`. Посмотри существенный diff от `previousRevision` до `revision`. Сообщения коммитов сами по себе не доказывают, что возможность есть.
