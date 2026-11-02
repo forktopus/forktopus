@@ -3,6 +3,7 @@
 // ошибка чтения. Git и CLI не вызываются, данные вымышлены.
 
 import {
+  type AppUpdate,
   type BranchInfo,
   Availability,
   ErrorCode,
@@ -221,6 +222,7 @@ function buildRepository(s: Scenario, index: number): Repository {
     open: prOk ? (s.prs ?? 0) : null,
     draft: prOk ? (s.drafts ?? 0) : null,
     url: prOk ? `https://${r.host}/${s.ns}/${s.name}/pulls` : undefined,
+    listUrl: prOk ? `https://${r.host}/${s.ns}/${s.name}/${r.provider === Provider.ProviderGitLab ? '-/merge_requests' : 'pulls'}` : undefined,
     error: sourceError,
     lastSuccessAt: prOk || s.offline ? lastSuccessAt : null,
     lastAttemptAt,
@@ -237,6 +239,7 @@ function buildRepository(s: Scenario, index: number): Repository {
   const ci: CISummary = {
     availability: ciAvailability,
     active: ciOk ? (s.ciActive ?? 0) : null,
+    listUrl: ciOk ? `https://${r.host}/${s.ns}/${s.name}/${r.provider === Provider.ProviderGitLab ? '-/pipelines' : 'actions'}` : undefined,
     lastResult: ciOk ? s.ciResult : undefined,
     error: sourceError,
     lastSuccessAt: ciOk || s.offline ? lastSuccessAt : null,
@@ -440,6 +443,29 @@ export interface MockOptions {
 }
 
 export function createMockSource({ delayMs = 250, scenario = 'default' }: MockOptions = {}): DataSource {
+  // Демо не обращается к Releases и не создаёт файлы; прогресс живёт в источнике.
+  let update: AppUpdate = {
+    revision: 1,
+    status: 'idle',
+    currentVersion: '0.3.1',
+    version: '',
+    format: 'appimage',
+    filename: '',
+    size: 0,
+    downloaded: 0,
+    releaseUrl: '',
+    checkedAt: '',
+    message: 'Демонстрация: пакеты не скачиваются.',
+    canDownload: false,
+    instruction: 'В установленном приложении здесь будет инструкция ручной установки.',
+  }
+  const updateListeners = new Set<(state: AppUpdate) => void>()
+  let updateTimer: ReturnType<typeof setTimeout> | undefined
+  const changeUpdate = (patch: Partial<AppUpdate>) => {
+    update = { ...update, ...patch, revision: update.revision + 1 }
+    updateListeners.forEach((cb) => cb(update))
+    return update
+  }
   const noRoots = scenario === 'noroots'
   let roots = noRoots ? [] : [...mockRoots.map((m) => m.root), emptyRoot]
   let repos = noRoots ? [] : linkParents(scenarios.map(buildRepository)).map((r) => withScenario(r, scenario))
@@ -540,6 +566,50 @@ export function createMockSource({ delayMs = 250, scenario = 'default' }: MockOp
 
   return {
     kind: 'mock',
+    getAppUpdate: () => reply(update),
+    checkAppUpdate: async () => {
+      if (['checking', 'downloading', 'verifying'].includes(update.status)) return update
+      return changeUpdate({
+        status: 'available',
+        version: '0.4.0',
+        filename: 'Forktopus-0.4.0-x86_64.AppImage',
+        size: 64 * 1024 * 1024,
+        downloaded: 0,
+        canDownload: true,
+        releaseUrl: 'https://github.com/forktopus/forktopus/releases',
+        checkedAt: new Date().toISOString(),
+        message: 'Демонстрация доступного обновления.',
+      })
+    },
+    downloadAppUpdate: async () => {
+      if (!update.canDownload) return update
+      const state = changeUpdate({ status: 'downloading', downloaded: 0, canDownload: false, message: '' })
+      const tick = () => {
+        if (update.status !== 'downloading') return
+        if (update.downloaded < update.size) {
+          changeUpdate({ downloaded: Math.min(update.size, update.downloaded + 16 * 1024 * 1024) })
+          updateTimer = setTimeout(tick, 200)
+        } else {
+          changeUpdate({ status: 'verifying' })
+          updateTimer = setTimeout(() => changeUpdate({ status: 'ready', message: 'Демонстрация: файл не создавался.' }), 200)
+        }
+      }
+      updateTimer = setTimeout(tick, 200)
+      return state
+    },
+    cancelAppUpdate: async () => {
+      clearTimeout(updateTimer)
+      return changeUpdate({ status: 'available', canDownload: true, downloaded: 0, message: 'Скачивание отменено.' })
+    },
+    openAppUpdateFolder: async () => {
+      console.info('Демонстрация: папка обновления не создавалась.')
+    },
+    onAppUpdate(cb) {
+      updateListeners.add(cb)
+      return () => {
+        updateListeners.delete(cb)
+      }
+    },
     listRoots: () => reply(roots),
     async addRoot(path) {
       const clean = path.trim().replace(/\/+$/, '')

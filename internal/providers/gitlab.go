@@ -155,7 +155,8 @@ type glMR struct {
 // PullRequests — открытые MR, где ветка — источник (при detached HEAD —
 // содержащие коммит); MR из форков (source_project_id ≠ target_project_id)
 // не считаются.
-func (g GitLab) PullRequests(ctx context.Context, q Query) model.PRSummary {
+func (g GitLab) PullRequests(ctx context.Context, q Query) (result model.PRSummary) {
+	defer prListLink(q, &result)
 	if q.noRef() {
 		return prFailed(noBranch())
 	}
@@ -290,7 +291,8 @@ var glActive = []string{"created", "waiting_for_resource", "preparing", "pending
 // CIRuns — pipelines ветки (при detached HEAD — коммита), 20 последних:
 // активные — по всем, итог — по последнему pipeline последнего коммита
 // (glLastResult).
-func (g GitLab) CIRuns(ctx context.Context, q Query) model.CISummary {
+func (g GitLab) CIRuns(ctx context.Context, q Query) (result model.CISummary) {
+	defer ciListLink(q, &result)
 	if q.noRef() {
 		return ciFailed(noBranch())
 	}

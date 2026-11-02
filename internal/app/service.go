@@ -24,6 +24,7 @@ import (
 	"github.com/forktopus/forktopus/internal/runner"
 	"github.com/forktopus/forktopus/internal/scan"
 	"github.com/forktopus/forktopus/internal/settings"
+	"github.com/forktopus/forktopus/internal/updates"
 )
 
 // EventScanRepository — репозиторий, найденный во время сканирования
@@ -36,6 +37,7 @@ func init() {
 
 // AppService — сервис Forktopus для фронтенда.
 type AppService struct {
+	updates   *updates.Service
 	store     *settings.Store
 	runner    runner.Runner
 	cachePath string // пусто — кэш между запусками отключён
@@ -110,6 +112,12 @@ func NewAppService(store *settings.Store, r runner.Runner, cachePath string) (*A
 // команды (скан, fetch, запросы CLI) отменяются, их процессы завершаются.
 func (s *AppService) ServiceShutdown() error {
 	s.stop()
+	s.mu.Lock()
+	u := s.updates
+	s.mu.Unlock()
+	if u != nil {
+		u.Close()
+	}
 	return nil
 }
 

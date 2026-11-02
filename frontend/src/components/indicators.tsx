@@ -12,11 +12,31 @@ import { t } from '../i18n'
 import { changesDetail, changesLabel, ciLabel, prLabel, remoteDetail, syncFreshness, syncLabel, type Label } from '../logic/status'
 import { useApp } from '../store/context'
 import { StatusText } from './status'
+import { ServerLink } from './ServerLink'
+import { indicatorURL } from '../logic/serverLinks'
 
 export type DetailMode = 'inline' | 'tooltip'
 
-function Indicator({ label, detail, mode, action }: { label: Label; detail: string; mode: DetailMode; action?: ReactNode }) {
-  const text = <StatusText label={label} wrap={mode === 'inline' || 'words'} />
+function Indicator({
+  label,
+  detail,
+  mode,
+  action,
+  url,
+  linkLabel,
+}: {
+  label: Label
+  detail: string
+  mode: DetailMode
+  action?: ReactNode
+  url?: string
+  linkLabel?: string
+}) {
+  const text = (
+    <ServerLink url={url} label={linkLabel ?? t('action.openOnServer')}>
+      <StatusText label={label} wrap={mode === 'inline' || 'words'} />
+    </ServerLink>
+  )
   if (mode === 'tooltip') {
     return (
       <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
@@ -94,11 +114,29 @@ function RemoteLink({ summary }: { summary: PRSummary | CISummary }) {
 /** Открытые PR/MR ветки: число только при успешном ответе CLI, иначе причина. */
 export function PRIndicator({ repo, mode = 'tooltip' }: { repo: Repository; mode?: DetailMode }) {
   const now = useNow()
-  return <Indicator label={prLabel(repo, now)} detail={remoteDetail(repo.pr, now)} mode={mode} action={<RemoteLink summary={repo.pr} />} />
+  return (
+    <Indicator
+      label={prLabel(repo, now)}
+      detail={remoteDetail(repo.pr, now)}
+      mode={mode}
+      url={indicatorURL(repo, 'pr')}
+      linkLabel={t(repo.pr.open === 0 && repo.pr.last ? 'action.openOnServer' : 'action.openPRList')}
+      action={<RemoteLink summary={repo.pr} />}
+    />
+  )
 }
 
 /** CI-запуски ветки: активные, последний итог или причина отсутствия данных. */
 export function CIIndicator({ repo, mode = 'tooltip' }: { repo: Repository; mode?: DetailMode }) {
   const now = useNow()
-  return <Indicator label={ciLabel(repo)} detail={remoteDetail(repo.ci, now)} mode={mode} action={<RemoteLink summary={repo.ci} />} />
+  return (
+    <Indicator
+      label={ciLabel(repo)}
+      detail={remoteDetail(repo.ci, now)}
+      mode={mode}
+      url={indicatorURL(repo, 'ci')}
+      linkLabel={t('action.openCIList')}
+      action={<RemoteLink summary={repo.ci} />}
+    />
+  )
 }

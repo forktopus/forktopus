@@ -11,6 +11,7 @@ export {
 } from "./models.js";
 
 export type {
+    AppUpdate,
     BranchInfo,
     BranchStatus,
     CISummary,

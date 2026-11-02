@@ -26,6 +26,8 @@ import { useSearchedRepos } from '../store/selectors'
 import { toneColor } from '../theme/theme'
 import { monoFontFamily } from '../theme/tokens'
 import { EmptyText } from './EmptyText'
+import { ServerLink } from '../components/ServerLink'
+import { remoteListURL } from '../logic/serverLinks'
 import { PathButtons, SkipRepoButton } from '../components/PathButtons'
 
 const sectionTitle = { ...caption, fontSize: 12, letterSpacing: '1.4px', mb: 1.5 } as const
@@ -191,11 +193,15 @@ function Tree({ tree, selectedId, rootsShown }: { tree: RootNode[]; selectedId: 
 
 // --- выбранный репозиторий ---
 
-function MiniCard({ name, value, note }: { name: string; value: number | null; note: string }) {
+export function MiniCard({ name, value, note, url, linkLabel }: { name: string; value: number | null; note: string; url?: string; linkLabel?: string }) {
   return (
     <Card>
       <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{name}</Typography>
-      <Typography sx={{ fontSize: 25, fontWeight: 760, mt: 0.5 }}>{value ?? t('kpi.none')}</Typography>
+      <Typography sx={{ fontSize: 25, fontWeight: 760, mt: 0.5 }}>
+        <ServerLink url={value != null ? url : undefined} label={linkLabel ?? name}>
+          {value ?? t('kpi.none')}
+        </ServerLink>
+      </Typography>
       <Typography sx={{ fontSize: 12, color: 'text.secondary', mt: 0.25, overflowWrap: 'anywhere' }}>{note}</Typography>
     </Card>
   )
@@ -484,8 +490,20 @@ function RepoMain({ repo, tree, onReveal }: { repo: Repository; tree: RootNode[]
         <Section title={t('explorer.project')}>
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 1.25 }}>
             <MiniCard name={t('explorer.changedFiles')} value={hasStatus(repo) ? changeCount(repo) : null} note={hasStatus(repo) ? '' : t('status.unknown')} />
-            <MiniCard name={t('column.pr')} value={pr} note={pr == null || repo.pr.last ? prLabel(repo, now).text : ''} />
-            <MiniCard name={t('explorer.activeCI')} value={ci} note={ci == null ? ciLabel(repo).text : ''} />
+            <MiniCard
+              name={t('column.pr')}
+              url={remoteListURL(repo.pr)}
+              linkLabel={t('action.openPRList')}
+              value={pr}
+              note={pr == null || repo.pr.last ? prLabel(repo, now).text : ''}
+            />
+            <MiniCard
+              name={t('explorer.activeCI')}
+              url={remoteListURL(repo.ci)}
+              linkLabel={t('action.openCIList')}
+              value={ci}
+              note={ci == null ? ciLabel(repo).text : ''}
+            />
           </Box>
         </Section>
 

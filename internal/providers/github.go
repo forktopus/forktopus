@@ -141,7 +141,8 @@ func ghOwn(q Query, crossRepo bool, head string) bool {
 
 // PullRequests — открытые PR, где ветка — источник (при detached HEAD —
 // содержащие текущий коммит).
-func (g GitHub) PullRequests(ctx context.Context, q Query) model.PRSummary {
+func (g GitHub) PullRequests(ctx context.Context, q Query) (result model.PRSummary) {
+	defer prListLink(q, &result)
 	if q.noRef() {
 		return prFailed(noBranch())
 	}
@@ -230,7 +231,8 @@ const ghRunLimit = "20"
 
 // CIRuns — запуски Actions ветки (при detached HEAD — коммита): активные
 // считаются по всем прочитанным, итог — по последнему коммиту (ghLastResult).
-func (g GitHub) CIRuns(ctx context.Context, q Query) model.CISummary {
+func (g GitHub) CIRuns(ctx context.Context, q Query) (result model.CISummary) {
+	defer ciListLink(q, &result)
 	if q.noRef() {
 		return ciFailed(noBranch())
 	}

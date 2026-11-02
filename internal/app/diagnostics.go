@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/forktopus/forktopus/internal/applog"
+	"github.com/forktopus/forktopus/internal/buildinfo"
 	"github.com/forktopus/forktopus/internal/model"
 	"github.com/forktopus/forktopus/internal/runner"
 )
@@ -55,6 +56,7 @@ func (s *AppService) GetDiagnostics(ctx context.Context) model.Diagnostics {
 	var b strings.Builder
 	line := func(format string, args ...any) { fmt.Fprintf(&b, format+"\n", args...) }
 	line("Forktopus — отчёт диагностики, %s", time.Now().Format("2006-01-02 15:04:05 -0700"))
+	line("Версия Forktopus: %s", buildinfo.Version())
 	line("ОС: %s", d.OS)
 	line("Настройки: %s", d.ConfigPath)
 	if d.LogPath != "" {

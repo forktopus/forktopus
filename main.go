@@ -17,6 +17,7 @@ import (
 
 	"github.com/forktopus/forktopus/internal/app"
 	"github.com/forktopus/forktopus/internal/applog"
+	"github.com/forktopus/forktopus/internal/buildinfo"
 	"github.com/forktopus/forktopus/internal/desktop"
 	"github.com/forktopus/forktopus/internal/repocache"
 	"github.com/forktopus/forktopus/internal/runner"
@@ -49,6 +50,12 @@ func setupLog() (logger *slog.Logger, path string, recent *applog.Recent) {
 }
 
 func main() {
+	// Проверка версии и метки пакета работает без окна, профиля и команд CLI.
+	// Сборка использует этот вывод при проверке извлечённого deb/AppImage.
+	if len(os.Args) == 2 && os.Args[1] == "--version" {
+		fmt.Printf("Forktopus %s (%s/%s; %s)\n", buildinfo.Version(), runtime.GOOS, runtime.GOARCH, buildinfo.PackageFormat)
+		return
+	}
 	logger, logPath, recent := setupLog()
 	configPath, err := settings.DefaultPath()
 	if err != nil {

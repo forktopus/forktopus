@@ -241,7 +241,8 @@ func teaDraft(title string) bool {
 // PullRequests — открытые PR, где ветка — источник. PR из форка tea не
 // отличает (`head` — только имя ветки) — ограничение (docs/providers.md).
 // При detached HEAD — PR, у которых текущий коммит — последний (commitPRs).
-func (g Gitea) PullRequests(ctx context.Context, q Query) model.PRSummary {
+func (g Gitea) PullRequests(ctx context.Context, q Query) (result model.PRSummary) {
+	defer prListLink(q, &result)
 	if q.noRef() {
 		return prFailed(noBranch())
 	}
@@ -412,7 +413,8 @@ type teaRun struct {
 // CIRuns — запуски Actions ветки (при detached HEAD — коммита) через REST
 // (D-041): формат как у GitHub, но `conclusion` нет, пока запуск не
 // завершён. Итог — по правилам D-043.
-func (g Gitea) CIRuns(ctx context.Context, q Query) model.CISummary {
+func (g Gitea) CIRuns(ctx context.Context, q Query) (result model.CISummary) {
+	defer ciListLink(q, &result)
 	if q.noRef() {
 		return ciFailed(noBranch())
 	}

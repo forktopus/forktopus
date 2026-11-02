@@ -49,8 +49,12 @@ export function traySummary(repos: Repository[]): string {
  * Метки карточки радара: почему репозиторий в своей группе, плюс серверные
  * факты (CI, PR, незавершённая настройка). Серверные метки группу не меняют.
  */
-export function radarTags(r: Repository): Label[] {
-  const tags: Label[] = []
+export interface RadarTag extends Label {
+  list?: 'pr' | 'ci'
+}
+
+export function radarTags(r: Repository): RadarTag[] {
+  const tags: RadarTag[] = []
   const w = r.worktree
   const b = r.branch
   if (r.error) tags.push({ tone: 'bad', text: t('radar.tag.readError') })
@@ -79,14 +83,14 @@ export function radarTags(r: Repository): Label[] {
       break
   }
   const active = remoteCount(r.ci, r.ci.active)
-  if (active) tags.push({ tone: 'info', text: t('radar.tag.ciActive', { count: active }) })
-  else if (ciFailed(r)) tags.push({ tone: 'bad', text: t('radar.tag.ciFailed') })
+  if (active) tags.push({ tone: 'info', text: t('radar.tag.ciActive', { count: active }), list: 'ci' })
+  else if (ciFailed(r)) tags.push({ tone: 'bad', text: t('radar.tag.ciFailed'), list: 'ci' })
   if (integrationIssue(r)) {
     const bad = (a: Availability) => a === Availability.AvailabilityUnavailable || a === Availability.AvailabilityError
     tags.push({ tone: 'warn', text: `⚠ ${(bad(r.pr.availability) ? prLabel(r) : ciLabel(r)).text}` })
   }
   const prs = remoteCount(r.pr, r.pr.open)
-  if (prs) tags.push({ tone: 'info', text: t('radar.tag.prs', { count: prs }) })
+  if (prs) tags.push({ tone: 'info', text: t('radar.tag.prs', { count: prs }), list: 'pr' })
   if (tags.length === 0 && radarGroup(r) === 'ok') tags.push({ tone: 'good', text: t('radar.tag.ok') })
   return tags
 }

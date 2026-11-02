@@ -4,6 +4,7 @@
 
 import { createStore, type StoreApi } from 'zustand/vanilla'
 import {
+  type AppUpdate,
   Operation,
   type BranchInfo,
   type Diagnostics,
@@ -60,6 +61,12 @@ export interface PendingOp {
 
 export interface AppState {
   sourceKind: DataSource['kind']
+  appUpdate: AppUpdate | null
+  loadAppUpdate(): Promise<void>
+  checkAppUpdate(): Promise<void>
+  downloadAppUpdate(): Promise<void>
+  cancelAppUpdate(): Promise<void>
+  openAppUpdateFolder(): Promise<void>
   /** первые данные (корни и кэш репозиториев) загружены */
   ready: boolean
   scanning: boolean
@@ -318,6 +325,42 @@ export function createAppStore(source: DataSource): AppStore {
 
     return {
       sourceKind: source.kind,
+      appUpdate: null,
+      async loadAppUpdate() {
+        try {
+          applyAppUpdate(await source.getAppUpdate())
+        } catch (err) {
+          fail(err)
+        }
+      },
+      async checkAppUpdate() {
+        try {
+          applyAppUpdate(await source.checkAppUpdate())
+        } catch (err) {
+          fail(err)
+        }
+      },
+      async downloadAppUpdate() {
+        try {
+          applyAppUpdate(await source.downloadAppUpdate())
+        } catch (err) {
+          fail(err)
+        }
+      },
+      async cancelAppUpdate() {
+        try {
+          applyAppUpdate(await source.cancelAppUpdate())
+        } catch (err) {
+          fail(err)
+        }
+      },
+      async openAppUpdateFolder() {
+        try {
+          await source.openAppUpdateFolder()
+        } catch (err) {
+          fail(err)
+        }
+      },
       ready: false,
       scanning: false,
       scanFound: 0,
@@ -691,6 +734,12 @@ export function createAppStore(source: DataSource): AppStore {
     flushTimer ??= setTimeout(flushPending, scanFlushMs)
   })
 
+  // Ответ метода может прийти после более нового события прогресса.
+  // Снимок с меньшей revision не должен возвращать кнопки в старое состояние.
+  const applyAppUpdate = (next: AppUpdate) => {
+    if (next.revision >= (store.getState().appUpdate?.revision ?? 0)) store.setState({ appUpdate: next })
+  }
+  source.onAppUpdate(applyAppUpdate)
   // PR/MR и CI приходят в фоне после сканирования, смены ветки и обновления.
   source.onRemoteStatus(queueRemote)
 

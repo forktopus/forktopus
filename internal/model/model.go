@@ -111,13 +111,15 @@ type ChangedFile struct {
 
 // PRSummary — открытые PR/MR, где текущая ветка — источник.
 type PRSummary struct {
-	Availability  Availability `json:"availability"`
-	Open          *int         `json:"open,omitempty"`
-	Draft         *int         `json:"draft,omitempty"`
-	URL           string       `json:"url,omitempty"`
-	Error         *Error       `json:"error,omitempty"`
-	LastSuccessAt *time.Time   `json:"lastSuccessAt,omitempty"`
-	LastAttemptAt *time.Time   `json:"lastAttemptAt,omitempty"`
+	Availability Availability `json:"availability"`
+	Open         *int         `json:"open,omitempty"`
+	Draft        *int         `json:"draft,omitempty"`
+	// ListURL — список PR/MR или CI; URL ниже может вести к одному элементу.
+	ListURL       string     `json:"listUrl,omitempty"`
+	URL           string     `json:"url,omitempty"`
+	Error         *Error     `json:"error,omitempty"`
+	LastSuccessAt *time.Time `json:"lastSuccessAt,omitempty"`
+	LastAttemptAt *time.Time `json:"lastAttemptAt,omitempty"`
 	// Last — последний закрытый или влитый PR/MR ветки; только когда открытых нет.
 	Last *PRRef `json:"last,omitempty"`
 }
@@ -133,13 +135,15 @@ type PRRef struct {
 
 // CISummary — CI-запуски на текущей ветке.
 type CISummary struct {
-	Availability  Availability `json:"availability"`
-	Active        *int         `json:"active,omitempty"` // queued / in progress
-	LastResult    string       `json:"lastResult,omitempty"`
-	URL           string       `json:"url,omitempty"`
-	Error         *Error       `json:"error,omitempty"`
-	LastSuccessAt *time.Time   `json:"lastSuccessAt,omitempty"`
-	LastAttemptAt *time.Time   `json:"lastAttemptAt,omitempty"`
+	Availability Availability `json:"availability"`
+	Active       *int         `json:"active,omitempty"` // queued / in progress
+	LastResult   string       `json:"lastResult,omitempty"`
+	// ListURL — список PR/MR или CI; URL ниже может вести к одному элементу.
+	ListURL       string     `json:"listUrl,omitempty"`
+	URL           string     `json:"url,omitempty"`
+	Error         *Error     `json:"error,omitempty"`
+	LastSuccessAt *time.Time `json:"lastSuccessAt,omitempty"`
+	LastAttemptAt *time.Time `json:"lastAttemptAt,omitempty"`
 }
 
 // Nesting — почему репозиторий лежит внутри рабочей копии другого.

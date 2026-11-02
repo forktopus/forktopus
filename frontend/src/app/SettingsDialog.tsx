@@ -18,6 +18,7 @@ import {
 } from '@mui/material'
 import { useEffect } from 'react'
 import { t } from '../i18n'
+import { AppUpdates } from './AppUpdates'
 import { maxZoom, minZoom, zoomStep } from '../logic/zoom'
 import { backgroundIntervals } from '../store/appStore'
 import { useApp } from '../store/context'
@@ -35,6 +36,7 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose(): vo
         <CloseToTraySetting />
         <AutostartSetting />
         <ZoomSetting />
+        <AppUpdates open={open} />
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>{t('action.close')}</Button>

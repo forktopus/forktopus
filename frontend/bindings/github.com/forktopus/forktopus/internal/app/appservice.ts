@@ -26,6 +26,20 @@ export function AddRoot(path: string): $CancellablePromise<model$0.Root> {
 }
 
 /**
+ * CancelAppUpdate отменяет активное скачивание и удаляет только его .part.
+ */
+export function CancelAppUpdate(): $CancellablePromise<model$0.AppUpdate> {
+    return $Call.ByID(2690860471);
+}
+
+/**
+ * CheckAppUpdate проверяет пакет встроенного типа; UI не выбирает формат или источник.
+ */
+export function CheckAppUpdate(): $CancellablePromise<model$0.AppUpdate> {
+    return $Call.ByID(3251545867);
+}
+
+/**
  * CheckNow — внеочередная фоновая проверка (меню трея). Если проверка уже
  * идёт, следующая начнётся сразу после неё.
  */
@@ -45,6 +59,13 @@ export function CheckTools(): $CancellablePromise<model$0.ToolDiagnostic[] | nul
 }
 
 /**
+ * DownloadAppUpdate запускает скачивание снимка выбранного релиза.
+ */
+export function DownloadAppUpdate(): $CancellablePromise<model$0.AppUpdate> {
+    return $Call.ByID(2342689593);
+}
+
+/**
  * FastForwardPull подтягивает upstream текущей ветки только fast-forward.
  */
 export function FastForwardPull(id: string, expect: model$0.OpExpect): $CancellablePromise<model$0.OpResult> {
@@ -57,6 +78,13 @@ export function FastForwardPull(id: string, expect: model$0.OpExpect): $Cancella
  */
 export function FetchRepo(id: string, expect: model$0.OpExpect): $CancellablePromise<model$0.OpResult> {
     return $Call.ByID(801040187, id, expect);
+}
+
+/**
+ * GetAppUpdate возвращает состояние, включая прогресс после открытия настроек.
+ */
+export function GetAppUpdate(): $CancellablePromise<model$0.AppUpdate> {
+    return $Call.ByID(2621875771);
 }
 
 /**
@@ -149,6 +177,13 @@ export function ListRepositories(): $CancellablePromise<model$0.RepositorySnapsh
  */
 export function ListRoots(): $CancellablePromise<model$0.Root[] | null> {
     return $Call.ByID(1982120062);
+}
+
+/**
+ * OpenAppUpdateFolder проверяет файл повторно и открывает папку без запуска пакета.
+ */
+export function OpenAppUpdateFolder(): $CancellablePromise<void> {
+    return $Call.ByID(2631881609);
 }
 
 /**

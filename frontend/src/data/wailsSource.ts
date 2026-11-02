@@ -4,6 +4,12 @@ import { normalizeOpResult, normalizeRepository, normalizeSkipDirs, normalizeSna
 
 export const wailsSource: DataSource = {
   kind: 'wails',
+  getAppUpdate: () => AppService.GetAppUpdate(),
+  checkAppUpdate: () => AppService.CheckAppUpdate(),
+  downloadAppUpdate: () => AppService.DownloadAppUpdate(),
+  cancelAppUpdate: () => AppService.CancelAppUpdate(),
+  openAppUpdateFolder: () => AppService.OpenAppUpdateFolder(),
+  onAppUpdate: (cb) => Events.On('app:update', (event) => cb(event.data)),
   listRoots: async () => (await AppService.ListRoots()) ?? [],
   addRoot: (path) => AppService.AddRoot(path),
   removeRoot: (id) => AppService.RemoveRoot(id),

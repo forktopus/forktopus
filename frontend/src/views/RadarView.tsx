@@ -22,13 +22,15 @@ import type { Tone } from '../theme/theme'
 import { toneColor } from '../theme/theme'
 import { monoFontFamily } from '../theme/tokens'
 import { EmptyText } from './EmptyText'
+import { ServerLink } from '../components/ServerLink'
+import { remoteListURL } from '../logic/serverLinks'
 
 const groupTitle: Record<RadarGroup, MessageKey> = { attention: 'radar.attention', progress: 'radar.progress', ok: 'radar.ok' }
 const groupLegend: Record<RadarGroup, MessageKey> = { attention: 'radar.legend.attention', progress: 'radar.legend.progress', ok: 'radar.legend.ok' }
 const groupTone: Record<RadarGroup, Tone> = { attention: 'bad', progress: 'info', ok: 'good' }
 const groupMark: Record<RadarGroup, string> = { attention: '!', progress: '↻', ok: '✓' }
 
-function Tag({ label }: { label: Label }) {
+function Tag({ label, url, linkLabel }: { label: Label; url?: string; linkLabel?: string }) {
   const theme = useTheme()
   const color = toneColor(theme, label.tone)
   return (
@@ -36,7 +38,9 @@ function Tag({ label }: { label: Label }) {
       component="span"
       sx={{ fontSize: 12, lineHeight: 1.2, px: 0.875, py: 0.5, borderRadius: '6px', color, bgcolor: alpha(color, 0.13), whiteSpace: 'nowrap' }}
     >
-      {label.text}
+      <ServerLink url={url} label={linkLabel ?? label.text}>
+        {label.text}
+      </ServerLink>
     </Box>
   )
 }
@@ -138,7 +142,12 @@ function RadarCard({ repo, group }: { repo: Repository; group: RadarGroup }) {
       </Typography>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 1.5 }}>
         {radarTags(repo).map((l) => (
-          <Tag key={l.text} label={l} />
+          <Tag
+            key={l.text}
+            label={l}
+            url={l.list ? remoteListURL(repo[l.list]) : undefined}
+            linkLabel={l.list ? t(l.list === 'pr' ? 'action.openPRList' : 'action.openCIList') : undefined}
+          />
         ))}
       </Box>
       <Box

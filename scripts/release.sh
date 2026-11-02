@@ -74,9 +74,9 @@ out="bin/release/$new"
 mkdir -p -- "$out"
 
 if want linux; then
-  wails3 build
-  wails3 task linux:generate:deb
+  # Каждый формат получает собственный бинарник со встроенной меткой.
   wails3 task linux:create:appimage
+  wails3 task linux:create:deb
   # Проверка: пакет собран с нужной версией (nfpm добавляет ревизию: 0.3.0-1).
   deb_version="$(dpkg-deb -f bin/forktopus.deb Version)"
   [[ "${deb_version%-*}" == "$new" ]] || die "В .deb версия $deb_version, ожидалась $new"
@@ -85,8 +85,9 @@ if want linux; then
 fi
 
 if want windows; then
-  wails3 build GOOS=windows
+  wails3 build GOOS=windows PACKAGE_TYPE=exe
   cp bin/forktopus.exe "$out/forktopus-${new}-windows-amd64.exe"
+  wails3 build GOOS=windows PACKAGE_TYPE=nsis
   # Установщик для текущего пользователя (без прав администратора): в
   # %LOCALAPPDATA%\Programs\Forktopus, ярлыки и запись в «Приложениях».
   # WebView2 bootstrapper ставит среду, если её нет.

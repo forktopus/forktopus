@@ -1,4 +1,5 @@
 import {
+  type AppUpdate,
   type BranchInfo,
   type Diagnostics,
   ErrorCode,
@@ -30,6 +31,13 @@ export type ScanOutcome = Omit<ScanResult, keyof Lists> & Lists
  */
 export interface DataSource {
   readonly kind: 'wails' | 'mock'
+  /** Обновление приложения: состояние живёт в Go, закрытие настроек его не сбрасывает. */
+  getAppUpdate(): Promise<AppUpdate>
+  checkAppUpdate(): Promise<AppUpdate>
+  downloadAppUpdate(): Promise<AppUpdate>
+  cancelAppUpdate(): Promise<AppUpdate>
+  openAppUpdateFolder(): Promise<void>
+  onAppUpdate(cb: (state: AppUpdate) => void): () => void
   listRoots(): Promise<Root[]>
   addRoot(path: string): Promise<Root>
   removeRoot(id: string): Promise<void>

@@ -12,6 +12,7 @@ import type * as model$0 from "../../../../forktopus/forktopus/internal/model/mo
 declare module "@wailsio/runtime" {
     namespace Events {
         interface CustomEvents {
+            "app:update": model$0.AppUpdate;
             "background:checked": string;
             "remote:status": model$0.RemoteStatus;
             "repo:reveal": string;
