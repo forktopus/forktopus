@@ -28,7 +28,7 @@ import { formatRelative, t, type MessageKey } from '../i18n'
 import { opName, opResultLabel, pullBlock, switchBlock } from '../logic/ops'
 import { repoHost, repoName, repoNamespace, repoProvider } from '../logic/repo'
 import { integrationIssue } from '../logic/status'
-import { availabilityTone, toolHint } from '../logic/tools'
+import { toolHint, toolLabel } from '../logic/tools'
 import { useApp } from '../store/context'
 import { monoFontFamily } from '../theme/tokens'
 import { CIIndicator, ChangesIndicator, PRIndicator, SyncIndicator } from './indicators'
@@ -217,11 +217,10 @@ export function CliStatus({ repo }: { repo: Repository }) {
   const tool = useApp((s) => (repoHost(repo) ? s.tools.find((d) => d.host === repoHost(repo)) : undefined))
   if (!tool) return null
   const hint = toolHint(tool)
+  const label = toolLabel(tool)
   return (
     <>
-      <StatusText
-        label={{ tone: availabilityTone[tool.availability] ?? 'muted', text: `${tool.name} · ${t(`availability.${tool.availability || 'unavailable'}`)}` }}
-      />
+      <StatusText label={{ ...label, text: `${tool.name} · ${label.text}` }} />
       {hint && (
         <Typography variant="caption" component="div" sx={{ color: 'text.secondary', mt: 0.5 }}>
           {hint.text}

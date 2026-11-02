@@ -234,6 +234,8 @@ tea api -l LOGIN -i "/repos/OWNER/REPO/actions/runs?branch=BRANCH&limit=20"
   - Нет репозитория: код 1, `Error: repository OWNER/REPO not found`.
   - `gt api` на ответ вне 2xx — код 1, тело в stdout, `Error: not found (HTTP 404 GET /api/v1/…)` в stderr (у `tea api` — код 0).
   - 403 (нет прав на раздел, например Actions) — код 1, **без статуса HTTP**: `Error: permission denied by the Gitea instance: user should have specific read permission …` → `ACCESS_DENIED` (D-068).
+- Запрет входа (`This account is prohibited from signing in…`) и неактивность (`This account is not activated.`) — `ACCOUNT_BLOCKED` / unavailable: проверять учётную запись в разделе управления пользователями сервера. Это отдельная причина HTTP 403; распознаётся до общего отказа прав, в stderr `gt`/`tea` и JSON API. Повторная авторизация не предлагается.
+- В диагностике CLI `ACCOUNT_BLOCKED` показывается как «Вход запрещён», `ACCESS_DENIED` — «Нет доступа», `UNSUPPORTED` — «Не поддерживается». Для PR/CI отказ прав сохраняет поведение D-068: приглушённое ограничение, без общего предупреждения о настройке подключения. Путь к разделу администрирования зависит от версии сервиса; непроверенные URL не подставляются.
 - `gt --version` → `gt version 0.2.0 (2026-10-26)` без ANSI-кодов.
 - Подсказка `more results available; use --page 2` — в stderr, JSON в stdout чистый.
 - В бинарнике есть проверка `gitea server at … is older than …`: часть команд требует новой Gitea, на версии старше 1.26 не проверялось.

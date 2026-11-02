@@ -15,12 +15,12 @@ const cliTimeout = 20 * time.Second
 // now подменяется в тестах.
 var now = time.Now
 
-// AvailabilityOf — как UI показывает ошибку: нет CLI или авторизации —
-// «недоступно», нет поддержки или прав (D-068) — «не поддерживается»: это не
-// проблема настройки CLI; прочее — ошибка источника.
+// AvailabilityOf — доступность источника: блокировка аккаунта требует
+// вмешательства, а отказ прав на отдельный раздел остаётся ограничением D-068.
+// Подпись диагностики дополнительно учитывает код ошибки (@link frontend/src/logic/tools.ts).
 func AvailabilityOf(code model.ErrorCode) model.Availability {
 	switch code {
-	case model.CodeCLIMissing, model.CodeAuthRequired:
+	case model.CodeCLIMissing, model.CodeAuthRequired, model.CodeAccountBlocked:
 		return model.AvailabilityUnavailable
 	case model.CodeUnsupported, model.CodeAccessDenied:
 		return model.AvailabilityNotSupported

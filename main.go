@@ -66,10 +66,18 @@ func main() {
 	app.AttachLog(service, logPath, recent)
 
 	var window *application.WebviewWindow
+	// У локального ярлыка своё имя GTK/WM_CLASS: окно разработки не должно
+	// приклеиваться к закреплённому значку установленного приложения.
+	name := "forktopus"
+	if os.Getenv("FORKTOPUS_DESKTOP_ID") == "forktopus-dev" {
+		name = "forktopus-dev"
+	}
+
 	hidden := desktop.StartHidden(os.Args[1:])
 	notifier := notifications.New()
 	wailsApp := application.New(application.Options{
-		Name:        "forktopus",
+		Name:        name,
+		Linux:       application.LinuxOptions{ProgramName: name},
 		Description: "Все ваши Git-репозитории на одном экране",
 		Services: []application.Service{
 			application.NewService(service),

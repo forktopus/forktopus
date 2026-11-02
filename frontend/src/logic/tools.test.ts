@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { Availability, ErrorCode } from '../data/model'
-import { gitProblem, toolHint } from './tools'
+import { Availability, ErrorCode, type ToolDiagnostic } from '../data/model'
+import { gitProblem, toolHint, toolLabel } from './tools'
 
 describe('toolHint', () => {
   it('готовому CLI подсказка не нужна', () => {
@@ -56,5 +56,27 @@ describe('git в PATH (A28)', () => {
       error: { code: ErrorCode.CodeCLIMissing, message: 'git не найден в PATH' },
     }
     expect(gitProblem([{ name: 'gh', availability: Availability.AvailabilityOK }, missing])).toBe(missing)
+  })
+})
+
+// Эти подписи используются и в общей диагностике, и в карточке репозитория.
+describe('причины отказа CLI', () => {
+  it.each([
+    [ErrorCode.CodeAccountBlocked, Availability.AvailabilityUnavailable, 'Вход запрещён', 'администратора'],
+    [ErrorCode.CodeAccessDenied, Availability.AvailabilityNotSupported, 'Нет доступа', 'разрешения токена'],
+    [ErrorCode.CodeUnsupported, Availability.AvailabilityNotSupported, 'Не поддерживается', null],
+  ] as const)('различает %s и даёт подходящее действие', (code, availability, text, hintText) => {
+    const diagnostic: ToolDiagnostic = { name: 'gt', host: 'git.example.org', availability, error: { code, message: 'ответ сервера' } }
+    expect(toolLabel(diagnostic).text).toBe(text)
+    const hint = toolHint(diagnostic)
+    if (hintText) expect(hint?.text).toContain(hintText)
+    else expect(hint).toBeNull()
+    // Повторный вход и переустановка не снимают запрет аккаунта или отказ прав.
+    expect(hint?.command).toBeUndefined()
+    expect(hint?.url).toBeUndefined()
+  })
+
+  it('сохраняет готовность после успешной проверки', () => {
+    expect(toolLabel({ name: 'gt', availability: Availability.AvailabilityOK }).text).toBe('Готов')
   })
 })

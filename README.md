@@ -46,7 +46,7 @@
 
 | Файл | Система | Как поставить |
 |---|---|---|
-| `forktopus_<версия>_amd64.deb` | Ubuntu 24.04+ / Debian 13+ | `sudo apt install ./forktopus_<версия>_amd64.deb` — подтянет GTK4 и WebKitGTK 6.0, добавит ярлык в меню |
+| `forktopus_<версия>_amd64.deb` | Ubuntu 24.04+ / Debian 13+ | `sudo apt install ./forktopus_<версия>_amd64.deb` — подтянет GTK4 и WebKitGTK 6.0, добавит ярлык в меню и профиль AppArmor для песочницы WebKit |
 | `Forktopus-<версия>-x86_64.AppImage` | другие Linux x86_64 | `chmod +x` и запустить; GTK4 и WebKitGTK внутри (≈128 МБ), ярлыка в меню нет |
 | `forktopus-<версия>-windows-amd64-setup.exe` | Windows 10/11 x64 | установщик для текущего пользователя, без прав администратора: в `%LOCALAPPDATA%\Programs\Forktopus`, ярлыки в «Пуске» и на рабочем столе, удаление — через «Приложения»; при необходимости ставит WebView2 Runtime |
 | `forktopus-<версия>-windows-amd64.exe` | Windows 10/11 x64 | без установки: запустить из любой папки; нужен WebView2 Runtime — в Windows 11 он есть всегда |
@@ -188,6 +188,7 @@ docker compose --env-file .env.dev -f compose.dev.yaml build toolbox
 Замечания:
 
 - `wails3 dev` использует порт 9245, контейнерный `ui` — 5173, их можно запускать одновременно.
+- `bash scripts/install-desktop.sh` создаёт отдельный ярлык «Forktopus (локальная сборка)» (`forktopus-dev.desktop`), значки и настройки `forktopus-dev`. Системный `forktopus.desktop` из deb остаётся за установленной версией. Скрипт удаляет только свой прежний ярлык, указывающий на `bin/forktopus` текущего checkout; `--remove` убирает локальную регистрацию. Для отдельного имени окна нужна сборка из текущего исходного кода.
 - Рядом с установленным Forktopus `wails3 dev` запускается со своими настройками: `FORKTOPUS_DIR=/tmp/forktopus-dev WAILS_VITE_PORT=9246 wails3 task dev`. В `FORKTOPUS_DIR` лежат настройки, кэш и лог; с общим каталогом второй экземпляр только покажет окно первого.
 - `node_modules` общий для хоста и контейнера (оба linux/amd64). На macOS/Windows перед `wails3 dev` выполнить `npm ci` на хосте.
 - Фикстуры создаются **на хосте**: скрипт прописывает remote абсолютным путём, и созданные в контейнере (`/workspace/...`) репозитории на хосте будут со сломанным remote. Повторный запуск не перезаписывает существующую папку — сначала удалить `.local/git-fixtures/` вручную.

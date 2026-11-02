@@ -3,7 +3,7 @@ import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, IconBut
 import { useEffect, useState } from 'react'
 import type { Diagnostics } from '../data/model'
 import { formatRelative, formatTime, t } from '../i18n'
-import { availabilityTone, selfCheckCommands, toolHint } from '../logic/tools'
+import { selfCheckCommands, toolHint, toolLabel } from '../logic/tools'
 import { useApp } from '../store/context'
 import { toneColor } from '../theme/theme'
 import { monoFontFamily } from '../theme/tokens'
@@ -130,7 +130,8 @@ export function ToolsDialog({ open, onClose }: { open: boolean; onClose(): void 
         </Typography>
         {tools.length === 0 && <Typography color="text.secondary">{t('tools.empty')}</Typography>}
         {tools.map((tool) => {
-          const color = toneColor(theme, availabilityTone[tool.availability] ?? 'muted')
+          const label = toolLabel(tool)
+          const color = toneColor(theme, label.tone)
           const details = [tool.host, tool.version && t('tools.version', { version: tool.version }), tool.path].filter(Boolean).join(' · ')
           const hint = toolHint(tool)
           return (
@@ -166,7 +167,7 @@ export function ToolsDialog({ open, onClose }: { open: boolean; onClose(): void 
                 {hint?.command && <Command text={hint.command} />}
               </Box>
               <Box component="span" sx={{ fontSize: 12, fontWeight: 700, color, border: `1px solid ${color}`, borderRadius: '7px', px: 1, py: 0.5 }}>
-                {t(`availability.${tool.availability || 'unavailable'}`)}
+                {label.text}
               </Box>
             </Box>
           )

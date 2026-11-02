@@ -184,6 +184,11 @@ export enum ErrorCode {
     CodeAuthRequired = "AUTH_REQUIRED",
 
     /**
+     * сервер запретил вход или аккаунт не активирован
+     */
+    CodeAccountBlocked = "ACCOUNT_BLOCKED",
+
+    /**
      * вход есть, но прав на этот раздел репозитория нет (HTTP 403, D-068)
      */
     CodeAccessDenied = "ACCESS_DENIED",

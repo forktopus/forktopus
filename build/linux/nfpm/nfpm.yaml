@@ -29,6 +29,14 @@ contents:
     file_info:
       mode: 0644
 
+  # Ubuntu 24.04 требует отдельного разрешения userns для песочницы WebKit.
+  - src: "./build/linux/apparmor/forktopus"
+    dst: "/etc/apparmor.d/forktopus"
+    type: config
+    packager: deb
+    file_info:
+      mode: 0644
+
 # Default dependencies for the GTK4 + WebKitGTK 6.0 stack (Ubuntu 24.04+ / Debian 13+)
 depends:
   - libgtk-4-1
@@ -36,6 +44,11 @@ depends:
 
 # Distribution-specific overrides for different package formats
 overrides:
+  deb:
+    scripts:
+      postinstall: "./build/linux/nfpm/scripts/deb-postinstall.sh"
+      preremove: "./build/linux/nfpm/scripts/deb-preremove.sh"
+      postremove: "./build/linux/nfpm/scripts/postremove.sh"
   # RPM packages for Fedora / RHEL / AlmaLinux / Rocky Linux
   rpm:
     depends:

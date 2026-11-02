@@ -27,6 +27,9 @@ type Gitea struct {
 func (Gitea) Provider() model.Provider { return model.ProviderGitea }
 
 var teaMarkers = []marker{
+	// Запрет аккаунта важнее общего отказа прав HTTP 403.
+	{model.CodeAccountBlocked, "This account is prohibited from signing in"},
+	{model.CodeAccountBlocked, "This account is not activated"},
 	{model.CodeNetworkError, "dial tcp"},
 	{model.CodeNetworkError, "no such host"},
 	{model.CodeNetworkError, "network is unreachable"},
@@ -44,6 +47,9 @@ var teaMarkers = []marker{
 // gtMarkers — тексты ошибок gt 0.2.0 (docs/providers.md, раздел gt); нет
 // аккаунта или учётка отклонена — ещё и код выхода 4.
 var gtMarkers = []marker{
+	// Запрет аккаунта важнее общего отказа прав HTTP 403.
+	{model.CodeAccountBlocked, "This account is prohibited from signing in"},
+	{model.CodeAccountBlocked, "This account is not activated"},
 	{model.CodeNetworkError, "cannot reach"},
 	{model.CodeNetworkError, "dial tcp"},
 	{model.CodeNetworkError, "x509:"},
@@ -82,7 +88,7 @@ func (g Gitea) classify(t Target, res runner.Result, err error) *model.Error {
 		return classify("tea", res, err, teaMarkers)
 	}
 	e := classify("gt", res, err, gtMarkers)
-	if err == nil && res.ExitCode == gtAuthExit {
+	if err == nil && res.ExitCode == gtAuthExit && e.Code != model.CodeAccountBlocked {
 		e.Code = model.CodeAuthRequired
 	}
 	return e
@@ -148,6 +154,8 @@ func statusError(cli string, code int, out []byte) *model.Error {
 	switch {
 	case code == http.StatusUnauthorized:
 		e.Code = model.CodeAuthRequired
+	case code == http.StatusForbidden && giteaAccountBlocked(body.Message):
+		e.Code = model.CodeAccountBlocked
 	case code == http.StatusForbidden:
 		// Вход есть, но роли не хватает прав на раздел (например, Actions при
 		// доступе к коду и PR) — не проблема настройки CLI (D-068).
@@ -163,6 +171,14 @@ func statusError(cli string, code int, out []byte) *model.Error {
 		e.Message = "сервер Gitea не отдаёт запуски Actions по API (нужна версия с /actions/runs)"
 	}
 	return e
+}
+
+// giteaAccountBlocked распознаёт тот же ответ в JSON, который gt/tea могут
+// печатать текстом. Поля учётной записи по этому сообщению различить нельзя.
+func giteaAccountBlocked(message string) bool {
+	text := strings.ToLower(message)
+	return strings.Contains(text, "this account is prohibited from signing in") ||
+		strings.Contains(text, "this account is not activated")
 }
 
 // httpStatus — код из `HTTP/2.0 200 OK`; 0 — строки статуса нет.

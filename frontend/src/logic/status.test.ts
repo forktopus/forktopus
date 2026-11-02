@@ -209,3 +209,15 @@ describe('изменённые файлы', () => {
     for (const code of ['DD', 'AU', 'UD', 'UA', 'DU', 'AA', 'UU']) expect(label(code)).toEqual({ tone: 'bad', text: 'конфликт' })
   })
 })
+
+// Блокировка аккаунта требует вмешательства и не превращается в нулевые PR/CI.
+it('запрет входа виден у PR/CI и считается проблемой подключения', () => {
+  const error = { code: ErrorCode.CodeAccountBlocked, message: 'аккаунт заблокирован' }
+  const r = repo({
+    pr: { availability: Availability.AvailabilityUnavailable, error, open: 3 },
+    ci: { availability: Availability.AvailabilityUnavailable, error, active: 2 },
+  })
+  expect(prLabel(r)).toEqual({ tone: 'warn', text: 'вход запрещён' })
+  expect(ciLabel(r)).toEqual({ tone: 'warn', text: 'вход запрещён' })
+  expect(integrationIssue(r)).toBe(true)
+})

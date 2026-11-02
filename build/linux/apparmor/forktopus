@@ -1,0 +1,12 @@
+# Разрешает песочнице WebKit создавать user namespaces только при запуске
+# установленного Forktopus. Общая политика AppArmor остаётся включённой.
+# @link https://documentation.ubuntu.com/security/security-features/privilege-restriction/apparmor/
+abi <abi/4.0>,
+include <tunables/global>
+
+profile forktopus /usr/bin/forktopus flags=(unconfined) {
+  userns,
+
+  # Локальные дополнения администратора сохраняются отдельно от пакета.
+  include if exists <local/forktopus>
+}

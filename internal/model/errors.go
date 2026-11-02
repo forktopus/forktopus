@@ -12,6 +12,7 @@ type ErrorCode string
 const (
 	CodeCLIMissing     ErrorCode = "CLI_MISSING"     // нет исполняемого файла
 	CodeAuthRequired   ErrorCode = "AUTH_REQUIRED"   // нет авторизации / доступа к инстансу
+	CodeAccountBlocked ErrorCode = "ACCOUNT_BLOCKED" // сервер запретил вход или аккаунт не активирован
 	CodeAccessDenied   ErrorCode = "ACCESS_DENIED"   // вход есть, но прав на этот раздел репозитория нет (HTTP 403, D-068)
 	CodeUnsupported    ErrorCode = "UNSUPPORTED"     // команды/формата нет в этой версии CLI
 	CodeNetworkError   ErrorCode = "NETWORK_ERROR"   // сервер недоступен, DNS, TLS

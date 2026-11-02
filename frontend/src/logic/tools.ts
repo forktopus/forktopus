@@ -4,6 +4,7 @@
 import { Availability, ErrorCode, type ToolDiagnostic } from '../data/model'
 import { t } from '../i18n'
 import type { Tone } from '../theme/theme'
+import type { Label } from './status'
 
 export const availabilityTone: Record<Availability, Tone> = {
   [Availability.$zero]: 'muted',
@@ -11,6 +12,21 @@ export const availabilityTone: Record<Availability, Tone> = {
   [Availability.AvailabilityUnavailable]: 'warn',
   [Availability.AvailabilityError]: 'bad',
   [Availability.AvailabilityNotSupported]: 'muted',
+}
+
+/** Причина отказа важнее общей доступности: отсутствие прав не означает отсутствие поддержки API. */
+export function toolLabel(d: ToolDiagnostic): Label {
+  if (d.availability !== Availability.AvailabilityOK) {
+    switch (d.error?.code) {
+      case ErrorCode.CodeAccountBlocked:
+        return { tone: 'warn', text: t('tools.signInProhibited') }
+      case ErrorCode.CodeAccessDenied:
+        return { tone: 'warn', text: t('tools.noAccess') }
+      case ErrorCode.CodeUnsupported:
+        return { tone: 'muted', text: t('availability.not_supported') }
+    }
+  }
+  return { tone: availabilityTone[d.availability] ?? 'muted', text: t(`availability.${d.availability || 'unavailable'}`) }
 }
 
 export interface ToolHint {
@@ -52,6 +68,10 @@ export function toolHint(d: ToolDiagnostic): ToolHint | null {
       return { text: t('tools.install', { name: d.name }), url: installURL[d.name] }
     case ErrorCode.CodeAuthRequired:
       return host ? { text: t('tools.login', { host }), command: loginCommand(d.name, host) } : { text: t('tools.loginAny') }
+    case ErrorCode.CodeAccountBlocked:
+      return { text: t('tools.accountBlocked') }
+    case ErrorCode.CodeAccessDenied:
+      return { text: t('tools.accessDenied') }
     case ErrorCode.CodeNetworkError:
     case ErrorCode.CodeTimeout:
       return { text: t('tools.offline', { host: host || d.name }) }
