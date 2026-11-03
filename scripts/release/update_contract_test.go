@@ -3,8 +3,10 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -54,6 +56,16 @@ func TestPackageBuildMarkers(t *testing.T) {
 		{"macos", "macos", []string{"darwin:package:universal"}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.format == "macos" && runtime.GOOS == "linux" {
+				// Task проверяет preconditions даже при -dry. Подменяем только
+				// проверку наличия Docker: граф и передача метки остаются настоящими.
+				bin := t.TempDir()
+				stub := "#!/bin/sh\ncase \"$*\" in info|'image inspect wails-cross') exit 0;; *) exit 1;; esac\n"
+				if err := os.WriteFile(filepath.Join(bin, "docker"), []byte(stub), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+			}
 			args := append([]string{"task", "-dry"}, tt.args...)
 			cmd := exec.Command("wails3", args...)
 			cmd.Dir = root
